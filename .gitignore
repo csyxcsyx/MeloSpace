@@ -38,3 +38,4 @@ src/main/resources/static/media/audio/*.flac
 music-web-frontend/node_modules/
 music-web-frontend/dist/
 music-web-frontend/.vite/
+music-web-frontend/*.tsbuildinfo
