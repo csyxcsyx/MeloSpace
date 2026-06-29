@@ -2,6 +2,7 @@ package com.musicweb.exception;
 
 import com.musicweb.common.ApiResponse;
 import com.musicweb.common.ErrorCode;
+import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ErrorCode.PARAM_ERROR, message));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.PARAM_ERROR, exception.getMessage()));
     }
 
     @ExceptionHandler(DuplicateKeyException.class)

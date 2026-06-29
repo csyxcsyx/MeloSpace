@@ -10,4 +10,6 @@ INSERT INTO album (id, title, artist_id, cover_url, release_date)
 VALUES (1, '太阳之子', 1, NULL, NULL);
 
 INSERT INTO song (id, title, artist_id, album_id, cover_url, audio_url, lyric_url, duration_seconds, language, genre, mood, status)
-VALUES (1, 'I Do', 1, 1, NULL, '/media/audio/I%20Do%20-%20%E5%91%A8%E6%9D%B0%E4%BC%A6.flac', NULL, 0, '中文', 'Pop', '浪漫', 1);
+VALUES
+  (1, 'I Do', 1, 1, NULL, '/media/audio/I%20Do%20-%20%E5%91%A8%E6%9D%B0%E4%BC%A6.flac', NULL, 0, '中文', 'Pop', '浪漫', 1),
+  (2, '下架测试歌', 1, 1, NULL, '/media/audio/offline.flac', NULL, 0, '中文', 'Pop', '测试', 0);

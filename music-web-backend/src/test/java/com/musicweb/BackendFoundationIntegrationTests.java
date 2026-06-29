@@ -76,6 +76,51 @@ class BackendFoundationIntegrationTests {
         assertThat(duplicate.getBody().get("code").asInt()).isEqualTo(409);
     }
 
+    @Test
+    void publicMusicQueriesOnlyExposePublishedContent() {
+        ResponseEntity<JsonNode> songs = restTemplate.getForEntity(
+                url("/api/songs?page=1&size=10"),
+                JsonNode.class
+        );
+        assertThat(songs.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode songItems = songs.getBody().get("data").get("items");
+        assertThat(songItems).hasSize(1);
+        assertThat(songItems.get(0).get("title").asText()).isEqualTo("I Do");
+        assertThat(songItems.get(0).get("artistName").asText()).isEqualTo("周杰伦");
+        assertThat(songItems.get(0).get("albumTitle").asText()).isEqualTo("太阳之子");
+
+        ResponseEntity<JsonNode> keyword = restTemplate.getForEntity(
+                url("/api/songs?keyword=I&page=1&size=10"),
+                JsonNode.class
+        );
+        assertThat(keyword.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(keyword.getBody().get("data").get("total").asLong()).isEqualTo(1);
+
+        ResponseEntity<JsonNode> publishedDetail = restTemplate.getForEntity(url("/api/songs/1"), JsonNode.class);
+        assertThat(publishedDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(publishedDetail.getBody().get("data").get("audioUrl").asText()).contains("/media/audio/");
+
+        ResponseEntity<JsonNode> unpublishedDetail = restTemplate.getForEntity(url("/api/songs/2"), JsonNode.class);
+        assertThat(unpublishedDetail.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(unpublishedDetail.getBody().get("code").asInt()).isEqualTo(404);
+    }
+
+    @Test
+    void searchArtistsAndAlbumsUseUnifiedResponses() {
+        ResponseEntity<JsonNode> search = restTemplate.getForEntity(url("/api/search?keyword=周杰伦"), JsonNode.class);
+        assertThat(search.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(search.getBody().get("data").get("artists").get(0).get("name").asText()).isEqualTo("周杰伦");
+
+        ResponseEntity<JsonNode> artists = restTemplate.getForEntity(url("/api/artists"), JsonNode.class);
+        assertThat(artists.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(artists.getBody().get("data").get(0).get("name").asText()).isEqualTo("周杰伦");
+
+        ResponseEntity<JsonNode> albums = restTemplate.getForEntity(url("/api/albums?artistId=1"), JsonNode.class);
+        assertThat(albums.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(albums.getBody().get("data").get(0).get("title").asText()).isEqualTo("太阳之子");
+        assertThat(albums.getBody().get("data").get(0).get("artistName").asText()).isEqualTo("周杰伦");
+    }
+
     private JsonNode login(String username, String password) {
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 url("/api/auth/login"),
