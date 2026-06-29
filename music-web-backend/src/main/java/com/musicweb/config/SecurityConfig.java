@@ -9,6 +9,7 @@ import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -38,7 +39,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health", "/api/auth/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/me").authenticated()
+                        .requestMatchers("/api/users/me/**", "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/playlists", "/api/playlists/*/songs").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/playlists/*", "/api/playlists/*/songs/order").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/playlists/*", "/api/playlists/*/songs/*").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

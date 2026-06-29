@@ -302,6 +302,174 @@ class BackendFoundationIntegrationTests {
         assertThat(missingFile.getBody().get("code").asInt()).isEqualTo(400);
     }
 
+    @Test
+    void playlistApisAllowUserBusinessFlowWithOwnershipRules() {
+        ResponseEntity<JsonNode> unauthenticatedCreate = restTemplate.postForEntity(
+                url("/api/playlists"),
+                Map.of("title", "未登录歌单"),
+                JsonNode.class
+        );
+        assertThat(unauthenticatedCreate.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        String demoToken = login("demo", "User@123456").get("data").get("token").asText();
+        String adminToken = login("admin", "Admin@123456").get("data").get("token").asText();
+
+        ResponseEntity<JsonNode> created = exchangeWithToken(
+                "/api/playlists",
+                HttpMethod.POST,
+                demoToken,
+                Map.of(
+                        "title", "阶段四公开歌单",
+                        "description", "用户闭环测试",
+                        "coverUrl", "/media/cover/stage4.jpg",
+                        "visibility", "PUBLIC"
+                )
+        );
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long playlistId = created.getBody().get("data").get("id").asLong();
+        assertThat(created.getBody().get("data").get("visibility").asText()).isEqualTo("PUBLIC");
+
+        ResponseEntity<JsonNode> myPlaylists = exchangeWithToken(
+                "/api/users/me/playlists?page=1&size=10",
+                HttpMethod.GET,
+                demoToken,
+                null
+        );
+        assertThat(myPlaylists.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(myPlaylists.getBody().get("data").get("total").asLong()).isGreaterThanOrEqualTo(1);
+
+        ResponseEntity<JsonNode> publicList = restTemplate.getForEntity(
+                url("/api/playlists?keyword=阶段四公开歌单&page=1&size=10"),
+                JsonNode.class
+        );
+        assertThat(publicList.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(publicList.getBody().get("data").get("total").asLong()).isEqualTo(1);
+
+        ResponseEntity<JsonNode> addFirstSong = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("songId", 1)
+        );
+        assertThat(addFirstSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(addFirstSong.getBody().get("data").get("songs")).hasSize(1);
+
+        ResponseEntity<JsonNode> duplicateAdd = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("songId", 1)
+        );
+        assertThat(duplicateAdd.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(duplicateAdd.getBody().get("data").get("songs")).hasSize(1);
+
+        ResponseEntity<JsonNode> addOfflineSong = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("songId", 2)
+        );
+        assertThat(addOfflineSong.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<JsonNode> secondSong = exchangeWithToken(
+                "/api/admin/songs",
+                HttpMethod.POST,
+                adminToken,
+                Map.of(
+                        "title", "阶段四排序歌曲",
+                        "artistId", 1,
+                        "albumId", 1,
+                        "audioUrl", "/media/audio/stage4-order.flac",
+                        "durationSeconds", 120,
+                        "status", 1
+                )
+        );
+        assertThat(secondSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long secondSongId = secondSong.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> addSecondSong = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("songId", secondSongId)
+        );
+        assertThat(addSecondSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(addSecondSong.getBody().get("data").get("songs")).hasSize(2);
+
+        ResponseEntity<JsonNode> reordered = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs/order",
+                HttpMethod.PUT,
+                demoToken,
+                Map.of("songIds", new long[] {secondSongId, 1})
+        );
+        assertThat(reordered.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode reorderedSongs = reordered.getBody().get("data").get("songs");
+        assertThat(reorderedSongs.get(0).get("songId").asLong()).isEqualTo(secondSongId);
+        assertThat(reorderedSongs.get(1).get("songId").asLong()).isEqualTo(1);
+
+        ResponseEntity<JsonNode> invalidOrder = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs/order",
+                HttpMethod.PUT,
+                demoToken,
+                Map.of("songIds", new long[] {1})
+        );
+        assertThat(invalidOrder.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<JsonNode> forbiddenUpdate = exchangeWithToken(
+                "/api/playlists/" + playlistId,
+                HttpMethod.PUT,
+                adminToken,
+                Map.of("title", "越权编辑", "visibility", "PUBLIC")
+        );
+        assertThat(forbiddenUpdate.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<JsonNode> privatePlaylist = exchangeWithToken(
+                "/api/playlists",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("title", "阶段四私有歌单", "visibility", "PRIVATE")
+        );
+        assertThat(privatePlaylist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long privatePlaylistId = privatePlaylist.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> publicPrivateDetail = restTemplate.getForEntity(
+                url("/api/playlists/" + privatePlaylistId),
+                JsonNode.class
+        );
+        assertThat(publicPrivateDetail.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<JsonNode> ownerPrivateDetail = exchangeWithToken(
+                "/api/playlists/" + privatePlaylistId,
+                HttpMethod.GET,
+                demoToken,
+                null
+        );
+        assertThat(ownerPrivateDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> removedSong = exchangeWithToken(
+                "/api/playlists/" + playlistId + "/songs/" + secondSongId,
+                HttpMethod.DELETE,
+                demoToken,
+                null
+        );
+        assertThat(removedSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(removedSong.getBody().get("data").get("songs")).hasSize(1);
+
+        ResponseEntity<JsonNode> deleted = exchangeWithToken(
+                "/api/playlists/" + playlistId,
+                HttpMethod.DELETE,
+                demoToken,
+                null
+        );
+        assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> deletedDetail = restTemplate.getForEntity(
+                url("/api/playlists/" + playlistId),
+                JsonNode.class
+        );
+        assertThat(deletedDetail.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     private JsonNode login(String username, String password) {
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 url("/api/auth/login"),
