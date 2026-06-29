@@ -49,4 +49,4 @@ cd music-web-backend
 .\mvnw.cmd test
 ```
 
-Docker CLI 已安装，但本次验证时 Docker Desktop Linux engine 未启动，因此临时 MySQL 8.4 容器加载 `schema.sql` / `data.sql` 的验证未执行。Docker 启动后可重新执行该项验证。
+Docker Desktop 已启动并完成 MySQL 8.4 临时容器验证：`schema.sql` 和 `data.sql` 可成功导入，10 张核心表可创建，默认用户、歌手、专辑和歌曲种子数据可查询。验证后临时容器已删除。
