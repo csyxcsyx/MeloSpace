@@ -33,3 +33,8 @@ bin/
 ### MusicWeb local media ###
 # Keep large demo audio files local unless explicit authorization and storage policy are confirmed.
 src/main/resources/static/media/audio/*.flac
+
+### Frontend ###
+music-web-frontend/node_modules/
+music-web-frontend/dist/
+music-web-frontend/.vite/
