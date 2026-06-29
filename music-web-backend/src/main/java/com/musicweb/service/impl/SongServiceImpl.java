@@ -9,15 +9,20 @@ import com.musicweb.dto.SongStatusRequest;
 import com.musicweb.dto.SongUpsertRequest;
 import com.musicweb.entity.Album;
 import com.musicweb.entity.Artist;
+import com.musicweb.entity.Playlist;
+import com.musicweb.entity.PlaylistSong;
 import com.musicweb.entity.Song;
 import com.musicweb.exception.BusinessException;
+import com.musicweb.mapper.PlaylistMapper;
 import com.musicweb.mapper.SongMapper;
 import com.musicweb.service.AlbumService;
 import com.musicweb.service.ArtistService;
+import com.musicweb.service.PlaylistSongService;
 import com.musicweb.service.SongService;
 import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.AlbumResponse;
 import com.musicweb.vo.ArtistResponse;
+import com.musicweb.vo.PlaylistResponse;
 import com.musicweb.vo.SearchResponse;
 import com.musicweb.vo.SongResponse;
 import java.util.Collections;
@@ -35,14 +40,24 @@ import org.springframework.util.StringUtils;
 public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements SongService {
 
     private static final int STATUS_PUBLISHED = 1;
+    private static final String VISIBILITY_PUBLIC = "PUBLIC";
     private static final int SEARCH_LIMIT = 10;
 
     private final ArtistService artistService;
     private final AlbumService albumService;
+    private final PlaylistMapper playlistMapper;
+    private final PlaylistSongService playlistSongService;
 
-    public SongServiceImpl(ArtistService artistService, AlbumService albumService) {
+    public SongServiceImpl(
+            ArtistService artistService,
+            AlbumService albumService,
+            PlaylistMapper playlistMapper,
+            PlaylistSongService playlistSongService
+    ) {
         this.artistService = artistService;
         this.albumService = albumService;
+        this.playlistMapper = playlistMapper;
+        this.playlistSongService = playlistSongService;
     }
 
     @Override
@@ -75,7 +90,7 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     @Override
     public SearchResponse search(String keyword) {
         if (!StringUtils.hasText(keyword)) {
-            return new SearchResponse(List.of(), List.of(), List.of());
+            return new SearchResponse(List.of(), List.of(), List.of(), List.of());
         }
 
         Page<Song> songPage = page(
@@ -98,6 +113,14 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
                         .like(Album::getTitle, keyword)
                         .orderByDesc(Album::getUpdatedAt)
                         .orderByDesc(Album::getId)
+                ).getRecords();
+        List<Playlist> playlists = playlistMapper.selectPage(
+                new Page<>(1, SEARCH_LIMIT),
+                new LambdaQueryWrapper<Playlist>()
+                        .eq(Playlist::getVisibility, VISIBILITY_PUBLIC)
+                        .like(Playlist::getTitle, keyword)
+                        .orderByDesc(Playlist::getUpdatedAt)
+                        .orderByDesc(Playlist::getId)
         ).getRecords();
 
         Map<Long, Artist> albumArtists = loadArtistsByIds(
@@ -106,7 +129,8 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         return new SearchResponse(
                 toSongResponses(songPage.getRecords()),
                 artists.stream().map(MusicResponseAssembler::toArtistResponse).toList(),
-                albums.stream().map(album -> MusicResponseAssembler.toAlbumResponse(album, albumArtists)).toList()
+                albums.stream().map(album -> MusicResponseAssembler.toAlbumResponse(album, albumArtists)).toList(),
+                playlists.stream().map(this::toPlaylistResponse).toList()
         );
     }
 
@@ -230,5 +254,22 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         }
         return albumService.listByIds(albumIds).stream()
                 .collect(Collectors.toMap(Album::getId, Function.identity()));
+    }
+
+    private PlaylistResponse toPlaylistResponse(Playlist playlist) {
+        return new PlaylistResponse(
+                playlist.getId(),
+                playlist.getUserId(),
+                playlist.getTitle(),
+                playlist.getDescription(),
+                playlist.getCoverUrl(),
+                playlist.getVisibility(),
+                playlist.getPlayCount(),
+                playlist.getFavoriteCount(),
+                playlistSongService.count(new LambdaQueryWrapper<PlaylistSong>()
+                        .eq(PlaylistSong::getPlaylistId, playlist.getId())),
+                playlist.getCreatedAt(),
+                playlist.getUpdatedAt()
+        );
     }
 }

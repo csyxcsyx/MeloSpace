@@ -41,8 +41,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/me/**", "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/playlists", "/api/playlists/*/songs").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/favorites", "/api/comments", "/api/songs/*/play-record").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/playlists/*", "/api/playlists/*/songs/order").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/playlists/*", "/api/playlists/*/songs/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/favorites", "/api/comments/*").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

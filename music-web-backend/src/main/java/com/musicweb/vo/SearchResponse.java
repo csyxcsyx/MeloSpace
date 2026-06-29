@@ -5,6 +5,7 @@ import java.util.List;
 public record SearchResponse(
         List<SongResponse> songs,
         List<ArtistResponse> artists,
-        List<AlbumResponse> albums
+        List<AlbumResponse> albums,
+        List<PlaylistResponse> playlists
 ) {
 }

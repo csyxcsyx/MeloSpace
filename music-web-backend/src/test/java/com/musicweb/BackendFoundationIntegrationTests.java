@@ -470,6 +470,183 @@ class BackendFoundationIntegrationTests {
         assertThat(deletedDetail.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    @Test
+    void userInteractionApisSupportFavoritesCommentsRecentPlaysAndPlaylistSearch() {
+        ResponseEntity<JsonNode> unauthenticatedFavorites = restTemplate.getForEntity(
+                url("/api/users/me/favorites"),
+                JsonNode.class
+        );
+        assertThat(unauthenticatedFavorites.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<JsonNode> unauthenticatedFavoriteWrite = restTemplate.postForEntity(
+                url("/api/favorites"),
+                Map.of("targetType", "SONG", "targetId", 1),
+                JsonNode.class
+        );
+        assertThat(unauthenticatedFavoriteWrite.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<JsonNode> unauthenticatedCommentWrite = restTemplate.postForEntity(
+                url("/api/comments"),
+                Map.of("targetType", "SONG", "targetId", 1, "content", "未登录评论"),
+                JsonNode.class
+        );
+        assertThat(unauthenticatedCommentWrite.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<JsonNode> unauthenticatedPlayRecord = restTemplate.postForEntity(
+                url("/api/songs/1/play-record"),
+                Map.of("progressSeconds", 30, "sourceType", "SEARCH"),
+                JsonNode.class
+        );
+        assertThat(unauthenticatedPlayRecord.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        String demoToken = login("demo", "User@123456").get("data").get("token").asText();
+        String adminToken = login("admin", "Admin@123456").get("data").get("token").asText();
+
+        ResponseEntity<JsonNode> publicPlaylist = exchangeWithToken(
+                "/api/playlists",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("title", "阶段四搜索公开歌单", "visibility", "PUBLIC")
+        );
+        assertThat(publicPlaylist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long publicPlaylistId = publicPlaylist.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> privatePlaylist = exchangeWithToken(
+                "/api/playlists",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("title", "阶段四搜索私有歌单", "visibility", "PRIVATE")
+        );
+        assertThat(privatePlaylist.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> favoriteSong = exchangeWithToken(
+                "/api/favorites",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("targetType", "SONG", "targetId", 1)
+        );
+        assertThat(favoriteSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long favoriteSongId = favoriteSong.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> duplicateFavoriteSong = exchangeWithToken(
+                "/api/favorites",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("targetType", "SONG", "targetId", 1)
+        );
+        assertThat(duplicateFavoriteSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(duplicateFavoriteSong.getBody().get("data").get("id").asLong()).isEqualTo(favoriteSongId);
+
+        ResponseEntity<JsonNode> favoritePlaylist = exchangeWithToken(
+                "/api/favorites",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("targetType", "PLAYLIST", "targetId", publicPlaylistId)
+        );
+        assertThat(favoritePlaylist.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> favorites = exchangeWithToken(
+                "/api/users/me/favorites?page=1&size=10",
+                HttpMethod.GET,
+                demoToken,
+                null
+        );
+        assertThat(favorites.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(favorites.getBody().get("data").get("total").asLong()).isEqualTo(2);
+
+        ResponseEntity<JsonNode> unfavoriteMissing = exchangeWithToken(
+                "/api/favorites?targetType=SONG&targetId=9999",
+                HttpMethod.DELETE,
+                demoToken,
+                null
+        );
+        assertThat(unfavoriteMissing.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> invalidFavorite = exchangeWithToken(
+                "/api/favorites",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("targetType", "ALBUM", "targetId", 1)
+        );
+        assertThat(invalidFavorite.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<JsonNode> createdComment = exchangeWithToken(
+                "/api/comments",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("targetType", "SONG", "targetId", 1, "content", "阶段四评论")
+        );
+        assertThat(createdComment.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long commentId = createdComment.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> comments = restTemplate.getForEntity(
+                url("/api/comments?targetType=SONG&targetId=1&page=1&size=10"),
+                JsonNode.class
+        );
+        assertThat(comments.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(comments.getBody().get("data").get("total").asLong()).isEqualTo(1);
+        assertThat(comments.getBody().get("data").get("items").get(0).get("content").asText())
+                .isEqualTo("阶段四评论");
+
+        ResponseEntity<JsonNode> forbiddenCommentDelete = exchangeWithToken(
+                "/api/comments/" + commentId,
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(forbiddenCommentDelete.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<JsonNode> deletedComment = exchangeWithToken(
+                "/api/comments/" + commentId,
+                HttpMethod.DELETE,
+                demoToken,
+                null
+        );
+        assertThat(deletedComment.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        long playCountBefore = restTemplate
+                .getForEntity(url("/api/songs/1"), JsonNode.class)
+                .getBody()
+                .get("data")
+                .get("playCount")
+                .asLong();
+        ResponseEntity<JsonNode> playRecord = exchangeWithToken(
+                "/api/songs/1/play-record",
+                HttpMethod.POST,
+                demoToken,
+                Map.of("progressSeconds", 35, "sourceType", "SEARCH")
+        );
+        assertThat(playRecord.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(playRecord.getBody().get("data").get("progressSeconds").asInt()).isEqualTo(35);
+
+        ResponseEntity<JsonNode> recentPlays = exchangeWithToken(
+                "/api/users/me/recent-plays?page=1&size=10",
+                HttpMethod.GET,
+                demoToken,
+                null
+        );
+        assertThat(recentPlays.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(recentPlays.getBody().get("data").get("total").asLong()).isEqualTo(1);
+        assertThat(recentPlays.getBody().get("data").get("items").get(0).get("songId").asLong()).isEqualTo(1);
+
+        long playCountAfter = restTemplate
+                .getForEntity(url("/api/songs/1"), JsonNode.class)
+                .getBody()
+                .get("data")
+                .get("playCount")
+                .asLong();
+        assertThat(playCountAfter).isEqualTo(playCountBefore + 1);
+
+        ResponseEntity<JsonNode> search = restTemplate.getForEntity(
+                url("/api/search?keyword=阶段四搜索"),
+                JsonNode.class
+        );
+        assertThat(search.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String playlistsJson = search.getBody().get("data").get("playlists").toString();
+        assertThat(playlistsJson).contains("阶段四搜索公开歌单");
+        assertThat(playlistsJson).doesNotContain("阶段四搜索私有歌单");
+    }
+
     private JsonNode login(String username, String password) {
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 url("/api/auth/login"),
