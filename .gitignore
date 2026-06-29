@@ -28,3 +28,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### MusicWeb local media ###
+# Keep large demo audio files local unless explicit authorization and storage policy are confirmed.
+src/main/resources/static/media/audio/*.flac
