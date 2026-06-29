@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 USE music_web;
 
 INSERT INTO `user` (id, username, password_hash, nickname, avatar_url, role, status)
