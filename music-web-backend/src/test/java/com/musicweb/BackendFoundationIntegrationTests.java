@@ -3,18 +3,23 @@ package com.musicweb;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -233,6 +238,70 @@ class BackendFoundationIntegrationTests {
                 .isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void adminCanUploadLocalMediaAndUseReturnedUrlForSongs() {
+        String adminToken = login("admin", "Admin@123456").get("data").get("token").asText();
+        ResponseEntity<JsonNode> upload = uploadWithToken(
+                adminToken,
+                "AUDIO",
+                "stage3.mp3",
+                "audio/mpeg",
+                "fake audio".getBytes(StandardCharsets.UTF_8)
+        );
+        assertThat(upload.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode uploadData = upload.getBody().get("data");
+        assertThat(uploadData.get("fileType").asText()).isEqualTo("AUDIO");
+        assertThat(uploadData.get("url").asText()).startsWith("/media/audio/");
+        String audioUrl = uploadData.get("url").asText();
+
+        ResponseEntity<String> staticMedia = restTemplate.getForEntity(url(audioUrl), String.class);
+        assertThat(staticMedia.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(staticMedia.getBody()).isEqualTo("fake audio");
+
+        ResponseEntity<JsonNode> createdSong = exchangeWithToken(
+                "/api/admin/songs",
+                HttpMethod.POST,
+                adminToken,
+                Map.of(
+                        "title", "上传闭环歌曲",
+                        "artistId", 1,
+                        "albumId", 1,
+                        "audioUrl", audioUrl,
+                        "durationSeconds", 9,
+                        "status", 1
+                )
+        );
+        assertThat(createdSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long songId = createdSong.getBody().get("data").get("id").asLong();
+        ResponseEntity<JsonNode> publicSong = restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class);
+        assertThat(publicSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(publicSong.getBody().get("data").get("audioUrl").asText()).isEqualTo(audioUrl);
+
+        ResponseEntity<JsonNode> badExtension = uploadWithToken(
+                adminToken,
+                "AUDIO",
+                "stage3.exe",
+                "application/octet-stream",
+                "bad".getBytes(StandardCharsets.UTF_8)
+        );
+        assertThat(badExtension.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(badExtension.getBody().get("code").asInt()).isEqualTo(400);
+
+        ResponseEntity<JsonNode> badType = uploadWithToken(
+                adminToken,
+                "VIDEO",
+                "stage3.mp3",
+                "audio/mpeg",
+                "bad".getBytes(StandardCharsets.UTF_8)
+        );
+        assertThat(badType.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(badType.getBody().get("code").asInt()).isEqualTo(400);
+
+        ResponseEntity<JsonNode> missingFile = uploadMissingFile(adminToken);
+        assertThat(missingFile.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(missingFile.getBody().get("code").asInt()).isEqualTo(400);
+    }
+
     private JsonNode login(String username, String password) {
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 url("/api/auth/login"),
@@ -256,7 +325,64 @@ class BackendFoundationIntegrationTests {
         return restTemplate.exchange(url(path), method, new HttpEntity<>(body, headers), JsonNode.class);
     }
 
+    private ResponseEntity<JsonNode> uploadWithToken(
+            String token,
+            String fileType,
+            String filename,
+            String contentType,
+            byte[] bytes
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        HttpHeaders fileHeaders = new HttpHeaders();
+        fileHeaders.setContentType(MediaType.parseMediaType(contentType));
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("fileType", fileType);
+        body.add("file", new HttpEntity<>(new NamedByteArrayResource(bytes, filename), fileHeaders));
+
+        return restTemplate.exchange(
+                url("/api/admin/upload"),
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                JsonNode.class
+        );
+    }
+
+    private ResponseEntity<JsonNode> uploadMissingFile(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("fileType", "AUDIO");
+
+        return restTemplate.exchange(
+                url("/api/admin/upload"),
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                JsonNode.class
+        );
+    }
+
     private String url(String path) {
         return "http://localhost:" + port + path;
+    }
+
+    private static final class NamedByteArrayResource extends ByteArrayResource {
+
+        private final String filename;
+
+        private NamedByteArrayResource(byte[] byteArray, String filename) {
+            super(byteArray);
+            this.filename = filename;
+        }
+
+        @Override
+        public String getFilename() {
+            return filename;
+        }
     }
 }

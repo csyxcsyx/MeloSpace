@@ -6,16 +6,20 @@ import com.musicweb.dto.AlbumUpsertRequest;
 import com.musicweb.dto.ArtistUpsertRequest;
 import com.musicweb.dto.SongStatusRequest;
 import com.musicweb.dto.SongUpsertRequest;
+import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.AlbumService;
 import com.musicweb.service.ArtistService;
 import com.musicweb.service.SongService;
+import com.musicweb.service.UploadFileService;
 import com.musicweb.vo.AlbumResponse;
 import com.musicweb.vo.ArtistResponse;
 import com.musicweb.vo.SongResponse;
+import com.musicweb.vo.UploadFileResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @Validated
 @RestController
@@ -35,15 +40,18 @@ public class AdminMusicController {
     private final SongService songService;
     private final ArtistService artistService;
     private final AlbumService albumService;
+    private final UploadFileService uploadFileService;
 
     public AdminMusicController(
             SongService songService,
             ArtistService artistService,
-            AlbumService albumService
+            AlbumService albumService,
+            UploadFileService uploadFileService
     ) {
         this.songService = songService;
         this.artistService = artistService;
         this.albumService = albumService;
+        this.uploadFileService = uploadFileService;
     }
 
     @GetMapping("/songs")
@@ -101,5 +109,14 @@ public class AdminMusicController {
             @Valid @RequestBody AlbumUpsertRequest request
     ) {
         return ApiResponse.ok(albumService.updateAlbum(id, request));
+    }
+
+    @PostMapping("/upload")
+    public ApiResponse<UploadFileResponse> upload(
+            @RequestParam MultipartFile file,
+            @RequestParam String fileType,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(uploadFileService.upload(file, fileType, principal.getId()));
     }
 }

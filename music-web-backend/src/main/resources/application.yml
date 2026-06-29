@@ -3,6 +3,10 @@ spring:
     name: music-web-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:100MB}
+      max-request-size: ${MAX_REQUEST_SIZE:110MB}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -30,3 +34,7 @@ music-web:
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
   media:
     base-url: ${MEDIA_BASE_URL:/media}
+    storage-root: ${MEDIA_STORAGE_ROOT:./media}
+    max-audio-size: ${MEDIA_MAX_AUDIO_SIZE:100MB}
+    max-cover-size: ${MEDIA_MAX_COVER_SIZE:5MB}
+    max-lyric-size: ${MEDIA_MAX_LYRIC_SIZE:1MB}

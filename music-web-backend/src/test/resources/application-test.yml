@@ -15,3 +15,6 @@ music-web:
     secret: test-secret-for-music-web-backend-foundation
     issuer: music-web-test
     expiration-minutes: 60
+  media:
+    base-url: /media
+    storage-root: target/test-media
