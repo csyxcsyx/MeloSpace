@@ -578,6 +578,102 @@ button {
   color: var(--muted);
 }
 
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.metric {
+  padding: 14px;
+  border: 1px solid var(--soft-line);
+  border-radius: 10px;
+}
+
+.metric strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.metric span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.admin-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: 0;
+}
+
+.form-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-song-list {
+  display: grid;
+}
+
+.admin-song-row {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  border-bottom: 1px solid var(--soft-line);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-song-row strong,
+.admin-song-row span {
+  display: block;
+}
+
+.admin-song-row span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 760;
+}
+
 .link-button {
   margin-top: 12px;
   color: var(--brand);
@@ -834,8 +930,14 @@ button {
 
   .detail-hero,
   .result-grid,
-  .profile-grid {
+  .profile-grid,
+  .admin-layout {
     grid-template-columns: 1fr;
+  }
+
+  .metrics,
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .player-controls {
@@ -866,5 +968,10 @@ button {
 
   .player-controls {
     justify-content: center;
+  }
+
+  .metrics,
+  .form-row {
+    grid-template-columns: 1fr;
   }
 }
