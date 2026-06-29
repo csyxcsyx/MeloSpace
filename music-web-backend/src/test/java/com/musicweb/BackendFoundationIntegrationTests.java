@@ -79,7 +79,7 @@ class BackendFoundationIntegrationTests {
     @Test
     void publicMusicQueriesOnlyExposePublishedContent() {
         ResponseEntity<JsonNode> songs = restTemplate.getForEntity(
-                url("/api/songs?page=1&size=10"),
+                url("/api/songs?keyword=I&page=1&size=10"),
                 JsonNode.class
         );
         assertThat(songs.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -89,12 +89,12 @@ class BackendFoundationIntegrationTests {
         assertThat(songItems.get(0).get("artistName").asText()).isEqualTo("周杰伦");
         assertThat(songItems.get(0).get("albumTitle").asText()).isEqualTo("太阳之子");
 
-        ResponseEntity<JsonNode> keyword = restTemplate.getForEntity(
-                url("/api/songs?keyword=I&page=1&size=10"),
+        ResponseEntity<JsonNode> unpublishedKeyword = restTemplate.getForEntity(
+                url("/api/songs?keyword=下架测试歌&page=1&size=10"),
                 JsonNode.class
         );
-        assertThat(keyword.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(keyword.getBody().get("data").get("total").asLong()).isEqualTo(1);
+        assertThat(unpublishedKeyword.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(unpublishedKeyword.getBody().get("data").get("total").asLong()).isZero();
 
         ResponseEntity<JsonNode> publishedDetail = restTemplate.getForEntity(url("/api/songs/1"), JsonNode.class);
         assertThat(publishedDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -119,6 +119,118 @@ class BackendFoundationIntegrationTests {
         assertThat(albums.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(albums.getBody().get("data").get(0).get("title").asText()).isEqualTo("太阳之子");
         assertThat(albums.getBody().get("data").get(0).get("artistName").asText()).isEqualTo("周杰伦");
+    }
+
+    @Test
+    void adminCanManageMusicContentAndPublicationStatus() {
+        ResponseEntity<JsonNode> noToken = restTemplate.getForEntity(url("/api/admin/songs"), JsonNode.class);
+        assertThat(noToken.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        String userToken = login("demo", "User@123456").get("data").get("token").asText();
+        ResponseEntity<JsonNode> forbidden = exchangeWithToken("/api/admin/songs", HttpMethod.GET, userToken, null);
+        assertThat(forbidden.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String adminToken = login("admin", "Admin@123456").get("data").get("token").asText();
+        ResponseEntity<JsonNode> artist = exchangeWithToken(
+                "/api/admin/artists",
+                HttpMethod.POST,
+                adminToken,
+                Map.of("name", "阶段三歌手", "bio", "管理员接口测试", "avatarUrl", "/media/cover/artist.jpg")
+        );
+        assertThat(artist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long artistId = artist.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> updatedArtist = exchangeWithToken(
+                "/api/admin/artists/" + artistId,
+                HttpMethod.PUT,
+                adminToken,
+                Map.of("name", "阶段三歌手改", "bio", "已编辑", "avatarUrl", "/media/cover/artist2.jpg")
+        );
+        assertThat(updatedArtist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updatedArtist.getBody().get("data").get("name").asText()).isEqualTo("阶段三歌手改");
+
+        ResponseEntity<JsonNode> album = exchangeWithToken(
+                "/api/admin/albums",
+                HttpMethod.POST,
+                adminToken,
+                Map.of("title", "阶段三专辑", "artistId", artistId, "coverUrl", "/media/cover/album.jpg")
+        );
+        assertThat(album.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long albumId = album.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> updatedAlbum = exchangeWithToken(
+                "/api/admin/albums/" + albumId,
+                HttpMethod.PUT,
+                adminToken,
+                Map.of("title", "阶段三专辑改", "artistId", artistId, "coverUrl", "/media/cover/album2.jpg")
+        );
+        assertThat(updatedAlbum.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updatedAlbum.getBody().get("data").get("title").asText()).isEqualTo("阶段三专辑改");
+
+        ResponseEntity<JsonNode> mismatch = exchangeWithToken(
+                "/api/admin/songs",
+                HttpMethod.POST,
+                adminToken,
+                Map.of("title", "关系错误歌曲", "artistId", artistId, "albumId", 1, "audioUrl", "/media/audio/bad.flac")
+        );
+        assertThat(mismatch.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(mismatch.getBody().get("code").asInt()).isEqualTo(400);
+
+        ResponseEntity<JsonNode> song = exchangeWithToken(
+                "/api/admin/songs",
+                HttpMethod.POST,
+                adminToken,
+                Map.of(
+                        "title", "阶段三歌曲",
+                        "artistId", artistId,
+                        "albumId", albumId,
+                        "audioUrl", "/media/audio/stage3.flac",
+                        "durationSeconds", 180,
+                        "status", 1
+                )
+        );
+        assertThat(song.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long songId = song.getBody().get("data").get("id").asLong();
+
+        ResponseEntity<JsonNode> adminList = exchangeWithToken(
+                "/api/admin/songs?keyword=阶段三歌曲&page=1&size=10",
+                HttpMethod.GET,
+                adminToken,
+                null
+        );
+        assertThat(adminList.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(adminList.getBody().get("data").get("total").asLong()).isEqualTo(1);
+
+        ResponseEntity<JsonNode> offline = exchangeWithToken(
+                "/api/admin/songs/" + songId + "/status",
+                HttpMethod.PATCH,
+                adminToken,
+                Map.of("status", 0)
+        );
+        assertThat(offline.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(offline.getBody().get("data").get("status").asInt()).isZero();
+
+        ResponseEntity<JsonNode> publicDetail = restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class);
+        assertThat(publicDetail.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<JsonNode> adminOfflineList = exchangeWithToken(
+                "/api/admin/songs?keyword=阶段三歌曲&status=0&page=1&size=10",
+                HttpMethod.GET,
+                adminToken,
+                null
+        );
+        assertThat(adminOfflineList.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(adminOfflineList.getBody().get("data").get("items").get(0).get("id").asLong()).isEqualTo(songId);
+
+        ResponseEntity<JsonNode> online = exchangeWithToken(
+                "/api/admin/songs/" + songId + "/status",
+                HttpMethod.PATCH,
+                adminToken,
+                Map.of("status", 1)
+        );
+        assertThat(online.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
     }
 
     private JsonNode login(String username, String password) {

@@ -1,0 +1,105 @@
+package com.musicweb.controller;
+
+import com.musicweb.common.ApiResponse;
+import com.musicweb.common.PageResult;
+import com.musicweb.dto.AlbumUpsertRequest;
+import com.musicweb.dto.ArtistUpsertRequest;
+import com.musicweb.dto.SongStatusRequest;
+import com.musicweb.dto.SongUpsertRequest;
+import com.musicweb.service.AlbumService;
+import com.musicweb.service.ArtistService;
+import com.musicweb.service.SongService;
+import com.musicweb.vo.AlbumResponse;
+import com.musicweb.vo.ArtistResponse;
+import com.musicweb.vo.SongResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Validated
+@RestController
+@RequestMapping("/api/admin")
+public class AdminMusicController {
+
+    private final SongService songService;
+    private final ArtistService artistService;
+    private final AlbumService albumService;
+
+    public AdminMusicController(
+            SongService songService,
+            ArtistService artistService,
+            AlbumService albumService
+    ) {
+        this.songService = songService;
+        this.artistService = artistService;
+        this.albumService = albumService;
+    }
+
+    @GetMapping("/songs")
+    public ApiResponse<PageResult<SongResponse>> listSongs(
+            @RequestParam(defaultValue = "1") @Min(1) long page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @Min(0) @Max(1) Integer status
+    ) {
+        return ApiResponse.ok(songService.listAdminSongs(page, size, keyword, status));
+    }
+
+    @PostMapping("/songs")
+    public ApiResponse<SongResponse> createSong(@Valid @RequestBody SongUpsertRequest request) {
+        return ApiResponse.ok(songService.createSong(request));
+    }
+
+    @PutMapping("/songs/{id}")
+    public ApiResponse<SongResponse> updateSong(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody SongUpsertRequest request
+    ) {
+        return ApiResponse.ok(songService.updateSong(id, request));
+    }
+
+    @PatchMapping("/songs/{id}/status")
+    public ApiResponse<SongResponse> updateSongStatus(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody SongStatusRequest request
+    ) {
+        return ApiResponse.ok(songService.updateSongStatus(id, request));
+    }
+
+    @PostMapping("/artists")
+    public ApiResponse<ArtistResponse> createArtist(@Valid @RequestBody ArtistUpsertRequest request) {
+        return ApiResponse.ok(artistService.createArtist(request));
+    }
+
+    @PutMapping("/artists/{id}")
+    public ApiResponse<ArtistResponse> updateArtist(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody ArtistUpsertRequest request
+    ) {
+        return ApiResponse.ok(artistService.updateArtist(id, request));
+    }
+
+    @PostMapping("/albums")
+    public ApiResponse<AlbumResponse> createAlbum(@Valid @RequestBody AlbumUpsertRequest request) {
+        return ApiResponse.ok(albumService.createAlbum(request));
+    }
+
+    @PutMapping("/albums/{id}")
+    public ApiResponse<AlbumResponse> updateAlbum(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody AlbumUpsertRequest request
+    ) {
+        return ApiResponse.ok(albumService.updateAlbum(id, request));
+    }
+}

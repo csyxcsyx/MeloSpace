@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.musicweb.common.ErrorCode;
 import com.musicweb.common.PageResult;
+import com.musicweb.dto.SongStatusRequest;
+import com.musicweb.dto.SongUpsertRequest;
 import com.musicweb.entity.Album;
 import com.musicweb.entity.Artist;
 import com.musicweb.entity.Song;
@@ -108,8 +110,86 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         );
     }
 
+    @Override
+    public PageResult<SongResponse> listAdminSongs(long page, long size, String keyword, Integer status) {
+        LambdaQueryWrapper<Song> wrapper = new LambdaQueryWrapper<Song>()
+                .eq(status != null, Song::getStatus, status)
+                .like(StringUtils.hasText(keyword), Song::getTitle, keyword)
+                .orderByDesc(Song::getUpdatedAt)
+                .orderByDesc(Song::getId);
+        Page<Song> songPage = page(new Page<>(page, size), wrapper);
+        return toSongPageResult(songPage);
+    }
+
+    @Override
+    public SongResponse createSong(SongUpsertRequest request) {
+        validateSongRelations(request.artistId(), request.albumId());
+        Song song = new Song();
+        applySongRequest(song, request);
+        song.setPlayCount(0L);
+        song.setStatus(request.status() == null ? STATUS_PUBLISHED : request.status());
+        save(song);
+        return toSongResponses(List.of(getById(song.getId()))).get(0);
+    }
+
+    @Override
+    public SongResponse updateSong(Long id, SongUpsertRequest request) {
+        Song song = getExistingSong(id);
+        validateSongRelations(request.artistId(), request.albumId());
+        applySongRequest(song, request);
+        song.setStatus(request.status() == null ? song.getStatus() : request.status());
+        updateById(song);
+        return toSongResponses(List.of(getById(id))).get(0);
+    }
+
+    @Override
+    public SongResponse updateSongStatus(Long id, SongStatusRequest request) {
+        Song song = getExistingSong(id);
+        song.setStatus(request.status());
+        updateById(song);
+        return toSongResponses(List.of(getById(id))).get(0);
+    }
+
     private LambdaQueryWrapper<Song> basePublishedWrapper() {
         return new LambdaQueryWrapper<Song>().eq(Song::getStatus, STATUS_PUBLISHED);
+    }
+
+    private Song getExistingSong(Long id) {
+        Song song = getById(id);
+        if (song == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "歌曲不存在", HttpStatus.NOT_FOUND);
+        }
+        return song;
+    }
+
+    private void validateSongRelations(Long artistId, Long albumId) {
+        Artist artist = artistService.getById(artistId);
+        if (artist == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "歌手不存在", HttpStatus.NOT_FOUND);
+        }
+        if (albumId == null) {
+            return;
+        }
+        Album album = albumService.getById(albumId);
+        if (album == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "专辑不存在", HttpStatus.NOT_FOUND);
+        }
+        if (!Objects.equals(album.getArtistId(), artistId)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "专辑不属于该歌手", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void applySongRequest(Song song, SongUpsertRequest request) {
+        song.setTitle(request.title());
+        song.setArtistId(request.artistId());
+        song.setAlbumId(request.albumId());
+        song.setCoverUrl(request.coverUrl());
+        song.setAudioUrl(request.audioUrl());
+        song.setLyricUrl(request.lyricUrl());
+        song.setDurationSeconds(request.durationSeconds() == null ? 0 : request.durationSeconds());
+        song.setLanguage(request.language());
+        song.setGenre(request.genre());
+        song.setMood(request.mood());
     }
 
     private PageResult<SongResponse> toSongPageResult(Page<Song> page) {
