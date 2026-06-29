@@ -36,7 +36,7 @@
         <div class="now-meta">
           {{ player.errorMessage || player.currentSong?.artistName || "Orange Music" }}
         </div>
-        <div class="mini-progress" aria-hidden="true">
+        <div class="mini-progress" aria-label="播放进度" role="slider" tabindex="0" @click="seek">
           <span :style="{ width: `${player.progressPercent}%` }" />
         </div>
       </div>
@@ -129,6 +129,16 @@ function onTimeUpdate() {
 
 function onAudioError() {
   player.setError("音频加载失败，请检查媒体文件或代理配置");
+}
+
+function seek(event: MouseEvent) {
+  const audio = audioRef.value;
+  const target = event.currentTarget as HTMLElement;
+  if (!audio || !player.duration) return;
+  const rect = target.getBoundingClientRect();
+  const percent = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  audio.currentTime = player.duration * percent;
+  player.setTime(audio.currentTime, player.duration);
 }
 
 function setVolume(event: Event) {

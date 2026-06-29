@@ -1,17 +1,32 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { Song } from "@/api/types";
 import { songApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 
+const PLAYER_SONG_KEY = "music-web-player-song";
+const PLAYER_QUEUE_KEY = "music-web-player-queue";
+const PLAYER_VOLUME_KEY = "music-web-player-volume";
+
+function readJson<T>(key: string, fallback: T): T {
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 export const usePlayerStore = defineStore("player", () => {
-  const currentSong = ref<Song | null>(null);
-  const queue = ref<Song[]>([]);
+  const currentSong = ref<Song | null>(readJson<Song | null>(PLAYER_SONG_KEY, null));
+  const queue = ref<Song[]>(readJson<Song[]>(PLAYER_QUEUE_KEY, []));
   const isPlaying = ref(false);
   const isLoading = ref(false);
   const currentTime = ref(0);
   const duration = ref(0);
-  const volume = ref(0.8);
+  const volume = ref(Number(localStorage.getItem(PLAYER_VOLUME_KEY) ?? "0.8"));
   const errorMessage = ref("");
   const recordedSongIds = ref<Set<number>>(new Set());
 
@@ -24,6 +39,8 @@ export const usePlayerStore = defineStore("player", () => {
     currentSong.value = song;
     queue.value = songs.length ? songs : [song];
     isPlaying.value = true;
+    currentTime.value = 0;
+    duration.value = 0;
     errorMessage.value = "";
   }
 
@@ -78,6 +95,30 @@ export const usePlayerStore = defineStore("player", () => {
       // The global HTTP interceptor already handles user feedback.
     }
   }
+
+  watch(
+    currentSong,
+    (song) => {
+      if (song) {
+        localStorage.setItem(PLAYER_SONG_KEY, JSON.stringify(song));
+      } else {
+        localStorage.removeItem(PLAYER_SONG_KEY);
+      }
+    },
+    { deep: true }
+  );
+
+  watch(
+    queue,
+    (songs) => {
+      localStorage.setItem(PLAYER_QUEUE_KEY, JSON.stringify(songs));
+    },
+    { deep: true }
+  );
+
+  watch(volume, (nextVolume) => {
+    localStorage.setItem(PLAYER_VOLUME_KEY, String(nextVolume));
+  });
 
   return {
     currentSong,

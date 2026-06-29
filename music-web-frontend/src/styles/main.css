@@ -707,6 +707,7 @@ button {
   border-radius: 999px;
   background: #d9d9dd;
   margin-top: 5px;
+  cursor: pointer;
 }
 
 .mini-progress span {
