@@ -1115,13 +1115,16 @@ button {
   bottom: calc(100% + 12px);
   display: grid;
   width: min(380px, calc(100vw - 40px));
+  height: min(520px, calc(100vh - 150px));
   max-height: min(520px, calc(100vh - 150px));
   overflow: hidden;
+  z-index: 30;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
   box-shadow: 0 22px 54px rgba(15, 15, 18, 0.16);
-  backdrop-filter: blur(24px) saturate(165%);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overscroll-behavior: contain;
 }
 
 .play-queue-head {
@@ -1196,8 +1199,26 @@ button {
 
 .play-queue-list {
   display: grid;
-  overflow: auto;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 2px 8px 8px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.play-queue-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.play-queue-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #d7d7dc;
+}
+
+.play-queue-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .play-queue-item {
