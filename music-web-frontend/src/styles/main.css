@@ -59,6 +59,9 @@ button {
 .app-shell.immersive-shell {
   display: block;
   padding-bottom: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -199,9 +202,11 @@ button {
 }
 
 .main.immersive-main {
-  min-height: 100vh;
-  overflow: visible;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 .page-title {
@@ -660,6 +665,7 @@ a.song-artist:focus-visible {
   border: 0;
   border-radius: 0;
   background: transparent;
+  grid-template-rows: 1fr;
 }
 
 .lyric-head {
@@ -1121,7 +1127,9 @@ a.song-artist:focus-visible {
 .player-page {
   position: relative;
   display: grid;
-  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   background: linear-gradient(135deg, var(--player-bg-start), var(--player-bg-end));
@@ -1204,6 +1212,7 @@ a.song-artist:focus-visible {
   z-index: 1;
   display: grid;
   min-height: 0;
+  overflow: hidden;
   align-items: center;
   gap: clamp(32px, 7vw, 108px);
   padding: 12px clamp(28px, 9vw, 150px) 24px;
@@ -1342,7 +1351,12 @@ a.song-artist:focus-visible {
 }
 
 .player-lyrics-panel .lyric-panel {
-  height: min(64vh, 620px);
+  height: min(68vh, 640px);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  grid-template-rows: 1fr;
 }
 
 .player-lyrics-panel .lyric-head {
@@ -1363,14 +1377,21 @@ a.song-artist:focus-visible {
 }
 
 .player-lyrics-panel .lyric-scroll {
-  height: calc(min(64vh, 620px) - 78px);
+  height: 100%;
   padding: 80px 24px;
   mask-image: linear-gradient(180deg, transparent, #000000 18%, #000000 78%, transparent);
+  background: transparent;
+  scrollbar-width: none;
+}
+
+.player-lyrics-panel .lyric-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .player-lyrics-panel .lyric-line {
   margin-bottom: 21px;
-  color: rgba(255, 255, 255, 0.36);
+  color: rgba(255, 255, 255, 0.34);
   font-size: 27px;
   font-weight: 680;
   line-height: 1.54;
@@ -1379,13 +1400,13 @@ a.song-artist:focus-visible {
 }
 
 .player-lyrics-panel .lyric-line.past {
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.48);
 }
 
 .player-lyrics-panel .lyric-line.active {
-  color: var(--player-theme);
-  font-size: 34px;
-  text-shadow: 0 0 28px var(--player-theme-soft), 0 10px 28px rgba(0, 0, 0, 0.32);
+  color: #ffffff;
+  font-size: 35px;
+  text-shadow: 0 0 30px var(--player-theme), 0 8px 26px rgba(0, 0, 0, 0.58);
 }
 
 .player-lyrics-panel .lyric-line.seekable:hover,

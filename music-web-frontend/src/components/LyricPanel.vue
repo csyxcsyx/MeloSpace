@@ -1,6 +1,6 @@
 <template>
   <section class="lyric-panel" :class="{ 'lyric-panel-full': fullscreen }" aria-label="歌词">
-    <div class="lyric-head">
+    <div v-if="!fullscreen" class="lyric-head">
       <div>
         <p class="feature-label">歌词</p>
         <h2>{{ song?.title || "未选择歌曲" }}</h2>
@@ -188,8 +188,13 @@ async function resumeFollowing() {
 }
 
 function scrollToLine(index: number, behavior: ScrollBehavior) {
+  const container = scrollRef.value;
+  const line = lineRefs.value[index];
+  if (!container || !line) return;
+
   autoScrolling.value = true;
-  lineRefs.value[index]?.scrollIntoView({ block: "center", behavior });
+  const nextTop = line.offsetTop - container.clientHeight / 2 + line.clientHeight / 2;
+  container.scrollTo({ top: Math.max(0, nextTop), behavior });
   if (autoScrollTimer) clearTimeout(autoScrollTimer);
   autoScrollTimer = setTimeout(() => {
     autoScrolling.value = false;
