@@ -1,5 +1,6 @@
 <template>
   <section>
+    <PageToolbar />
     <h1 class="page-title">搜索</h1>
 
     <form class="search-page-form" @submit.prevent="submit">
@@ -48,6 +49,7 @@ import { useRoute, useRouter } from "vue-router";
 import { searchApi } from "@/api";
 import type { SearchResponse, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import PageToolbar from "@/components/PageToolbar.vue";
 import PlaylistSection from "@/components/PlaylistSection.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import { usePlayerStore } from "@/stores/player";

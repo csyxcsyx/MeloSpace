@@ -27,10 +27,21 @@
     </div>
 
     <div class="now-playing" :class="{ empty: !player.currentSong }">
-      <div class="now-cover">
+      <button
+        class="now-cover now-cover-actionable"
+        type="button"
+        :disabled="!player.currentSong"
+        aria-label="进入全屏歌词"
+        title="进入全屏歌词"
+        @click="openPlayer"
+      >
         <img v-if="player.currentSong?.coverUrl" :src="resolveMediaUrl(player.currentSong.coverUrl)" alt="" />
         <Music v-else :size="18" />
-      </div>
+        <span class="now-cover-lyric" aria-hidden="true">
+          <Maximize2 :size="15" />
+          <span>歌词</span>
+        </span>
+      </button>
       <div class="now-text">
         <div class="now-title">{{ player.currentSong?.title || "选择一首歌开始播放" }}</div>
         <div class="now-meta">

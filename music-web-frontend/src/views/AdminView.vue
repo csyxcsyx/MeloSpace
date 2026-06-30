@@ -1,5 +1,6 @@
 <template>
   <section>
+    <PageToolbar />
     <h1 class="page-title">后台管理</h1>
 
     <section class="metrics">
@@ -136,6 +137,7 @@ import { onMounted, reactive, ref } from "vue";
 import { adminApi, albumApi, artistApi } from "@/api";
 import type { Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import PageToolbar from "@/components/PageToolbar.vue";
 import { useUiStore } from "@/stores/ui";
 
 const ui = useUiStore();

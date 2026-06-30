@@ -50,9 +50,8 @@ button {
 }
 
 .app-shell {
-  display: grid;
+  display: block;
   min-height: 100vh;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   padding-bottom: 110px;
 }
 
@@ -65,10 +64,15 @@ button {
 }
 
 .sidebar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9;
   display: flex;
+  width: var(--sidebar-width);
   height: 100vh;
+  height: 100dvh;
   flex-direction: column;
   border-right: 1px solid var(--soft-line);
   background: var(--side-bg);
@@ -197,7 +201,8 @@ button {
 
 .main {
   min-width: 0;
-  overflow: hidden;
+  margin-left: var(--sidebar-width);
+  overflow: visible;
   padding: 20px 48px 36px;
 }
 
@@ -205,8 +210,41 @@ button {
   height: 100dvh;
   max-height: 100dvh;
   min-height: 0;
+  margin-left: 0;
   padding: 0;
   overflow: hidden;
+}
+
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.page-toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg);
+  color: #3b3b3f;
+  font-size: 13px;
+  font-weight: 740;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(15, 15, 18, 0.08);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.page-toolbar-action:hover,
+.page-toolbar-action:focus-visible {
+  background: var(--glass-strong);
+  color: var(--brand);
+  outline: 0;
 }
 
 .page-title {
@@ -411,7 +449,7 @@ button {
   align-items: center;
   min-height: 64px;
   border-bottom: 1px solid var(--line);
-  grid-template-columns: 48px minmax(0, 1fr) 28px;
+  grid-template-columns: max-content minmax(0, 1fr) 28px;
   gap: 12px;
   border-radius: 10px;
   padding: 6px 8px 6px 6px;
@@ -448,7 +486,12 @@ button {
   position: relative;
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  min-height: 48px;
+  max-height: 48px;
   aspect-ratio: 1;
+  flex: 0 0 48px;
   border-radius: var(--radius-media);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
@@ -571,6 +614,14 @@ button {
   background: var(--brand);
   color: #ffffff;
   font-weight: 760;
+  white-space: nowrap;
+}
+
+.search-page-form button,
+.inline-form button,
+.comment-form button {
+  flex: 0 0 auto;
+  min-width: 76px;
 }
 
 .secondary-action {
@@ -1010,6 +1061,38 @@ button {
   box-shadow: 0 10px 22px rgba(15, 15, 18, 0.14);
 }
 
+.now-cover-actionable {
+  position: relative;
+}
+
+.now-cover-actionable:disabled {
+  cursor: default;
+}
+
+.now-cover-lyric {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.42);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 760;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.now-cover-actionable:not(:disabled):hover .now-cover-lyric,
+.now-cover-actionable:not(:disabled):focus-visible .now-cover-lyric {
+  opacity: 1;
+}
+
+.now-cover-actionable:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
 .now-text {
   min-width: 0;
   flex: 1;
@@ -1089,8 +1172,14 @@ button {
   place-items: center;
 }
 
-.login-card {
+.login-stack {
+  display: grid;
   width: min(440px, 100%);
+  gap: 14px;
+}
+
+.login-card {
+  width: 100%;
   padding: 32px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
@@ -1535,6 +1624,7 @@ button {
 
   .sidebar {
     position: static;
+    width: auto;
     height: auto;
   }
 
@@ -1554,6 +1644,7 @@ button {
   }
 
   .main {
+    margin-left: 0;
     padding: 20px 18px 36px;
   }
 

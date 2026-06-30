@@ -1,5 +1,6 @@
 <template>
   <section>
+    <PageToolbar />
     <EmptyState v-if="loading">正在加载歌曲...</EmptyState>
     <template v-else-if="song">
       <section class="playback-detail">
@@ -63,6 +64,7 @@ import { commentApi, favoriteApi, playlistApi, songApi, userApi } from "@/api";
 import type { CommentItem, Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import LyricPanel from "@/components/LyricPanel.vue";
+import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
 import { useUiStore } from "@/stores/ui";

@@ -1,33 +1,37 @@
 <template>
   <section class="login-view">
-    <form class="login-card" @submit.prevent="submit">
-      <h1>{{ mode === "login" ? "登录 MeloSpace" : "注册 MeloSpace" }}</h1>
-      <p>使用后端初始化账号或新注册账号进入音乐网站。</p>
-      <label>
-        用户名
-        <input v-model.trim="username" autocomplete="username" required />
-      </label>
-      <label>
-        密码
-        <input v-model="password" autocomplete="current-password" type="password" required minlength="8" />
-      </label>
-      <label v-if="mode === 'register'">
-        昵称
-        <input v-model.trim="nickname" autocomplete="nickname" />
-      </label>
-      <button class="primary-action" type="submit" :disabled="submitting">
-        {{ submitting ? "提交中..." : mode === "login" ? "登录" : "注册" }}
-      </button>
-      <button class="link-button" type="button" @click="toggleMode">
-        {{ mode === "login" ? "没有账号？去注册" : "已有账号？去登录" }}
-      </button>
-    </form>
+    <div class="login-stack">
+      <PageToolbar />
+      <form class="login-card" @submit.prevent="submit">
+        <h1>{{ mode === "login" ? "登录 MeloSpace" : "注册 MeloSpace" }}</h1>
+        <p>使用后端初始化账号或新注册账号进入音乐网站。</p>
+        <label>
+          用户名
+          <input v-model.trim="username" autocomplete="username" required />
+        </label>
+        <label>
+          密码
+          <input v-model="password" autocomplete="current-password" type="password" required minlength="8" />
+        </label>
+        <label v-if="mode === 'register'">
+          昵称
+          <input v-model.trim="nickname" autocomplete="nickname" />
+        </label>
+        <button class="primary-action" type="submit" :disabled="submitting">
+          {{ submitting ? "提交中..." : mode === "login" ? "登录" : "注册" }}
+        </button>
+        <button class="link-button" type="button" @click="toggleMode">
+          {{ mode === "login" ? "没有账号？去注册" : "已有账号？去登录" }}
+        </button>
+      </form>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();

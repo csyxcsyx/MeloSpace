@@ -1,5 +1,6 @@
 <template>
   <section>
+    <PageToolbar />
     <EmptyState v-if="loading">正在加载歌单...</EmptyState>
     <template v-else-if="playlist">
       <section class="detail-hero">
@@ -43,6 +44,7 @@ import { useRoute, useRouter } from "vue-router";
 import { favoriteApi, playlistApi } from "@/api";
 import type { PlaylistDetail, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import PageToolbar from "@/components/PageToolbar.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import { usePlayerStore } from "@/stores/player";
 import { useUiStore } from "@/stores/ui";
