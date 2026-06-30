@@ -42,6 +42,7 @@ export const songApi = {
 };
 
 export const artistApi = {
+  detail: (id: number) => unwrap<Artist>(http.get(`/api/artists/${id}`)),
   list: (params: { page?: number; size?: number; keyword?: string } = {}) =>
     unwrap<Artist[]>(http.get("/api/artists", { params }))
 };
