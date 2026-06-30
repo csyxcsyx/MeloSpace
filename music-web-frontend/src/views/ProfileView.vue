@@ -26,7 +26,10 @@
           <span class="chevron">›</span>
         </div>
         <div class="profile-list">
-          <p v-for="favorite in favorites" :key="favorite.id">{{ favorite.targetType }} #{{ favorite.targetId }}</p>
+          <RouterLink v-for="favorite in favorites" :key="favorite.id" :to="favoritePath(favorite)">
+            <strong>{{ favoriteTitle(favorite) }}</strong>
+            <span>{{ favoriteSubtitle(favorite) }}</span>
+          </RouterLink>
           <p v-if="!favorites.length" class="muted-line">还没有收藏内容。</p>
         </div>
       </div>
@@ -50,14 +53,23 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { playlistApi, userApi } from "@/api";
-import type { FavoriteItem, PlayHistoryItem, Playlist } from "@/api/types";
+import { playlistApi, songApi, userApi } from "@/api";
+import type { FavoriteItem, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import { useUiStore } from "@/stores/ui";
+
+interface FavoriteDisplayItem extends FavoriteItem {
+  song?: Song | null;
+  playlist?: Playlist | null;
+}
+
+interface RecentDisplayItem extends PlayHistoryItem {
+  song?: Song | null;
+}
 
 const ui = useUiStore();
 const playlists = ref<Playlist[]>([]);
-const favorites = ref<FavoriteItem[]>([]);
-const recent = ref<PlayHistoryItem[]>([]);
+const favorites = ref<FavoriteDisplayItem[]>([]);
+const recent = ref<RecentDisplayItem[]>([]);
 const playlistTitle = ref("");
 
 onMounted(loadProfile);
@@ -69,8 +81,66 @@ async function loadProfile() {
     userApi.recentPlays(1, 20)
   ]);
   playlists.value = playlistPage.items;
-  favorites.value = favoritePage.items;
-  recent.value = recentPage.items;
+  favorites.value = await hydrateFavorites(favoritePage.items);
+  recent.value = await hydrateRecentPlays(recentPage.items);
+}
+
+async function hydrateFavorites(items: FavoriteItem[]): Promise<FavoriteDisplayItem[]> {
+  return Promise.all(
+    items.map(async (favorite) => {
+      if (favorite.targetType === "SONG" && !favorite.song) {
+        try {
+          return { ...favorite, song: await songApi.detail(favorite.targetId) };
+        } catch {
+          return favorite;
+        }
+      }
+      if (favorite.targetType === "PLAYLIST" && !favorite.playlist) {
+        try {
+          return { ...favorite, playlist: await playlistApi.detail(favorite.targetId) };
+        } catch {
+          return favorite;
+        }
+      }
+      return favorite;
+    })
+  );
+}
+
+async function hydrateRecentPlays(items: PlayHistoryItem[]): Promise<RecentDisplayItem[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      if (item.song) {
+        return item;
+      }
+      try {
+        return { ...item, song: await songApi.detail(item.songId) };
+      } catch {
+        return item;
+      }
+    })
+  );
+}
+
+function favoritePath(favorite: FavoriteDisplayItem) {
+  if (favorite.targetType === "PLAYLIST") {
+    return `/playlists/${favorite.playlist?.id || favorite.targetId}`;
+  }
+  return `/songs/${favorite.song?.id || favorite.targetId}`;
+}
+
+function favoriteTitle(favorite: FavoriteDisplayItem) {
+  if (favorite.targetType === "PLAYLIST") {
+    return favorite.playlist?.title || `歌单 #${favorite.targetId}`;
+  }
+  return favorite.song?.title || `歌曲 #${favorite.targetId}`;
+}
+
+function favoriteSubtitle(favorite: FavoriteDisplayItem) {
+  if (favorite.targetType === "PLAYLIST") {
+    return favorite.playlist ? `${favorite.playlist.songCount} 首` : "歌单";
+  }
+  return favorite.song?.artistName || "歌曲";
 }
 
 async function createPlaylist() {

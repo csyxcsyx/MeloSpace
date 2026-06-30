@@ -115,6 +115,8 @@ export interface FavoriteItem {
   targetType: "SONG" | "PLAYLIST";
   targetId: number;
   createdAt: string;
+  song?: Song | null;
+  playlist?: Playlist | null;
 }
 
 export interface PlayHistoryItem {
