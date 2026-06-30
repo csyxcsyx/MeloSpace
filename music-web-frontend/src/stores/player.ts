@@ -4,6 +4,8 @@ import type { Song } from "@/api/types";
 import { songApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 
+export const PLAYER_PLAY_REQUEST_EVENT = "music-web-player-play-request";
+
 const PLAYER_SONG_KEY = "music-web-player-song";
 const PLAYER_QUEUE_KEY = "music-web-player-queue";
 const PLAYER_VOLUME_KEY = "music-web-player-volume";
@@ -45,6 +47,7 @@ export const usePlayerStore = defineStore("player", () => {
     currentTime.value = 0;
     duration.value = 0;
     errorMessage.value = "";
+    dispatchPlayRequest(song, 0, true);
   }
 
   function setPlaying(value: boolean) {
@@ -75,6 +78,7 @@ export const usePlayerStore = defineStore("player", () => {
     seekTarget.value = Math.max(0, time);
     seekShouldPlay.value = shouldPlay;
     seekRequestId.value += 1;
+    dispatchPlayRequest(currentSong.value, seekTarget.value, shouldPlay);
   }
 
   function next() {
@@ -103,6 +107,17 @@ export const usePlayerStore = defineStore("player", () => {
     } catch {
       // The global HTTP interceptor already handles user feedback.
     }
+  }
+
+  function dispatchPlayRequest(song: Song | null, time: number, shouldPlay: boolean) {
+    if (!song || typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent(PLAYER_PLAY_REQUEST_EVENT, {
+      detail: {
+        song,
+        time,
+        shouldPlay
+      }
+    }));
   }
 
   watch(

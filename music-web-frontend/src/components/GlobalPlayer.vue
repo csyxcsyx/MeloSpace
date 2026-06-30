@@ -70,10 +70,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Maximize2, Music, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-vue-next";
 import { usePlayerStore } from "@/stores/player";
+import type { Song } from "@/api/types";
+import { PLAYER_PLAY_REQUEST_EVENT } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
 withDefaults(defineProps<{ hidden?: boolean }>(), {
@@ -85,14 +87,26 @@ const player = usePlayerStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
 
+interface PlayRequestDetail {
+  song: Song;
+  time?: number;
+  shouldPlay?: boolean;
+}
+
 watch(
   () => player.currentSong?.id,
   async () => {
     await nextTick();
-    if (player.isPlaying) {
+    const audio = audioRef.value;
+    if (!audio) return;
+    if (audio.getAttribute("src") !== audioSrc.value) {
+      audio.load();
+    }
+    if (player.isPlaying && audio.paused) {
       playAudio();
     }
-  }
+  },
+  { flush: "post" }
 );
 
 watch(
@@ -103,7 +117,8 @@ watch(
     } else {
       audioRef.value?.pause();
     }
-  }
+  },
+  { flush: "post" }
 );
 
 watch(
@@ -130,6 +145,14 @@ watch(
   }
 );
 
+onMounted(() => {
+  window.addEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+});
+
 function playAudio() {
   const audio = audioRef.value;
   if (!audio || !audioSrc.value) {
@@ -143,7 +166,12 @@ function playAudio() {
 
 function togglePlay() {
   if (!player.currentSong) return;
-  player.setPlaying(!player.isPlaying);
+  if (player.isPlaying) {
+    player.setPlaying(false);
+    return;
+  }
+  player.setPlaying(true);
+  playAudio();
 }
 
 function onLoadedMetadata() {
@@ -175,6 +203,30 @@ function seek(event: MouseEvent) {
 function setVolume(event: Event) {
   const input = event.target as HTMLInputElement;
   player.setVolume(Number(input.value));
+}
+
+function handlePlayRequest(event: Event) {
+  const audio = audioRef.value;
+  const detail = (event as CustomEvent<PlayRequestDetail>).detail;
+  const song = detail?.song;
+  if (!audio || !song) return;
+
+  const nextSrc = resolveMediaUrl(song.audioUrl);
+  if (!nextSrc) return;
+  if (audio.getAttribute("src") !== nextSrc) {
+    audio.src = nextSrc;
+    audio.setAttribute("src", nextSrc);
+    audio.load();
+  }
+  if (typeof detail.time === "number" && Number.isFinite(detail.time)) {
+    audio.currentTime = Math.max(0, detail.time);
+    player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
+  }
+  if (detail.shouldPlay !== false) {
+    audio.play().catch(() => {
+      player.setError("浏览器阻止了自动播放，请再次点击播放");
+    });
+  }
 }
 
 function openPlayer() {

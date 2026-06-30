@@ -126,7 +126,12 @@ function goBack() {
 
 function togglePlay() {
   if (!player.currentSong) return;
-  player.setPlaying(!player.isPlaying);
+  if (player.isPlaying) {
+    player.setPlaying(false);
+    return;
+  }
+  player.setPlaying(true);
+  player.seekTo(player.currentTime, true);
 }
 
 function seekLyric(time: number) {
