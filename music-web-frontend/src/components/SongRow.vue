@@ -41,6 +41,8 @@
     </button>
     <div v-if="menuOpen" class="song-row-menu" role="menu" @click.stop>
       <button type="button" role="menuitem" @click="favoriteSong">收藏</button>
+      <button type="button" role="menuitem" @click="addToPlayQueue">添加到播放列表</button>
+      <button type="button" role="menuitem" @click="playSongNext">下一首播放</button>
       <button type="button" role="menuitem" @click="togglePlaylistPicker">添加到歌单</button>
       <button type="button" role="menuitem" @click="downloadSong">下载音乐</button>
 
@@ -64,6 +66,7 @@ import { MoreHorizontal, Music, Pause, Play } from "lucide-vue-next";
 import { favoriteApi, playlistApi, userApi } from "@/api";
 import type { Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
+import { usePlayerStore } from "@/stores/player";
 import { useUiStore } from "@/stores/ui";
 import { displayName, resolveMediaUrl } from "@/utils/format";
 
@@ -80,6 +83,7 @@ defineEmits<{
 }>();
 
 const auth = useAuthStore();
+const player = usePlayerStore();
 const route = useRoute();
 const router = useRouter();
 const ui = useUiStore();
@@ -132,6 +136,18 @@ async function favoriteSong() {
   if (!requireLogin()) return;
   await favoriteApi.add("SONG", props.song.id);
   ui.toast("已收藏歌曲");
+  closeMenu();
+}
+
+function addToPlayQueue() {
+  player.addToQueue(props.song);
+  ui.toast("已添加到播放列表");
+  closeMenu();
+}
+
+function playSongNext() {
+  void player.playNext(props.song);
+  ui.toast("已设为下一首播放");
   closeMenu();
 }
 

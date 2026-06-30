@@ -5,10 +5,12 @@ import { songApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 
 export const PLAYER_PLAY_REQUEST_EVENT = "melospace-player-play-request";
+export type PlayMode = "order" | "shuffle" | "repeat-one";
 
 const PLAYER_SONG_KEY = "melospace-player-song";
 const PLAYER_QUEUE_KEY = "melospace-player-queue";
 const PLAYER_VOLUME_KEY = "melospace-player-volume";
+const PLAYER_MODE_KEY = "melospace-player-mode";
 const LEGACY_PLAYER_SONG_KEY = "music-web-player-song";
 const LEGACY_PLAYER_QUEUE_KEY = "music-web-player-queue";
 const LEGACY_PLAYER_VOLUME_KEY = "music-web-player-volume";
@@ -46,9 +48,15 @@ function readVolume() {
   return Number.isFinite(volume) ? volume : 0.8;
 }
 
+function readPlayMode(): PlayMode {
+  const mode = localStorage.getItem(PLAYER_MODE_KEY);
+  return mode === "shuffle" || mode === "repeat-one" || mode === "order" ? mode : "order";
+}
+
 export const usePlayerStore = defineStore("player", () => {
   const currentSong = ref<Song | null>(readJson<Song | null>(PLAYER_SONG_KEY, LEGACY_PLAYER_SONG_KEY, null));
   const queue = ref<Song[]>(readJson<Song[]>(PLAYER_QUEUE_KEY, LEGACY_PLAYER_QUEUE_KEY, []));
+  const playMode = ref<PlayMode>(readPlayMode());
   const isPlaying = ref(false);
   const isLoading = ref(false);
   const currentTime = ref(0);
@@ -63,6 +71,12 @@ export const usePlayerStore = defineStore("player", () => {
   const progressPercent = computed(() => {
     if (!duration.value) return 0;
     return Math.min(100, Math.max(0, (currentTime.value / duration.value) * 100));
+  });
+
+  const playModeLabel = computed(() => {
+    if (playMode.value === "shuffle") return "随机播放";
+    if (playMode.value === "repeat-one") return "单曲循环";
+    return "顺序播放";
   });
 
   function playSong(song: Song, songs: Song[] = []) {
@@ -105,6 +119,20 @@ export const usePlayerStore = defineStore("player", () => {
     volume.value = Math.min(1, Math.max(0, nextVolume));
   }
 
+  function setPlayMode(mode: PlayMode) {
+    playMode.value = mode;
+  }
+
+  function cyclePlayMode() {
+    if (playMode.value === "order") {
+      setPlayMode("shuffle");
+    } else if (playMode.value === "shuffle") {
+      setPlayMode("repeat-one");
+    } else {
+      setPlayMode("order");
+    }
+  }
+
   function setError(message: string) {
     errorMessage.value = message;
     isPlaying.value = false;
@@ -126,6 +154,14 @@ export const usePlayerStore = defineStore("player", () => {
 
   function getNextSong(wrap = true) {
     if (!currentSong.value || queue.value.length === 0) return null;
+    if (playMode.value === "repeat-one") return currentSong.value;
+    if (playMode.value === "shuffle") {
+      const candidates = queue.value.filter((song) => song.id !== currentSong.value?.id);
+      if (candidates.length) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+      return wrap ? currentSong.value : null;
+    }
     const index = queue.value.findIndex((song) => song.id === currentSong.value?.id);
     if (index === -1) return queue.value[0] ?? null;
     const nextIndex = index + 1;
@@ -146,6 +182,74 @@ export const usePlayerStore = defineStore("player", () => {
     const index = queue.value.findIndex((song) => song.id === currentSong.value?.id);
     const nextSong = queue.value[(index - 1 + queue.value.length) % queue.value.length];
     return playSong(nextSong, queue.value);
+  }
+
+  function addToQueue(song: Song) {
+    ensureCurrentSongInQueue();
+    if (!queue.value.some((item) => item.id === song.id)) {
+      queue.value = [...queue.value, song];
+    }
+    if (!currentSong.value) {
+      currentSong.value = song;
+    }
+  }
+
+  function playNext(song: Song) {
+    if (!currentSong.value) {
+      return playSong(song, [song]);
+    }
+    if (currentSong.value.id === song.id) {
+      ensureCurrentSongInQueue();
+      return Promise.resolve(false);
+    }
+
+    ensureCurrentSongInQueue();
+    const currentIndex = queue.value.findIndex((item) => item.id === currentSong.value?.id);
+    const queueWithoutSong = queue.value.filter((item) => item.id !== song.id);
+    if (currentIndex === -1) {
+      queue.value = [currentSong.value, song, ...queueWithoutSong];
+      return Promise.resolve(false);
+    }
+    const insertIndex = queueWithoutSong.findIndex((item) => item.id === currentSong.value?.id) + 1;
+    queue.value = [
+      ...queueWithoutSong.slice(0, insertIndex),
+      song,
+      ...queueWithoutSong.slice(insertIndex)
+    ];
+    return Promise.resolve(false);
+  }
+
+  function ensureCurrentSongInQueue() {
+    if (currentSong.value && !queue.value.some((song) => song.id === currentSong.value?.id)) {
+      queue.value = [currentSong.value, ...queue.value];
+    }
+  }
+
+  function removeFromQueue(songId: number) {
+    const removingCurrent = currentSong.value?.id === songId;
+    const nextQueue = queue.value.filter((song) => song.id !== songId);
+    queue.value = nextQueue;
+
+    if (!removingCurrent) return;
+    const nextSong = nextQueue[0] ?? null;
+    if (nextSong) {
+      void playSong(nextSong, nextQueue);
+      return;
+    }
+    currentSong.value = null;
+    isPlaying.value = false;
+    currentTime.value = 0;
+    duration.value = 0;
+    errorMessage.value = "";
+  }
+
+  function clearQueue() {
+    queue.value = [];
+    currentSong.value = null;
+    isPlaying.value = false;
+    currentTime.value = 0;
+    duration.value = 0;
+    errorMessage.value = "";
   }
 
   async function maybeRecordPlay() {
@@ -210,9 +314,15 @@ export const usePlayerStore = defineStore("player", () => {
     localStorage.setItem(PLAYER_VOLUME_KEY, String(nextVolume));
   });
 
+  watch(playMode, (mode) => {
+    localStorage.setItem(PLAYER_MODE_KEY, mode);
+  });
+
   return {
     currentSong,
     queue,
+    playMode,
+    playModeLabel,
     isPlaying,
     isLoading,
     currentTime,
@@ -229,11 +339,17 @@ export const usePlayerStore = defineStore("player", () => {
     setLoading,
     setTime,
     setVolume,
+    setPlayMode,
+    cyclePlayMode,
     setError,
     seekTo,
     resumeCurrent,
     getNextSong,
     next,
-    previous
+    previous,
+    addToQueue,
+    playNext,
+    removeFromQueue,
+    clearQueue
   };
 });
