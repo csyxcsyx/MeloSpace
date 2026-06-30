@@ -1,7 +1,7 @@
 <template>
   <section class="login-view">
     <form class="login-card" @submit.prevent="submit">
-      <h1>{{ mode === "login" ? "登录 Orange Music" : "注册 Orange Music" }}</h1>
+      <h1>{{ mode === "login" ? "登录 MeloSpace" : "注册 MeloSpace" }}</h1>
       <p>使用后端初始化账号或新注册账号进入音乐网站。</p>
       <label>
         用户名

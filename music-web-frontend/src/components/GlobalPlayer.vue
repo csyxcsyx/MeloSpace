@@ -34,7 +34,7 @@
       <div class="now-text">
         <div class="now-title">{{ player.currentSong?.title || "选择一首歌开始播放" }}</div>
         <div class="now-meta">
-          {{ player.errorMessage || player.currentSong?.artistName || "Orange Music" }}
+          {{ player.errorMessage || player.currentSong?.artistName || "MeloSpace" }}
         </div>
         <div class="mini-progress" aria-label="播放进度" role="slider" tabindex="0" @click="seek">
           <span :style="{ width: `${player.progressPercent}%` }" />

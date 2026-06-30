@@ -12,7 +12,7 @@
             <p class="feature-label">歌曲</p>
             <h1 class="page-title">{{ song.title }}</h1>
             <p>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未知专辑" }}</p>
-            <p class="muted-line">{{ song.genre || "Pop" }} · {{ song.mood || "Orange Music" }} · {{ formatDuration(song.durationSeconds) }}</p>
+            <p class="muted-line">{{ song.genre || "Pop" }} · {{ song.mood || "MeloSpace" }} · {{ formatDuration(song.durationSeconds) }}</p>
             <div class="detail-actions">
               <button type="button" class="primary-action" @click="play">播放</button>
               <button type="button" class="secondary-action" @click="favorite">收藏</button>

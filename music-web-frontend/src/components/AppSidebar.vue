@@ -1,8 +1,8 @@
 <template>
   <aside class="sidebar">
-    <RouterLink class="brand" to="/discover" aria-label="Orange Music 首页">
+    <RouterLink class="brand" to="/discover" aria-label="MeloSpace 首页">
       <span class="brand-dot">♪</span>
-      <span>Orange Music</span>
+      <span>MeloSpace</span>
     </RouterLink>
 
     <form class="sidebar-search" @submit.prevent="submitSearch">

@@ -12,7 +12,7 @@
 	<artifactId>music-web-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>music-web-backend</name>
-	<description>Music Web backend service</description>
+	<description>MeloSpace backend service</description>
 	<url/>
 	<licenses>
 		<license/>

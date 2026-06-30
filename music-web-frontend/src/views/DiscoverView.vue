@@ -7,12 +7,12 @@
       <FeatureScroller v-if="songs.length || playlists.length">
         <article class="feature-unit">
           <p class="feature-label">推荐歌单</p>
-          <h2 class="feature-title">{{ playlists[0]?.title || "橙音代表作" }}</h2>
-          <p class="feature-subtitle">Orange Music 国语流行</p>
+          <h2 class="feature-title">{{ playlists[0]?.title || "MeloSpace 代表作" }}</h2>
+          <p class="feature-subtitle">MeloSpace 国语流行</p>
           <button class="feature-card feature-card-a" type="button" @click="playFirst">
             <div class="feature-art-text">
               <strong>{{ songs[0]?.title || "代表作" }}</strong>
-              <span>{{ songs[0]?.artistName || "Orange Music" }}</span>
+              <span>{{ songs[0]?.artistName || "MeloSpace" }}</span>
             </div>
             <div class="feature-caption">从项目曲库里挑选适合开场演示的歌曲。</div>
           </button>
@@ -21,7 +21,7 @@
         <article class="feature-unit">
           <p class="feature-label">歌曲已更新</p>
           <h2 class="feature-title">今日热门</h2>
-          <p class="feature-subtitle">Orange Music 热门</p>
+          <p class="feature-subtitle">MeloSpace 热门</p>
           <button class="feature-card feature-card-b" type="button" @click="playSong(songs[1] || songs[0])">
             <div class="feature-art-text">
               <strong>{{ songs[1]?.title || songs[0]?.title || "今日热门" }}</strong>
@@ -34,7 +34,7 @@
         <article class="feature-unit">
           <p class="feature-label">排行榜更新</p>
           <h2 class="feature-title">每周热门 100 首：中国大陆</h2>
-          <p class="feature-subtitle">Orange Music</p>
+          <p class="feature-subtitle">MeloSpace</p>
           <div class="feature-card chart-card">
             <p class="chart-title">每周热门 100 首</p>
             <p class="chart-region">中国大陆</p>

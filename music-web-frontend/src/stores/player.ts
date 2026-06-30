@@ -4,31 +4,56 @@ import type { Song } from "@/api/types";
 import { songApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 
-export const PLAYER_PLAY_REQUEST_EVENT = "music-web-player-play-request";
+export const PLAYER_PLAY_REQUEST_EVENT = "melospace-player-play-request";
 
-const PLAYER_SONG_KEY = "music-web-player-song";
-const PLAYER_QUEUE_KEY = "music-web-player-queue";
-const PLAYER_VOLUME_KEY = "music-web-player-volume";
+const PLAYER_SONG_KEY = "melospace-player-song";
+const PLAYER_QUEUE_KEY = "melospace-player-queue";
+const PLAYER_VOLUME_KEY = "melospace-player-volume";
+const LEGACY_PLAYER_SONG_KEY = "music-web-player-song";
+const LEGACY_PLAYER_QUEUE_KEY = "music-web-player-queue";
+const LEGACY_PLAYER_VOLUME_KEY = "music-web-player-volume";
 
-function readJson<T>(key: string, fallback: T): T {
+function readStoredJson<T>(key: string) {
   const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
+  if (!raw) return { found: false, value: null as T | null };
   try {
-    return JSON.parse(raw) as T;
+    return { found: true, value: JSON.parse(raw) as T };
   } catch {
     localStorage.removeItem(key);
-    return fallback;
+    return { found: false, value: null as T | null };
   }
 }
 
+function readJson<T>(key: string, legacyKey: string, fallback: T): T {
+  const stored = readStoredJson<T>(key);
+  if (stored.found) return stored.value as T;
+
+  const legacy = readStoredJson<T>(legacyKey);
+  if (!legacy.found) return fallback;
+  localStorage.setItem(key, JSON.stringify(legacy.value));
+  localStorage.removeItem(legacyKey);
+  return legacy.value as T;
+}
+
+function readVolume() {
+  const current = localStorage.getItem(PLAYER_VOLUME_KEY);
+  const legacy = localStorage.getItem(LEGACY_PLAYER_VOLUME_KEY);
+  if (!current && legacy) {
+    localStorage.setItem(PLAYER_VOLUME_KEY, legacy);
+    localStorage.removeItem(LEGACY_PLAYER_VOLUME_KEY);
+  }
+  const volume = Number(current ?? legacy ?? "0.8");
+  return Number.isFinite(volume) ? volume : 0.8;
+}
+
 export const usePlayerStore = defineStore("player", () => {
-  const currentSong = ref<Song | null>(readJson<Song | null>(PLAYER_SONG_KEY, null));
-  const queue = ref<Song[]>(readJson<Song[]>(PLAYER_QUEUE_KEY, []));
+  const currentSong = ref<Song | null>(readJson<Song | null>(PLAYER_SONG_KEY, LEGACY_PLAYER_SONG_KEY, null));
+  const queue = ref<Song[]>(readJson<Song[]>(PLAYER_QUEUE_KEY, LEGACY_PLAYER_QUEUE_KEY, []));
   const isPlaying = ref(false);
   const isLoading = ref(false);
   const currentTime = ref(0);
   const duration = ref(0);
-  const volume = ref(Number(localStorage.getItem(PLAYER_VOLUME_KEY) ?? "0.8"));
+  const volume = ref(readVolume());
   const errorMessage = ref("");
   const recordedSongIds = ref<Set<number>>(new Set());
   const seekTarget = ref(0);
