@@ -14,7 +14,12 @@
           <h2>歌曲</h2>
           <span class="chevron">›</span>
         </div>
-        <SongColumnList v-if="result.songs.length" :songs="result.songs" @play="playSong" />
+        <SongColumnList
+          v-if="result.songs.length"
+          :songs="result.songs"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        />
         <EmptyState v-else>没有找到歌曲。</EmptyState>
       </section>
 
@@ -82,5 +87,18 @@ async function search() {
 
 function playSong(song: Song) {
   player.playSong(song, result.value?.songs ?? [song]);
+}
+
+function toggleSongPlayback(song: Song) {
+  if (player.currentSong?.id === song.id) {
+    player.setPlaying(!player.isPlaying);
+    return;
+  }
+  player.playSong(song, result.value?.songs ?? [song]);
+}
+
+function openPlayer(song: Song) {
+  player.playSong(song, result.value?.songs ?? [song]);
+  router.push("/player");
 }
 </script>

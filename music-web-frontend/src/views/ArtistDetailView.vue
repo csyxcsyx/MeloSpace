@@ -38,7 +38,12 @@
           <h2>全部歌曲</h2>
           <span class="chevron">›</span>
         </div>
-        <SongColumnList v-if="songs.length" :songs="songs" @play="playSong" />
+        <SongColumnList
+          v-if="songs.length"
+          :songs="songs"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        />
         <EmptyState v-else>该歌手暂无已上架歌曲。</EmptyState>
       </section>
     </template>
@@ -94,6 +99,19 @@ async function loadArtist() {
 
 function playSong(song: Song) {
   player.playSong(song, songs.value);
+}
+
+function toggleSongPlayback(song: Song) {
+  if (player.currentSong?.id === song.id) {
+    player.setPlaying(!player.isPlaying);
+    return;
+  }
+  player.playSong(song, songs.value);
+}
+
+function openPlayer(song: Song) {
+  player.playSong(song, songs.value);
+  router.push("/player");
 }
 
 function playAll() {

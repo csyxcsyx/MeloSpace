@@ -1,7 +1,16 @@
 <template>
   <div class="song-columns">
     <div v-for="(column, index) in columns" :key="index" class="song-list">
-      <SongRow v-for="song in column" :key="song.id" :song="song" @play="$emit('play', $event)" @more="$emit('more', $event)" />
+      <SongRow
+        v-for="song in column"
+        :key="song.id"
+        :song="song"
+        :is-current="player.currentSong?.id === song.id"
+        :is-playing="player.isPlaying"
+        @toggle-play="$emit('togglePlay', $event)"
+        @open-player="$emit('openPlayer', $event)"
+        @more="$emit('more', $event)"
+      />
     </div>
   </div>
 </template>
@@ -10,6 +19,7 @@
 import { computed } from "vue";
 import type { Song } from "@/api/types";
 import SongRow from "@/components/SongRow.vue";
+import { usePlayerStore } from "@/stores/player";
 
 const props = defineProps<{
   songs: Song[];
@@ -17,9 +27,12 @@ const props = defineProps<{
 }>();
 
 defineEmits<{
-  play: [song: Song];
+  togglePlay: [song: Song];
+  openPlayer: [song: Song];
   more: [song: Song];
 }>();
+
+const player = usePlayerStore();
 
 const columns = computed(() => {
   const count = props.columnCount ?? 4;

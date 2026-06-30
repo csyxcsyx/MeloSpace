@@ -24,7 +24,12 @@
           <h2>歌曲</h2>
           <span class="chevron">›</span>
         </div>
-        <SongColumnList v-if="songs.length" :songs="songs" @play="playSong" />
+        <SongColumnList
+          v-if="songs.length"
+          :songs="songs"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        />
         <EmptyState v-else>歌单还没有歌曲。</EmptyState>
       </section>
     </template>
@@ -34,7 +39,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { favoriteApi, playlistApi } from "@/api";
 import type { PlaylistDetail, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
@@ -44,6 +49,7 @@ import { useUiStore } from "@/stores/ui";
 import { resolveMediaUrl } from "@/utils/format";
 
 const route = useRoute();
+const router = useRouter();
 const player = usePlayerStore();
 const ui = useUiStore();
 const loading = ref(true);
@@ -63,6 +69,19 @@ async function loadPlaylist() {
 
 function playSong(song: Song) {
   player.playSong(song, songs.value);
+}
+
+function toggleSongPlayback(song: Song) {
+  if (player.currentSong?.id === song.id) {
+    player.setPlaying(!player.isPlaying);
+    return;
+  }
+  player.playSong(song, songs.value);
+}
+
+function openPlayer(song: Song) {
+  player.playSong(song, songs.value);
+  router.push("/player");
 }
 
 function playAll() {

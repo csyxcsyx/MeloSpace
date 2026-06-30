@@ -51,7 +51,12 @@
           <h2>2026 上半年歌曲收藏榜</h2>
           <span class="chevron">›</span>
         </div>
-        <SongColumnList v-if="songs.length" :songs="songs" @play="playSong" />
+        <SongColumnList
+          v-if="songs.length"
+          :songs="songs"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        />
         <EmptyState v-else>还没有可展示的歌曲。</EmptyState>
       </section>
 
@@ -70,6 +75,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { playlistApi, songApi, userApi } from "@/api";
 import type { Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
@@ -81,6 +87,7 @@ import { usePlayerStore } from "@/stores/player";
 
 const auth = useAuthStore();
 const player = usePlayerStore();
+const router = useRouter();
 const loading = ref(true);
 const songs = ref<Song[]>([]);
 const playlists = ref<Playlist[]>([]);
@@ -113,5 +120,18 @@ function playFirst() {
 function playSong(song?: Song) {
   if (!song) return;
   player.playSong(song, songs.value);
+}
+
+function toggleSongPlayback(song: Song) {
+  if (player.currentSong?.id === song.id) {
+    player.setPlaying(!player.isPlaying);
+    return;
+  }
+  player.playSong(song, songs.value);
+}
+
+function openPlayer(song: Song) {
+  player.playSong(song, songs.value);
+  router.push("/player");
 }
 </script>
