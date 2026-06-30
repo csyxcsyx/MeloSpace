@@ -35,7 +35,7 @@
 | POST | `/api/comments` | 发布评论，需要登录。 |
 | DELETE | `/api/comments/{id}` | 删除自己的评论。 |
 | POST | `/api/songs/{id}/play-record` | 记录播放，需要登录，并递增歌曲播放量。 |
-| GET | `/api/users/me/recent-plays?page=&size=` | 当前用户最近播放记录。 |
+| GET | `/api/users/me/recent-plays?page=&size=` | 当前用户最近播放记录；返回项包含 `song` 摘要，便于前端展示歌曲名、歌手和封面。 |
 
 ### 搜索接口
 
