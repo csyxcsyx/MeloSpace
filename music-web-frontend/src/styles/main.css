@@ -409,12 +409,12 @@ button {
 .song-row {
   display: grid;
   align-items: center;
-  min-height: 60px;
+  min-height: 64px;
   border-bottom: 1px solid var(--line);
-  grid-template-columns: 42px minmax(0, 1fr) 28px;
+  grid-template-columns: 48px minmax(0, 1fr) 28px;
   gap: 12px;
   border-radius: 10px;
-  padding: 4px 6px 4px 0;
+  padding: 6px 8px 6px 6px;
   cursor: default;
   transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
@@ -446,15 +446,17 @@ button {
 
 .song-cover {
   position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-media);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .song-cover img,
 .album-cover img,
 .now-cover img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;

@@ -15,10 +15,6 @@
         <Grid2X2 :size="18" />
         新发现
       </RouterLink>
-      <RouterLink class="nav-link" :to="{ path: '/search', query: keyword ? { keyword } : undefined }">
-        <Search :size="18" />
-        搜索
-      </RouterLink>
       <RouterLink class="nav-link" to="/me">
         <Library :size="18" />
         我的音乐
