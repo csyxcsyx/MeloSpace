@@ -25,16 +25,7 @@
     </button>
     <div class="song-info">
       <div class="song-name">{{ song.title }}</div>
-      <RouterLink
-        v-if="song.artistId"
-        class="song-artist"
-        :to="`/artists/${song.artistId}`"
-        @click.stop
-        @dblclick.stop
-      >
-        {{ displayName(song.artistName, "未知歌手") }}
-      </RouterLink>
-      <div v-else class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
+      <div class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
     </div>
     <button class="more" type="button" aria-label="更多操作" @click.stop="$emit('more', song)" @dblclick.stop>
       <MoreHorizontal :size="18" />

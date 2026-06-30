@@ -486,12 +486,6 @@ button {
   line-height: 1.2;
 }
 
-a.song-artist:hover,
-a.song-artist:focus-visible {
-  color: var(--brand);
-  outline: 0;
-}
-
 .song-cover-action {
   position: absolute;
   inset: 0;
@@ -535,19 +529,6 @@ a.song-artist:focus-visible {
   background: var(--glass-bg);
   box-shadow: 0 16px 34px rgba(15, 15, 18, 0.08);
   backdrop-filter: blur(18px) saturate(150%);
-}
-
-.page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.compact-action {
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 13px;
 }
 
 .muted-line {
@@ -1195,16 +1176,6 @@ a.song-artist:focus-visible {
 .round-icon-button:hover {
   background: rgba(255, 255, 255, 0.24);
   transform: translateY(-1px);
-}
-
-.player-artist-link {
-  overflow: hidden;
-  max-width: 280px;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 14px;
-  font-weight: 720;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .player-stage {

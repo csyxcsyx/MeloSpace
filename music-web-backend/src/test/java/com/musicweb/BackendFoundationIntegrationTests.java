@@ -120,14 +120,6 @@ class BackendFoundationIntegrationTests {
         assertThat(artists.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(artists.getBody().get("data").get(0).get("name").asText()).isEqualTo("周杰伦");
 
-        ResponseEntity<JsonNode> artistDetail = restTemplate.getForEntity(url("/api/artists/1"), JsonNode.class);
-        assertThat(artistDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(artistDetail.getBody().get("data").get("name").asText()).isEqualTo("周杰伦");
-
-        ResponseEntity<JsonNode> missingArtist = restTemplate.getForEntity(url("/api/artists/9999"), JsonNode.class);
-        assertThat(missingArtist.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(missingArtist.getBody().get("code").asInt()).isEqualTo(404);
-
         ResponseEntity<JsonNode> albums = restTemplate.getForEntity(url("/api/albums?artistId=1"), JsonNode.class);
         assertThat(albums.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(albums.getBody().get("data").get(0).get("title").asText()).isEqualTo("太阳之子");

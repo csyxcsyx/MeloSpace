@@ -15,13 +15,6 @@
           <span>首页</span>
         </RouterLink>
       </div>
-      <RouterLink
-        v-if="player.currentSong?.artistId"
-        class="player-artist-link"
-        :to="`/artists/${player.currentSong.artistId}`"
-      >
-        {{ player.currentSong.artistName || "查看歌手" }}
-      </RouterLink>
     </header>
 
     <EmptyState v-if="!player.currentSong" class="player-empty">

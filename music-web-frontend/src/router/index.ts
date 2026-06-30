@@ -7,7 +7,6 @@ import ProfileView from "@/views/ProfileView.vue";
 import AdminView from "@/views/AdminView.vue";
 import LoginView from "@/views/LoginView.vue";
 import PlayerView from "@/views/PlayerView.vue";
-import ArtistDetailView from "@/views/ArtistDetailView.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const router = createRouter({
@@ -17,7 +16,6 @@ const router = createRouter({
     { path: "/discover", name: "discover", component: DiscoverView },
     { path: "/search", name: "search", component: SearchView },
     { path: "/songs/:id", name: "song-detail", component: SongDetailView, props: true },
-    { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true },
     { path: "/playlists/:id", name: "playlist-detail", component: PlaylistDetailView, props: true },
     { path: "/me", name: "profile", component: ProfileView, meta: { requiresAuth: true } },
     { path: "/admin", name: "admin", component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
