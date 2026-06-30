@@ -2,7 +2,6 @@
   <footer class="player" :class="{ 'player-hidden': hidden }" :aria-hidden="hidden" aria-label="全局播放器">
     <audio
       ref="audioRef"
-      :src="audioSrc"
       :volume="player.volume"
       preload="metadata"
       @loadedmetadata="onLoadedMetadata"
@@ -81,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Maximize2, Music, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-vue-next";
 import { usePlayerStore } from "@/stores/player";
@@ -108,22 +107,6 @@ interface PlayRequestDetail {
 }
 
 watch(
-  () => player.currentSong?.id,
-  async () => {
-    await nextTick();
-    const audio = audioRef.value;
-    if (!audio) return;
-    if (audio.getAttribute("src") !== audioSrc.value) {
-      audio.load();
-    }
-    if (player.isPlaying && audio.paused) {
-      playAudio();
-    }
-  },
-  { flush: "post" }
-);
-
-watch(
   () => player.isPlaying,
   (isPlaying) => {
     if (isPlaying) {
@@ -145,10 +128,10 @@ watch(
 
 watch(
   () => player.seekRequestId,
-  async () => {
-    await nextTick();
+  () => {
     const audio = audioRef.value;
     if (!audio || !audioSrc.value) return;
+    prepareCurrentAudioSource();
     const nextTime = Math.min(player.seekTarget, Number.isFinite(audio.duration) ? audio.duration : player.seekTarget);
     audio.currentTime = nextTime;
     player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
@@ -173,6 +156,7 @@ function playAudio() {
     player.setPlaying(false);
     return Promise.resolve(false);
   }
+  prepareCurrentAudioSource();
   if (activePlayRequest) return activePlayRequest;
   if (!audio.paused) {
     player.setPlaying(true);
@@ -187,7 +171,13 @@ function playAudio() {
       player.setLoading(false);
       return true;
     })
-    .catch((error: unknown) => {
+    .catch(async (error: unknown) => {
+      if (isAbortError(error) && token === playRequestToken) {
+        const ready = await waitForPlayable(audio, token);
+        if (ready) {
+          return retryPlay(audio, token);
+        }
+      }
       if (token === playRequestToken) {
         player.setError(playbackErrorMessage(error));
       }
@@ -245,12 +235,9 @@ async function handleEnded() {
   }
 
   player.replaceCurrentSong(nextSong, player.queue);
-  await nextTick();
 
-  audio.src = nextSrc;
-  audio.setAttribute("src", nextSrc);
+  setAudioSource(audio, nextSrc);
   audio.currentTime = 0;
-  audio.load();
   player.setLoading(true);
 
   audio.play()
@@ -286,14 +273,7 @@ function handlePlayRequest(event: Event) {
 
   const nextSrc = resolveMediaUrl(song.audioUrl);
   if (!nextSrc) return;
-  if (audio.getAttribute("src") !== nextSrc) {
-    playRequestToken += 1;
-    activePlayRequest = null;
-    audio.pause();
-    audio.src = nextSrc;
-    audio.setAttribute("src", nextSrc);
-    audio.load();
-  }
+  setAudioSource(audio, nextSrc);
   if (typeof detail.time === "number" && Number.isFinite(detail.time)) {
     audio.currentTime = Math.max(0, detail.time);
     player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
@@ -311,10 +291,76 @@ function playbackErrorMessage(error: unknown) {
       return "浏览器阻止了自动播放，请点击播放";
     }
     if (error.name === "AbortError") {
-      return "音频正在准备，请再次点击播放";
+      return "音频播放失败，请再次点击播放";
     }
   }
   return "音频播放失败，请再次点击播放";
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function waitForPlayable(audio: HTMLAudioElement, token: number) {
+  if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return Promise.resolve(token === playRequestToken);
+  }
+
+  return new Promise<boolean>((resolve) => {
+    const cleanup = () => {
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("loadeddata", handleCanPlay);
+      audio.removeEventListener("error", handleError);
+      window.clearTimeout(timeoutId);
+    };
+    const handleCanPlay = () => {
+      cleanup();
+      resolve(token === playRequestToken);
+    };
+    const handleError = () => {
+      cleanup();
+      resolve(false);
+    };
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      resolve(token === playRequestToken && audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
+    }, 1200);
+
+    audio.addEventListener("canplay", handleCanPlay, { once: true });
+    audio.addEventListener("loadeddata", handleCanPlay, { once: true });
+    audio.addEventListener("error", handleError, { once: true });
+  });
+}
+
+async function retryPlay(audio: HTMLAudioElement, token: number) {
+  try {
+    await audio.play();
+    if (token === playRequestToken) {
+      player.setPlaying(true);
+      player.setLoading(false);
+    }
+    return true;
+  } catch (error) {
+    if (token === playRequestToken) {
+      player.setError(playbackErrorMessage(error));
+    }
+    return false;
+  }
+}
+
+function prepareCurrentAudioSource() {
+  const audio = audioRef.value;
+  if (!audio || !audioSrc.value) return;
+  setAudioSource(audio, audioSrc.value);
+}
+
+function setAudioSource(audio: HTMLAudioElement, src: string) {
+  if (audio.currentSrc === src || audio.getAttribute("src") === src) return;
+  playRequestToken += 1;
+  activePlayRequest = null;
+  audio.pause();
+  audio.src = src;
+  audio.setAttribute("src", src);
 }
 
 function openPlayer() {
