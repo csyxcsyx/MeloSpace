@@ -75,6 +75,15 @@ export const usePlayerStore = defineStore("player", () => {
     dispatchPlayRequest(song, 0, true);
   }
 
+  function replaceCurrentSong(song: Song, songs: Song[] = queue.value) {
+    currentSong.value = song;
+    queue.value = songs.length ? songs : [song];
+    isPlaying.value = false;
+    currentTime.value = 0;
+    duration.value = 0;
+    errorMessage.value = "";
+  }
+
   function setPlaying(value: boolean) {
     isPlaying.value = value;
   }
@@ -106,10 +115,20 @@ export const usePlayerStore = defineStore("player", () => {
     dispatchPlayRequest(currentSong.value, seekTarget.value, shouldPlay);
   }
 
-  function next() {
-    if (!currentSong.value || queue.value.length === 0) return;
+  function getNextSong(wrap = true) {
+    if (!currentSong.value || queue.value.length === 0) return null;
     const index = queue.value.findIndex((song) => song.id === currentSong.value?.id);
-    const nextSong = queue.value[(index + 1 + queue.value.length) % queue.value.length];
+    if (index === -1) return queue.value[0] ?? null;
+    const nextIndex = index + 1;
+    if (nextIndex >= queue.value.length) {
+      return wrap ? queue.value[0] : null;
+    }
+    return queue.value[nextIndex];
+  }
+
+  function next() {
+    const nextSong = getNextSong(true);
+    if (!nextSong) return;
     playSong(nextSong, queue.value);
   }
 
@@ -183,12 +202,14 @@ export const usePlayerStore = defineStore("player", () => {
     seekShouldPlay,
     progressPercent,
     playSong,
+    replaceCurrentSong,
     setPlaying,
     setLoading,
     setTime,
     setVolume,
     setError,
     seekTo,
+    getNextSong,
     next,
     previous
   };

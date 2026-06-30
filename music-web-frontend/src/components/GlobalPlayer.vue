@@ -7,7 +7,7 @@
       preload="metadata"
       @loadedmetadata="onLoadedMetadata"
       @timeupdate="onTimeUpdate"
-      @ended="player.next"
+      @ended="handleEnded"
       @waiting="player.setLoading(true)"
       @canplay="player.setLoading(false)"
       @error="onAudioError"
@@ -199,6 +199,41 @@ function onTimeUpdate() {
 
 function onAudioError() {
   player.setError("音频加载失败，请检查媒体文件或代理配置");
+}
+
+async function handleEnded() {
+  const audio = audioRef.value;
+  const nextSong = player.getNextSong(false);
+  if (!audio || !nextSong) {
+    player.setTime(player.duration, player.duration);
+    player.setPlaying(false);
+    player.setLoading(false);
+    return;
+  }
+
+  const nextSrc = resolveMediaUrl(nextSong.audioUrl);
+  if (!nextSrc) {
+    player.setError("下一首音频地址无效");
+    return;
+  }
+
+  player.replaceCurrentSong(nextSong, player.queue);
+  await nextTick();
+
+  audio.src = nextSrc;
+  audio.setAttribute("src", nextSrc);
+  audio.currentTime = 0;
+  audio.load();
+  player.setLoading(true);
+
+  audio.play()
+    .then(() => {
+      player.setPlaying(true);
+      player.setLoading(false);
+    })
+    .catch(() => {
+      player.setError("浏览器阻止了自动播放，请再次点击播放");
+    });
 }
 
 function seek(event: MouseEvent) {
