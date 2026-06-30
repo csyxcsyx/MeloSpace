@@ -8,6 +8,7 @@ public record PlayHistoryResponse(
         Long songId,
         Integer progressSeconds,
         String sourceType,
-        LocalDateTime playedAt
+        LocalDateTime playedAt,
+        SongResponse song
 ) {
 }

@@ -37,7 +37,10 @@
           <span class="chevron">›</span>
         </div>
         <div class="profile-list">
-          <p v-for="item in recent" :key="item.id">歌曲 #{{ item.songId }} · {{ item.sourceType || "FRONTEND" }}</p>
+          <RouterLink v-for="item in recent" :key="item.id" :to="`/songs/${item.song?.id || item.songId}`">
+            <strong>{{ item.song?.title || `歌曲 #${item.songId}` }}</strong>
+            <span>{{ item.song?.artistName || item.sourceType || "MeloSpace" }}</span>
+          </RouterLink>
           <p v-if="!recent.length" class="muted-line">暂无最近播放。</p>
         </div>
       </div>

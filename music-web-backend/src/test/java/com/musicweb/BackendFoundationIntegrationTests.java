@@ -627,7 +627,10 @@ class BackendFoundationIntegrationTests {
         );
         assertThat(recentPlays.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(recentPlays.getBody().get("data").get("total").asLong()).isEqualTo(1);
-        assertThat(recentPlays.getBody().get("data").get("items").get(0).get("songId").asLong()).isEqualTo(1);
+        JsonNode recentPlay = recentPlays.getBody().get("data").get("items").get(0);
+        assertThat(recentPlay.get("songId").asLong()).isEqualTo(1);
+        assertThat(recentPlay.get("song").get("title").asText()).isEqualTo("I Do");
+        assertThat(recentPlay.get("song").get("artistName").asText()).isEqualTo("周杰伦");
 
         long playCountAfter = restTemplate
                 .getForEntity(url("/api/songs/1"), JsonNode.class)

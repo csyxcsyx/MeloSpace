@@ -62,12 +62,17 @@
 
       <PlaylistSection v-if="playlists.length" title="新歌单精选" :playlists="playlists" />
 
-      <section v-if="recentSongIds.length" class="compact-panel">
+      <section v-if="recentPlays.length" class="compact-panel">
         <div class="section-head">
           <h2>最近播放</h2>
           <span class="chevron">›</span>
         </div>
-        <p class="muted-line">最近播放记录已同步：{{ recentSongIds.join("、") }}</p>
+        <div class="recent-play-list">
+          <p v-for="item in recentPlays" :key="item.id">
+            <span>{{ item.song?.title || `歌曲 #${item.songId}` }}</span>
+            <small>{{ item.song?.artistName || item.sourceType || "MeloSpace" }}</small>
+          </p>
+        </div>
       </section>
     </template>
   </section>
@@ -77,7 +82,7 @@
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { playlistApi, songApi, userApi } from "@/api";
-import type { Playlist, Song } from "@/api/types";
+import type { PlayHistoryItem, Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import FeatureScroller from "@/components/FeatureScroller.vue";
 import PlaylistSection from "@/components/PlaylistSection.vue";
@@ -91,7 +96,7 @@ const router = useRouter();
 const loading = ref(true);
 const songs = ref<Song[]>([]);
 const playlists = ref<Playlist[]>([]);
-const recentSongIds = ref<number[]>([]);
+const recentPlays = ref<PlayHistoryItem[]>([]);
 
 onMounted(loadDiscover);
 
@@ -106,7 +111,7 @@ async function loadDiscover() {
     playlists.value = playlistPage.items;
     if (auth.isAuthenticated) {
       const recent = await userApi.recentPlays(1, 8);
-      recentSongIds.value = recent.items.map((item) => item.songId);
+      recentPlays.value = recent.items;
     }
   } finally {
     loading.value = false;

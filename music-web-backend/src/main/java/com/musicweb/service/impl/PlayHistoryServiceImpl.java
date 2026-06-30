@@ -6,14 +6,22 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.musicweb.common.ErrorCode;
 import com.musicweb.common.PageResult;
 import com.musicweb.dto.PlayRecordRequest;
+import com.musicweb.entity.Album;
+import com.musicweb.entity.Artist;
 import com.musicweb.entity.PlayHistory;
 import com.musicweb.entity.Song;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.mapper.PlayHistoryMapper;
+import com.musicweb.service.AlbumService;
+import com.musicweb.service.ArtistService;
 import com.musicweb.service.PlayHistoryService;
 import com.musicweb.service.SongService;
+import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.PlayHistoryResponse;
+import com.musicweb.vo.SongResponse;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,9 +33,13 @@ public class PlayHistoryServiceImpl extends ServiceImpl<PlayHistoryMapper, PlayH
     private static final int STATUS_PUBLISHED = 1;
 
     private final SongService songService;
+    private final ArtistService artistService;
+    private final AlbumService albumService;
 
-    public PlayHistoryServiceImpl(SongService songService) {
+    public PlayHistoryServiceImpl(SongService songService, ArtistService artistService, AlbumService albumService) {
         this.songService = songService;
+        this.artistService = artistService;
+        this.albumService = albumService;
     }
 
     @Override
@@ -76,7 +88,33 @@ public class PlayHistoryServiceImpl extends ServiceImpl<PlayHistoryMapper, PlayH
                 playHistory.getSongId(),
                 playHistory.getProgressSeconds(),
                 playHistory.getSourceType(),
-                playHistory.getPlayedAt()
+                playHistory.getPlayedAt(),
+                toSongResponse(playHistory.getSongId())
         );
+    }
+
+    private SongResponse toSongResponse(Long songId) {
+        Song song = songService.getById(songId);
+        if (song == null) {
+            return null;
+        }
+
+        Map<Long, Artist> artistsById = new HashMap<>();
+        if (song.getArtistId() != null) {
+            Artist artist = artistService.getById(song.getArtistId());
+            if (artist != null) {
+                artistsById.put(artist.getId(), artist);
+            }
+        }
+
+        Map<Long, Album> albumsById = new HashMap<>();
+        if (song.getAlbumId() != null) {
+            Album album = albumService.getById(song.getAlbumId());
+            if (album != null) {
+                albumsById.put(album.getId(), album);
+            }
+        }
+
+        return MusicResponseAssembler.toSongResponse(song, artistsById, albumsById);
     }
 }

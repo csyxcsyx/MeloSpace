@@ -124,6 +124,7 @@ export interface PlayHistoryItem {
   progressSeconds: number | null;
   sourceType: string | null;
   playedAt: string;
+  song?: Song | null;
 }
 
 export interface UploadFile {

@@ -883,7 +883,51 @@ button {
   border-bottom: 1px solid var(--soft-line);
 }
 
+.profile-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-list strong {
+  overflow: hidden;
+  color: #353538;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .profile-list span {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.recent-play-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recent-play-list p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.recent-play-list span {
+  overflow: hidden;
+  color: #353538;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-play-list small {
+  flex: 0 0 auto;
   color: var(--muted);
 }
 
