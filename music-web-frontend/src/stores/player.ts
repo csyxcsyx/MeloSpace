@@ -68,7 +68,7 @@ export const usePlayerStore = defineStore("player", () => {
   function playSong(song: Song, songs: Song[] = []) {
     currentSong.value = song;
     queue.value = songs.length ? songs : [song];
-    isPlaying.value = true;
+    isPlaying.value = false;
     currentTime.value = 0;
     duration.value = 0;
     errorMessage.value = "";

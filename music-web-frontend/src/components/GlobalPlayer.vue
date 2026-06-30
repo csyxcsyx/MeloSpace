@@ -96,6 +96,7 @@ withDefaults(defineProps<{ hidden?: boolean }>(), {
 const router = useRouter();
 const player = usePlayerStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
+const playInFlight = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
 
 interface PlayRequestDetail {
@@ -170,9 +171,24 @@ function playAudio() {
     player.setPlaying(false);
     return;
   }
-  audio.play().catch(() => {
-    player.setError("浏览器阻止了自动播放，请再次点击播放");
-  });
+  if (playInFlight.value) return;
+  if (!audio.paused) {
+    player.setPlaying(true);
+    return;
+  }
+
+  playInFlight.value = true;
+  audio.play()
+    .then(() => {
+      player.setPlaying(true);
+      player.setLoading(false);
+    })
+    .catch(() => {
+      player.setError("浏览器阻止了自动播放，请再次点击播放");
+    })
+    .finally(() => {
+      playInFlight.value = false;
+    });
 }
 
 function togglePlay() {
@@ -269,9 +285,7 @@ function handlePlayRequest(event: Event) {
     player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
   }
   if (detail.shouldPlay !== false) {
-    audio.play().catch(() => {
-      player.setError("浏览器阻止了自动播放，请再次点击播放");
-    });
+    playAudio();
   }
 }
 
