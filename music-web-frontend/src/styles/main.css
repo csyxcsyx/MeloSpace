@@ -8,8 +8,13 @@
   --soft-line: #ececf0;
   --brand: #fa233b;
   --brand-soft: #fff0f2;
-  --player-bg: rgba(255, 255, 255, 0.88);
-  --shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  --player-bg: rgba(255, 255, 255, 0.76);
+  --glass-bg: rgba(255, 255, 255, 0.66);
+  --glass-strong: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.62);
+  --radius-card: 18px;
+  --radius-media: 14px;
+  --shadow: 0 18px 46px rgba(15, 15, 18, 0.14);
   --sidebar-width: 250px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
 }
@@ -48,7 +53,7 @@ button {
   display: grid;
   min-height: 100vh;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  padding-bottom: 82px;
+  padding-bottom: 110px;
 }
 
 .app-shell.immersive-shell {
@@ -274,10 +279,12 @@ button {
   overflow: hidden;
   width: 100%;
   height: 320px;
-  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
   background: #d8d8dc;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   text-align: left;
+  backdrop-filter: blur(18px) saturate(150%);
 }
 
 .feature-card::after {
@@ -353,7 +360,7 @@ button {
   display: grid;
   overflow: hidden;
   height: 150px;
-  border-radius: 2px;
+  border-radius: 12px;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: repeat(4, 1fr);
 }
@@ -436,7 +443,7 @@ button {
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 5px;
+  border-radius: 10px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -518,8 +525,24 @@ a.song-artist:focus-visible {
 .result-panel {
   margin-bottom: 24px;
   padding: 16px;
-  border: 1px solid var(--soft-line);
-  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: 0 16px 34px rgba(15, 15, 18, 0.08);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.compact-action {
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 13px;
 }
 
 .muted-line {
@@ -596,10 +619,11 @@ a.song-artist:focus-visible {
   aspect-ratio: 1;
   place-items: center;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: linear-gradient(135deg, #f1f1f3, #dcdce1);
   color: var(--muted);
   font-size: 48px;
+  box-shadow: var(--shadow);
 }
 
 .detail-cover img {
@@ -623,10 +647,11 @@ a.song-artist:focus-visible {
   height: 420px;
   min-height: 360px;
   overflow: hidden;
-  border: 1px solid var(--soft-line);
-  border-radius: 10px;
-  background: #fbfbfc;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
   grid-template-rows: auto 1fr;
+  backdrop-filter: blur(18px) saturate(150%);
 }
 
 .lyric-panel-full {
@@ -771,8 +796,11 @@ a.song-artist:focus-visible {
 
 .metric {
   padding: 14px;
-  border: 1px solid var(--soft-line);
-  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: 0 16px 34px rgba(15, 15, 18, 0.08);
+  backdrop-filter: blur(18px) saturate(150%);
 }
 
 .metric strong {
@@ -879,7 +907,8 @@ a.song-artist:focus-visible {
 .album-cover {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 6px;
+  border-radius: var(--radius-media);
+  box-shadow: 0 12px 28px rgba(15, 15, 18, 0.12);
 }
 
 .album-title {
@@ -904,21 +933,21 @@ a.song-artist:focus-visible {
 .player {
   position: fixed;
   right: 50%;
-  bottom: 18px;
+  bottom: 20px;
   z-index: 10;
   display: grid;
-  width: min(680px, calc(100vw - 36px));
-  min-height: 56px;
+  width: min(900px, calc(100vw - 40px));
+  min-height: 78px;
   transform: translateX(50%);
   align-items: center;
-  grid-template-columns: auto 1fr auto;
-  gap: 18px;
-  padding: 7px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 999px;
+  grid-template-columns: auto minmax(260px, 1fr) auto;
+  gap: 22px;
+  padding: 12px 20px;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
   background: var(--player-bg);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(22px);
+  backdrop-filter: blur(26px) saturate(170%);
 }
 
 .player-hidden {
@@ -935,19 +964,28 @@ a.song-artist:focus-visible {
 .player-tools {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 15px;
   color: #343437;
 }
 
 .player-controls button {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
   place-items: center;
+  border-radius: 50%;
+}
+
+.player-controls button:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .play-toggle {
-  color: var(--text);
+  width: 44px !important;
+  height: 44px !important;
+  background: var(--text);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(29, 29, 31, 0.18);
 }
 
 .player-tool-button {
@@ -972,14 +1010,15 @@ a.song-artist:focus-visible {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 10px;
+  gap: 13px;
 }
 
 .now-cover {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  border-radius: 5px;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  border-radius: 14px;
+  box-shadow: 0 10px 22px rgba(15, 15, 18, 0.14);
 }
 
 .now-text {
@@ -996,21 +1035,21 @@ a.song-artist:focus-visible {
 
 .now-title {
   color: #3b3b3f;
-  font-size: 13px;
-  font-weight: 660;
+  font-size: 15px;
+  font-weight: 740;
 }
 
 .now-meta {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .mini-progress {
-  height: 2px;
+  height: 4px;
   overflow: hidden;
   border-radius: 999px;
   background: #d9d9dd;
-  margin-top: 5px;
+  margin-top: 8px;
   cursor: pointer;
 }
 
@@ -1030,15 +1069,17 @@ a.song-artist:focus-visible {
   min-height: 180px;
   place-items: center;
   border: 1px dashed var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
   color: var(--muted);
   text-align: center;
+  backdrop-filter: blur(16px) saturate(145%);
 }
 
 .toast-host {
   position: fixed;
   right: 20px;
-  bottom: 92px;
+  bottom: 124px;
   z-index: 20;
   display: grid;
   gap: 8px;
@@ -1047,7 +1088,7 @@ a.song-artist:focus-visible {
 .toast {
   max-width: 320px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 14px;
   background: rgba(29, 29, 31, 0.92);
   color: #ffffff;
   box-shadow: var(--shadow);
@@ -1062,8 +1103,11 @@ a.song-artist:focus-visible {
 .login-card {
   width: min(440px, 100%);
   padding: 32px;
-  border: 1px solid var(--soft-line);
-  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(150%);
 }
 
 .login-card h1 {
