@@ -12,7 +12,7 @@
       @error="onAudioError"
     />
 
-    <section v-if="queueOpen" class="play-queue-panel" aria-label="播放列表">
+    <section v-if="queueOpen" class="play-queue-panel" aria-label="播放列表" @wheel.stop @touchmove.stop>
       <div class="play-queue-head">
         <div>
           <strong>播放列表</strong>
