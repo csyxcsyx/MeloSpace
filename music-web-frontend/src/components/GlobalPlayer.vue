@@ -234,7 +234,7 @@ async function handleEnded() {
     return;
   }
 
-  player.replaceCurrentSong(nextSong, player.queue);
+  player.replaceCurrentSong(nextSong, player.queue, true);
 
   setAudioSource(audio, nextSrc);
   audio.currentTime = 0;
@@ -245,8 +245,8 @@ async function handleEnded() {
       player.setPlaying(true);
       player.setLoading(false);
     })
-    .catch(() => {
-      player.setError("浏览器阻止了自动播放，请再次点击播放");
+    .catch((error: unknown) => {
+      player.setError(playbackErrorMessage(error));
     });
 }
 

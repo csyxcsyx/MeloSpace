@@ -75,10 +75,10 @@ export const usePlayerStore = defineStore("player", () => {
     return dispatchPlayRequest(song, 0, true);
   }
 
-  function replaceCurrentSong(song: Song, songs: Song[] = queue.value) {
+  function replaceCurrentSong(song: Song, songs: Song[] = queue.value, shouldKeepPlaying = false) {
     currentSong.value = song;
     queue.value = songs.length ? songs : [song];
-    isPlaying.value = false;
+    isPlaying.value = shouldKeepPlaying;
     currentTime.value = 0;
     duration.value = 0;
     errorMessage.value = "";
