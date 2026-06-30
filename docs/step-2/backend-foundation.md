@@ -49,4 +49,12 @@ cd music-web-backend
 .\mvnw.cmd test
 ```
 
+本地开发默认连接 Docker MySQL 8.4 容器暴露到宿主机的 `3307` 端口，避免与本机已有 MySQL 的 `3306` 冲突。若使用其他端口，可在启动后端前显式覆盖：
+
+```powershell
+$env:MYSQL_PORT='3307'
+cd music-web-backend
+.\mvnw.cmd spring-boot:run
+```
+
 Docker Desktop 已启动并完成 MySQL 8.4 临时容器验证：`schema.sql` 和 `data.sql` 可成功导入，10 张核心表可创建，默认用户、歌手、专辑和歌曲种子数据可查询。验证后临时容器已删除。
