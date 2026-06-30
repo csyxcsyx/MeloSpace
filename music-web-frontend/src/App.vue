@@ -1,17 +1,22 @@
 <template>
-  <div class="app-shell">
-    <AppSidebar />
-    <main class="main">
+  <div class="app-shell" :class="{ 'immersive-shell': isImmersive }">
+    <AppSidebar v-if="!isImmersive" />
+    <main class="main" :class="{ 'immersive-main': isImmersive }">
       <RouterView />
     </main>
-    <GlobalPlayer />
+    <GlobalPlayer :hidden="isImmersive" />
     <ToastHost />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 import { RouterView } from "vue-router";
 import AppSidebar from "@/components/AppSidebar.vue";
 import GlobalPlayer from "@/components/GlobalPlayer.vue";
 import ToastHost from "@/components/ToastHost.vue";
+
+const route = useRoute();
+const isImmersive = computed(() => route.meta.immersive === true);
 </script>

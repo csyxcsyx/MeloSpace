@@ -20,7 +20,7 @@
           </div>
         </section>
 
-        <LyricPanel :song="song" :current-time="player.currentTime" :is-current-song="isCurrentSong" />
+        <LyricPanel :song="song" :current-time="player.currentTime" :is-current-song="isCurrentSong" @seek="seekLyric" />
       </section>
 
       <section v-if="auth.isAuthenticated" class="compact-panel">
@@ -101,6 +101,14 @@ async function loadSong() {
 function play() {
   if (!song.value) return;
   player.playSong(song.value, [song.value]);
+}
+
+function seekLyric(time: number) {
+  if (!song.value) return;
+  if (!isCurrentSong.value) {
+    player.playSong(song.value, [song.value]);
+  }
+  player.seekTo(time, true);
 }
 
 async function favorite() {

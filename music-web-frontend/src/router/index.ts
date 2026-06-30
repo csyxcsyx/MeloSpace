@@ -6,6 +6,7 @@ import PlaylistDetailView from "@/views/PlaylistDetailView.vue";
 import ProfileView from "@/views/ProfileView.vue";
 import AdminView from "@/views/AdminView.vue";
 import LoginView from "@/views/LoginView.vue";
+import PlayerView from "@/views/PlayerView.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const router = createRouter({
@@ -18,7 +19,8 @@ const router = createRouter({
     { path: "/playlists/:id", name: "playlist-detail", component: PlaylistDetailView, props: true },
     { path: "/me", name: "profile", component: ProfileView, meta: { requiresAuth: true } },
     { path: "/admin", name: "admin", component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: "/login", name: "login", component: LoginView }
+    { path: "/login", name: "login", component: LoginView },
+    { path: "/player", name: "player", component: PlayerView, meta: { immersive: true } }
   ],
   scrollBehavior() {
     return { top: 0 };

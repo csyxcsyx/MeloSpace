@@ -1,5 +1,5 @@
 <template>
-  <footer class="player" aria-label="全局播放器">
+  <footer class="player" :class="{ 'player-hidden': hidden }" :aria-hidden="hidden" aria-label="全局播放器">
     <audio
       ref="audioRef"
       :src="audioSrc"
@@ -43,6 +43,15 @@
     </div>
 
     <div class="player-tools">
+      <button
+        class="player-tool-button"
+        type="button"
+        aria-label="打开全屏歌词"
+        :disabled="!player.currentSong"
+        @click="openPlayer"
+      >
+        <Maximize2 :size="16" />
+      </button>
       <span>{{ formatDuration(player.currentTime) }}</span>
       <Volume2 :size="16" />
       <input
@@ -62,10 +71,16 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { Music, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-vue-next";
+import { useRouter } from "vue-router";
+import { Maximize2, Music, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-vue-next";
 import { usePlayerStore } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
+withDefaults(defineProps<{ hidden?: boolean }>(), {
+  hidden: false
+});
+
+const router = useRouter();
 const player = usePlayerStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
@@ -97,6 +112,22 @@ watch(
     if (audioRef.value) audioRef.value.volume = volume;
   },
   { immediate: true }
+);
+
+watch(
+  () => player.seekRequestId,
+  async () => {
+    await nextTick();
+    const audio = audioRef.value;
+    if (!audio || !audioSrc.value) return;
+    const nextTime = Math.min(player.seekTarget, Number.isFinite(audio.duration) ? audio.duration : player.seekTarget);
+    audio.currentTime = nextTime;
+    player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
+    if (player.seekShouldPlay) {
+      player.setPlaying(true);
+      playAudio();
+    }
+  }
 );
 
 function playAudio() {
@@ -144,5 +175,10 @@ function seek(event: MouseEvent) {
 function setVolume(event: Event) {
   const input = event.target as HTMLInputElement;
   player.setVolume(Number(input.value));
+}
+
+function openPlayer() {
+  if (!player.currentSong) return;
+  router.push("/player");
 }
 </script>

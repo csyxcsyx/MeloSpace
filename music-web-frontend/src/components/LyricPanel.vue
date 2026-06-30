@@ -1,5 +1,5 @@
 <template>
-  <section class="lyric-panel" aria-label="歌词">
+  <section class="lyric-panel" :class="{ 'lyric-panel-full': fullscreen }" aria-label="歌词">
     <div class="lyric-head">
       <div>
         <p class="feature-label">歌词</p>
@@ -8,27 +8,45 @@
       <span class="lyric-clock">{{ isCurrentSong ? formatDuration(currentTime) : "--:--" }}</span>
     </div>
 
-    <div ref="scrollRef" class="lyric-scroll">
+    <div ref="scrollRef" class="lyric-scroll" @scroll="onManualScroll">
       <p v-if="loading" class="lyric-state">正在加载歌词...</p>
       <p v-else-if="errorMessage" class="lyric-state">{{ errorMessage }}</p>
       <p v-else-if="!lines.length" class="lyric-state">暂无歌词。</p>
       <template v-else>
-        <p
+        <button
           v-for="(line, index) in lines"
           :key="`${line.time}-${index}`"
-          :ref="setLineRef"
+          :ref="(element) => setLineRef(element, index)"
+          type="button"
           class="lyric-line"
-          :class="{ active: index === activeIndex, past: isCurrentSong && index < activeIndex }"
+          :class="{ active: index === activeIndex, past: isCurrentSong && index < activeIndex, seekable: Boolean(song) }"
+          @click="selectLine(line)"
         >
           {{ line.text }}
-        </p>
+        </button>
       </template>
+      <button
+        v-if="showFollowButton"
+        class="lyric-follow-button"
+        type="button"
+        @click="resumeFollowing"
+      >
+        回到当前
+      </button>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUpdate, ref, watch, type ComponentPublicInstance } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onBeforeUpdate,
+  ref,
+  watch,
+  type ComponentPublicInstance
+} from "vue";
 import type { Song } from "@/api/types";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
@@ -41,6 +59,11 @@ const props = defineProps<{
   song: Song | null;
   currentTime: number;
   isCurrentSong: boolean;
+  fullscreen?: boolean;
+}>();
+
+const emit = defineEmits<{
+  seek: [time: number];
 }>();
 
 const loading = ref(false);
@@ -48,6 +71,10 @@ const errorMessage = ref("");
 const lines = ref<LyricLine[]>([]);
 const lineRefs = ref<HTMLElement[]>([]);
 const scrollRef = ref<HTMLElement | null>(null);
+const userBrowsing = ref(false);
+const autoScrolling = ref(false);
+let browsingTimer: ReturnType<typeof setTimeout> | null = null;
+let autoScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
 const activeIndex = computed(() => {
@@ -62,17 +89,24 @@ const activeIndex = computed(() => {
   }
   return Math.max(index, 0);
 });
+const showFollowButton = computed(() => userBrowsing.value && props.isCurrentSong && activeIndex.value >= 0);
 
 watch(lyricUrl, loadLyrics, { immediate: true });
 
 watch(activeIndex, async (index) => {
   if (index < 0 || !props.isCurrentSong) return;
+  if (userBrowsing.value) return;
   await nextTick();
-  lineRefs.value[index]?.scrollIntoView({ block: "center", behavior: "smooth" });
+  scrollToLine(index, "smooth");
 });
 
 onBeforeUpdate(() => {
   lineRefs.value = [];
+});
+
+onBeforeUnmount(() => {
+  if (browsingTimer) clearTimeout(browsingTimer);
+  if (autoScrollTimer) clearTimeout(autoScrollTimer);
 });
 
 async function loadLyrics(url: string) {
@@ -125,9 +159,40 @@ function parseLrc(text: string) {
   return parsed.sort((first, second) => first.time - second.time);
 }
 
-function setLineRef(element: Element | ComponentPublicInstance | null) {
+function setLineRef(element: Element | ComponentPublicInstance | null, index: number) {
   if (element instanceof HTMLElement) {
-    lineRefs.value.push(element);
+    lineRefs.value[index] = element;
   }
+}
+
+function selectLine(line: LyricLine) {
+  if (!props.song) return;
+  emit("seek", line.time);
+}
+
+function onManualScroll() {
+  if (autoScrolling.value || !lines.value.length) return;
+  userBrowsing.value = true;
+  if (browsingTimer) clearTimeout(browsingTimer);
+  browsingTimer = setTimeout(() => {
+    userBrowsing.value = false;
+  }, 4200);
+}
+
+async function resumeFollowing() {
+  userBrowsing.value = false;
+  await nextTick();
+  if (activeIndex.value >= 0) {
+    scrollToLine(activeIndex.value, "smooth");
+  }
+}
+
+function scrollToLine(index: number, behavior: ScrollBehavior) {
+  autoScrolling.value = true;
+  lineRefs.value[index]?.scrollIntoView({ block: "center", behavior });
+  if (autoScrollTimer) clearTimeout(autoScrollTimer);
+  autoScrollTimer = setTimeout(() => {
+    autoScrolling.value = false;
+  }, 700);
 }
 </script>

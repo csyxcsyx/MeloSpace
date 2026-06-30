@@ -29,6 +29,9 @@ export const usePlayerStore = defineStore("player", () => {
   const volume = ref(Number(localStorage.getItem(PLAYER_VOLUME_KEY) ?? "0.8"));
   const errorMessage = ref("");
   const recordedSongIds = ref<Set<number>>(new Set());
+  const seekTarget = ref(0);
+  const seekRequestId = ref(0);
+  const seekShouldPlay = ref(true);
 
   const progressPercent = computed(() => {
     if (!duration.value) return 0;
@@ -66,6 +69,12 @@ export const usePlayerStore = defineStore("player", () => {
     errorMessage.value = message;
     isPlaying.value = false;
     isLoading.value = false;
+  }
+
+  function seekTo(time: number, shouldPlay = true) {
+    seekTarget.value = Math.max(0, time);
+    seekShouldPlay.value = shouldPlay;
+    seekRequestId.value += 1;
   }
 
   function next() {
@@ -129,6 +138,9 @@ export const usePlayerStore = defineStore("player", () => {
     duration,
     volume,
     errorMessage,
+    seekTarget,
+    seekRequestId,
+    seekShouldPlay,
     progressPercent,
     playSong,
     setPlaying,
@@ -136,6 +148,7 @@ export const usePlayerStore = defineStore("player", () => {
     setTime,
     setVolume,
     setError,
+    seekTo,
     next,
     previous
   };
