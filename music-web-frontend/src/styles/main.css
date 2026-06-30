@@ -513,11 +513,19 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.playback-detail {
+  display: grid;
+  align-items: stretch;
+  gap: 28px;
+  margin-bottom: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.75fr);
+}
+
 .detail-hero {
   display: grid;
   align-items: end;
   gap: 28px;
-  margin-bottom: 28px;
+  margin-bottom: 0;
   grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
 }
 
@@ -547,6 +555,79 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.lyric-panel {
+  display: grid;
+  height: 420px;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--soft-line);
+  border-radius: 10px;
+  background: #fbfbfc;
+  grid-template-rows: auto 1fr;
+}
+
+.lyric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.lyric-head h2 {
+  overflow: hidden;
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lyric-clock {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lyric-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 86px 28px;
+  scroll-behavior: smooth;
+  mask-image: linear-gradient(180deg, transparent, #000000 16%, #000000 84%, transparent);
+}
+
+.lyric-line {
+  margin: 0 0 18px;
+  color: #a0a0a5;
+  font-size: 17px;
+  font-weight: 560;
+  line-height: 1.65;
+  transition: color 160ms ease, font-size 160ms ease, transform 160ms ease;
+}
+
+.lyric-line.past {
+  color: #6e6e73;
+}
+
+.lyric-line.active {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 780;
+  transform: translateX(2px);
+}
+
+.lyric-state {
+  display: grid;
+  min-height: 160px;
+  margin: 0;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
 }
 
 .comment-form {
@@ -867,6 +948,10 @@ button {
 }
 
 @media (max-width: 1180px) {
+  .playback-detail {
+    grid-template-columns: 1fr;
+  }
+
   .song-columns {
     grid-template-columns: repeat(2, minmax(260px, 1fr));
   }
@@ -928,6 +1013,7 @@ button {
     border-radius: 16px;
   }
 
+  .playback-detail,
   .detail-hero,
   .result-grid,
   .profile-grid,
@@ -938,6 +1024,10 @@ button {
   .metrics,
   .form-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lyric-scroll {
+    max-height: 320px;
   }
 
   .player-controls {
@@ -973,5 +1063,17 @@ button {
   .metrics,
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .lyric-scroll {
+    padding: 72px 22px;
+  }
+
+  .lyric-panel {
+    height: 380px;
+  }
+
+  .lyric-line.active {
+    font-size: 20px;
   }
 }

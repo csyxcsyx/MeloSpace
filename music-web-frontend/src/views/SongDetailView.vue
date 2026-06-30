@@ -2,21 +2,25 @@
   <section>
     <EmptyState v-if="loading">正在加载歌曲...</EmptyState>
     <template v-else-if="song">
-      <section class="detail-hero">
-        <div class="detail-cover">
-          <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
-          <span v-else>♪</span>
-        </div>
-        <div class="detail-copy">
-          <p class="feature-label">歌曲</p>
-          <h1 class="page-title">{{ song.title }}</h1>
-          <p>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未知专辑" }}</p>
-          <p class="muted-line">{{ song.genre || "Pop" }} · {{ song.mood || "Orange Music" }} · {{ formatDuration(song.durationSeconds) }}</p>
-          <div class="detail-actions">
-            <button type="button" class="primary-action" @click="play">播放</button>
-            <button type="button" class="secondary-action" @click="favorite">收藏</button>
+      <section class="playback-detail">
+        <section class="detail-hero">
+          <div class="detail-cover">
+            <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
+            <span v-else>♪</span>
           </div>
-        </div>
+          <div class="detail-copy">
+            <p class="feature-label">歌曲</p>
+            <h1 class="page-title">{{ song.title }}</h1>
+            <p>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未知专辑" }}</p>
+            <p class="muted-line">{{ song.genre || "Pop" }} · {{ song.mood || "Orange Music" }} · {{ formatDuration(song.durationSeconds) }}</p>
+            <div class="detail-actions">
+              <button type="button" class="primary-action" @click="play">播放</button>
+              <button type="button" class="secondary-action" @click="favorite">收藏</button>
+            </div>
+          </div>
+        </section>
+
+        <LyricPanel :song="song" :current-time="player.currentTime" :is-current-song="isCurrentSong" />
       </section>
 
       <section v-if="auth.isAuthenticated" class="compact-panel">
@@ -53,11 +57,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { commentApi, favoriteApi, playlistApi, songApi, userApi } from "@/api";
 import type { CommentItem, Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import LyricPanel from "@/components/LyricPanel.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
 import { useUiStore } from "@/stores/ui";
@@ -73,6 +78,7 @@ const comments = ref<CommentItem[]>([]);
 const myPlaylists = ref<Playlist[]>([]);
 const selectedPlaylistId = ref(0);
 const commentText = ref("");
+const isCurrentSong = computed(() => Boolean(song.value && player.currentSong?.id === song.value.id));
 
 onMounted(loadSong);
 
