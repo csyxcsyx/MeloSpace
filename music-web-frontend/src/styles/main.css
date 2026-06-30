@@ -445,6 +445,7 @@ button {
 }
 
 .song-row {
+  position: relative;
   display: grid;
   align-items: center;
   min-height: 64px;
@@ -557,6 +558,65 @@ button {
   display: grid;
   place-items: center;
   color: var(--muted);
+}
+
+.more:hover,
+.more:focus-visible {
+  color: var(--brand);
+  outline: 0;
+}
+
+.song-row-menu {
+  position: absolute;
+  top: 52px;
+  right: 8px;
+  z-index: 30;
+  display: grid;
+  min-width: 168px;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 20px 48px rgba(15, 15, 18, 0.16);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
+.song-row-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: #343437;
+  font-size: 13px;
+  font-weight: 690;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.song-row-menu button:hover,
+.song-row-menu button:focus-visible {
+  background: var(--brand-soft);
+  color: var(--brand);
+  outline: 0;
+}
+
+.song-row-submenu {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+  padding-top: 7px;
+  border-top: 1px solid var(--soft-line);
+}
+
+.menu-muted {
+  margin: 0;
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .album-grid {
