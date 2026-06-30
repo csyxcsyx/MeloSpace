@@ -173,8 +173,8 @@ async function loadAdmin() {
   ]);
   Object.assign(dashboard, stats);
   songs.value = songPage.items;
-  artists.value = artistPage.items;
-  albums.value = albumPage.items;
+  artists.value = artistPage;
+  albums.value = albumPage;
 }
 
 async function createArtist() {

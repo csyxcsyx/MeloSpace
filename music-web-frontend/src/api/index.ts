@@ -43,12 +43,12 @@ export const songApi = {
 
 export const artistApi = {
   list: (params: { page?: number; size?: number; keyword?: string } = {}) =>
-    unwrap<PageResult<Artist>>(http.get("/api/artists", { params }))
+    unwrap<Artist[]>(http.get("/api/artists", { params }))
 };
 
 export const albumApi = {
   list: (params: { page?: number; size?: number; keyword?: string; artistId?: number } = {}) =>
-    unwrap<PageResult<Album>>(http.get("/api/albums", { params }))
+    unwrap<Album[]>(http.get("/api/albums", { params }))
 };
 
 export const playlistApi = {
