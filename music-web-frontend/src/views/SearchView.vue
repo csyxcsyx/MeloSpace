@@ -93,7 +93,11 @@ function playSong(song: Song) {
 
 function toggleSongPlayback(song: Song) {
   if (player.currentSong?.id === song.id) {
-    player.setPlaying(!player.isPlaying);
+    if (player.isPlaying) {
+      player.setPlaying(false);
+    } else {
+      void player.resumeCurrent();
+    }
     return;
   }
   player.playSong(song, result.value?.songs ?? [song]);

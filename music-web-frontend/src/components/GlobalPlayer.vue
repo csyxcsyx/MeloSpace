@@ -96,13 +96,15 @@ withDefaults(defineProps<{ hidden?: boolean }>(), {
 const router = useRouter();
 const player = usePlayerStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
-const playInFlight = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
+let activePlayRequest: Promise<boolean> | null = null;
+let playRequestToken = 0;
 
 interface PlayRequestDetail {
   song: Song;
   time?: number;
   shouldPlay?: boolean;
+  respond?: (played: boolean) => void;
 }
 
 watch(
@@ -169,26 +171,36 @@ function playAudio() {
   const audio = audioRef.value;
   if (!audio || !audioSrc.value) {
     player.setPlaying(false);
-    return;
+    return Promise.resolve(false);
   }
-  if (playInFlight.value) return;
+  if (activePlayRequest) return activePlayRequest;
   if (!audio.paused) {
     player.setPlaying(true);
-    return;
+    return Promise.resolve(true);
   }
 
-  playInFlight.value = true;
-  audio.play()
+  player.setLoading(true);
+  const token = ++playRequestToken;
+  const request = audio.play()
     .then(() => {
       player.setPlaying(true);
       player.setLoading(false);
+      return true;
     })
-    .catch(() => {
-      player.setError("浏览器阻止了自动播放，请再次点击播放");
+    .catch((error: unknown) => {
+      if (token === playRequestToken) {
+        player.setError(playbackErrorMessage(error));
+      }
+      return false;
     })
     .finally(() => {
-      playInFlight.value = false;
+      if (activePlayRequest === request) {
+        activePlayRequest = null;
+      }
     });
+
+  activePlayRequest = request;
+  return request;
 }
 
 function togglePlay() {
@@ -197,7 +209,6 @@ function togglePlay() {
     player.setPlaying(false);
     return;
   }
-  player.setPlaying(true);
   playAudio();
 }
 
@@ -276,6 +287,9 @@ function handlePlayRequest(event: Event) {
   const nextSrc = resolveMediaUrl(song.audioUrl);
   if (!nextSrc) return;
   if (audio.getAttribute("src") !== nextSrc) {
+    playRequestToken += 1;
+    activePlayRequest = null;
+    audio.pause();
     audio.src = nextSrc;
     audio.setAttribute("src", nextSrc);
     audio.load();
@@ -285,8 +299,22 @@ function handlePlayRequest(event: Event) {
     player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
   }
   if (detail.shouldPlay !== false) {
-    playAudio();
+    void playAudio().then((played) => detail.respond?.(played));
+  } else {
+    detail.respond?.(true);
   }
+}
+
+function playbackErrorMessage(error: unknown) {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError") {
+      return "浏览器阻止了自动播放，请点击播放";
+    }
+    if (error.name === "AbortError") {
+      return "音频正在准备，请再次点击播放";
+    }
+  }
+  return "音频播放失败，请再次点击播放";
 }
 
 function openPlayer() {

@@ -72,7 +72,7 @@ export const usePlayerStore = defineStore("player", () => {
     currentTime.value = 0;
     duration.value = 0;
     errorMessage.value = "";
-    dispatchPlayRequest(song, 0, true);
+    return dispatchPlayRequest(song, 0, true);
   }
 
   function replaceCurrentSong(song: Song, songs: Song[] = queue.value) {
@@ -86,6 +86,9 @@ export const usePlayerStore = defineStore("player", () => {
 
   function setPlaying(value: boolean) {
     isPlaying.value = value;
+    if (value) {
+      errorMessage.value = "";
+    }
   }
 
   function setLoading(value: boolean) {
@@ -112,7 +115,13 @@ export const usePlayerStore = defineStore("player", () => {
     seekTarget.value = Math.max(0, time);
     seekShouldPlay.value = shouldPlay;
     seekRequestId.value += 1;
-    dispatchPlayRequest(currentSong.value, seekTarget.value, shouldPlay);
+    return dispatchPlayRequest(currentSong.value, seekTarget.value, shouldPlay);
+  }
+
+  function resumeCurrent() {
+    if (!currentSong.value) return Promise.resolve(false);
+    errorMessage.value = "";
+    return dispatchPlayRequest(currentSong.value, currentTime.value, true);
   }
 
   function getNextSong(wrap = true) {
@@ -129,14 +138,14 @@ export const usePlayerStore = defineStore("player", () => {
   function next() {
     const nextSong = getNextSong(true);
     if (!nextSong) return;
-    playSong(nextSong, queue.value);
+    return playSong(nextSong, queue.value);
   }
 
   function previous() {
     if (!currentSong.value || queue.value.length === 0) return;
     const index = queue.value.findIndex((song) => song.id === currentSong.value?.id);
     const nextSong = queue.value[(index - 1 + queue.value.length) % queue.value.length];
-    playSong(nextSong, queue.value);
+    return playSong(nextSong, queue.value);
   }
 
   async function maybeRecordPlay() {
@@ -154,14 +163,27 @@ export const usePlayerStore = defineStore("player", () => {
   }
 
   function dispatchPlayRequest(song: Song | null, time: number, shouldPlay: boolean) {
-    if (!song || typeof window === "undefined") return;
-    window.dispatchEvent(new CustomEvent(PLAYER_PLAY_REQUEST_EVENT, {
-      detail: {
-        song,
-        time,
-        shouldPlay
-      }
-    }));
+    if (!song || typeof window === "undefined") return Promise.resolve(false);
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const respond = (played: boolean) => {
+        if (settled) return;
+        settled = true;
+        resolve(played);
+      };
+
+      window.dispatchEvent(new CustomEvent(PLAYER_PLAY_REQUEST_EVENT, {
+        detail: {
+          song,
+          time,
+          shouldPlay,
+          respond
+        }
+      }));
+
+      window.setTimeout(() => respond(false), 4000);
+    });
   }
 
   watch(
@@ -209,6 +231,7 @@ export const usePlayerStore = defineStore("player", () => {
     setVolume,
     setError,
     seekTo,
+    resumeCurrent,
     getNextSong,
     next,
     previous

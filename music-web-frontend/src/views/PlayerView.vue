@@ -153,8 +153,7 @@ function togglePlay() {
     player.setPlaying(false);
     return;
   }
-  player.setPlaying(true);
-  player.seekTo(player.currentTime, true);
+  void player.resumeCurrent();
 }
 
 function seekLyric(time: number) {
