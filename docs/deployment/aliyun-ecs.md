@@ -69,10 +69,30 @@ apt install -y nodejs
 |项目|内容|
 |-|-|
 |前端访问地址|`http://47.89.235.138/`|
+|域名访问地址|`http://melospace.asia/`，DNS A 记录生效后可用|
+|www 访问地址|`http://www.melospace.asia/`，DNS A 记录生效后可用|
 |后端健康检查|`http://47.89.235.138/api/actuator/health`|
+|域名健康检查|`http://melospace.asia/api/actuator/health`|
 |后端本机端口|`127.0.0.1:8080`|
 |systemd 服务名|`melospace-backend`|
 |Nginx 配置|`/etc/nginx/sites-available/melospace`|
+
+### 5.1 域名接入
+
+服务器侧 Nginx 已将 `melospace.asia` 和 `www.melospace.asia` 加入 `server_name`：
+
+```nginx
+server_name melospace.asia www.melospace.asia 47.89.235.138 _;
+```
+
+需要在阿里云云解析 DNS 中添加以下公网解析记录：
+
+|记录类型|主机记录|记录值|解析线路|TTL|
+|-|-|-|-|-|
+|A|`@`|`47.89.235.138`|默认|600 秒或默认值|
+|A|`www`|`47.89.235.138`|默认|600 秒或默认值|
+
+当前外部 DNS 查询仅看到 `melospace.asia` 的 SOA 记录，尚未看到 A 记录；DNS 添加并生效后，浏览器即可直接访问 `http://melospace.asia/`。
 
 ## 6. 运维命令
 
@@ -138,6 +158,7 @@ melospace-health
 * [x] Nginx 配置检查 `nginx -t` 通过。
 * [x] `http://47.89.235.138/` 可打开前端。
 * [x] `http://47.89.235.138/api/actuator/health` 返回 `UP`。
+* [x] Nginx 已接受 `melospace.asia` 和 `www.melospace.asia` 的 Host 访问。
 * [x] 服务器重启后服务已设置为 systemd 开机自启。
 
 ## 8. 本次执行结果
@@ -163,3 +184,24 @@ melospace-health
 * `http://47.89.235.138/api/actuator/health` 返回 `{"status":"UP"}`。
 * `http://47.89.235.138/api/songs?page=1&size=2` 返回歌曲数据。
 * 示例媒体文件 `/media/audio/I%20Do%20-%20%E5%91%A8%E6%9D%B0%E4%BC%A6.flac` 返回 HTTP 200。
+
+## 9. 域名接入执行结果
+
+执行时间为 2026-07-02 01:57 CST 左右。
+
+已完成：
+
+* 修改服务器 Nginx 配置，将 `melospace.asia` 和 `www.melospace.asia` 加入 `server_name`。
+* 执行 `nginx -t` 检查通过，并 reload Nginx。
+* 使用 Host header 在服务器本机验证前端和健康检查通过。
+* 使用 `curl --resolve` 从本机绕过 DNS 验证公网链路通过。
+
+已验证：
+
+```bash
+curl --noproxy "*" --resolve melospace.asia:80:47.89.235.138 -I http://melospace.asia/
+curl --noproxy "*" --resolve melospace.asia:80:47.89.235.138 http://melospace.asia/api/actuator/health
+curl --noproxy "*" --resolve www.melospace.asia:80:47.89.235.138 http://www.melospace.asia/api/actuator/health
+```
+
+结果分别为前端 HTTP 200、主域名健康检查 `UP`、www 健康检查 `UP`。剩余动作是等待阿里云 DNS 中的 A 记录生效。
