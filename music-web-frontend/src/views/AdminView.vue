@@ -62,24 +62,49 @@
               <input v-model.number="songForm.durationSeconds" min="0" type="number" />
             </label>
           </div>
-          <label>
-            音频 URL
-            <input v-model.trim="songForm.audioUrl" required placeholder="/media/audio/demo.flac" />
-          </label>
-          <label>
-            封面 URL
-            <input v-model.trim="songForm.coverUrl" placeholder="/media/cover/demo.jpg" />
-          </label>
-          <label>
-            歌词 URL
-            <div class="field-with-action">
-              <input v-model.trim="songForm.lyricUrl" placeholder="/media/lyrics/demo.lrc" />
-              <button class="secondary-action" type="button" :disabled="lyricMatching" @click="matchLyrics">
-                <Wand2 :size="16" />
-                <span>{{ lyricMatching ? "匹配中..." : "匹配歌词" }}</span>
-              </button>
-            </div>
-          </label>
+
+          <div class="file-picker-grid">
+            <label class="file-picker">
+              <span>音频文件</span>
+              <input
+                :key="songFileInputKey"
+                accept="audio/*,.flac"
+                required
+                type="file"
+                @change="onSongAudioChange"
+              />
+              <small>{{ fileStatus(songAudioFile, songForm.audioUrl, "请选择 MP3、FLAC、WAV 等音频") }}</small>
+            </label>
+            <label class="file-picker">
+              <span>歌曲封面</span>
+              <input
+                :key="songFileInputKey + '-cover'"
+                accept="image/*"
+                type="file"
+                @change="onSongCoverChange"
+              />
+              <small>{{ fileStatus(songCoverFile, songForm.coverUrl, "可选，未选时使用专辑图") }}</small>
+            </label>
+            <label class="file-picker">
+              <span>歌词文件</span>
+              <input
+                :key="songFileInputKey + '-lyric'"
+                accept=".lrc,.txt,text/plain"
+                type="file"
+                @change="onSongLyricChange"
+              />
+              <small>{{ fileStatus(songLyricFile, songForm.lyricUrl, "可选，未选时自动用 LDDC 匹配") }}</small>
+            </label>
+          </div>
+
+          <div class="file-actions">
+            <button class="secondary-action" type="button" :disabled="lyricMatching" @click="matchLyrics">
+              <Wand2 :size="16" />
+              <span>{{ lyricMatching ? "匹配中..." : "用 LDDC 匹配歌词" }}</span>
+            </button>
+            <span class="form-help">音频会先上传到网站媒体库，再用于本地 LDDC 匹配。</span>
+          </div>
+
           <div class="form-row">
             <label>
               语言
@@ -94,38 +119,14 @@
               <input v-model.trim="songForm.mood" />
             </label>
           </div>
-          <button class="primary-action" type="submit">
+          <button class="primary-action" type="submit" :disabled="savingSong">
             <Plus :size="16" />
-            <span>创建歌曲</span>
+            <span>{{ savingSong ? "创建中..." : "创建歌曲" }}</span>
           </button>
         </form>
       </div>
 
       <div class="compact-panel">
-        <div class="section-head">
-          <Upload :size="18" />
-          <h2>上传资源</h2>
-        </div>
-        <form class="admin-form" @submit.prevent="uploadFile">
-          <label>
-            文件类型
-            <select v-model="uploadType">
-              <option value="AUDIO">音频 AUDIO</option>
-              <option value="COVER">封面 COVER</option>
-              <option value="LYRIC">歌词 LYRIC</option>
-            </select>
-          </label>
-          <label>
-            文件
-            <input type="file" @change="onFileChange" />
-          </label>
-          <button class="secondary-action" type="submit">
-            <Upload :size="16" />
-            <span>上传</span>
-          </button>
-          <p v-if="uploadedUrl" class="muted-line url-chip">{{ uploadedUrl }}</p>
-        </form>
-
         <div class="section-head">
           <Mic2 :size="18" />
           <h2>新增歌手</h2>
@@ -154,17 +155,24 @@
               <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
             </select>
           </label>
-          <label>
-            专辑图 URL
-            <input v-model.trim="albumForm.coverUrl" placeholder="/media/cover/album.jpg" />
+          <label class="file-picker">
+            <span>专辑图</span>
+            <input
+              :key="albumFileInputKey"
+              accept="image/*"
+              required
+              type="file"
+              @change="onAlbumCoverChange"
+            />
+            <small>{{ fileStatus(albumCoverFile, albumForm.coverUrl, "请选择 JPG、PNG、WebP 等图片") }}</small>
           </label>
           <label>
             发行日期
             <input v-model.trim="albumForm.releaseDate" type="date" />
           </label>
-          <button class="secondary-action" type="submit">
+          <button class="secondary-action" type="submit" :disabled="savingAlbum">
             <Plus :size="16" />
-            <span>创建专辑</span>
+            <span>{{ savingAlbum ? "创建中..." : "创建专辑" }}</span>
           </button>
         </form>
       </div>
@@ -180,7 +188,7 @@
           <div>
             <strong>{{ song.title }}</strong>
             <span>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未绑定专辑" }}</span>
-            <small>{{ song.audioUrl }}</small>
+            <small>{{ song.lyricUrl ? "歌词已配置" : "暂无歌词" }} · {{ song.coverUrl ? "封面已配置" : "使用默认封面" }}</small>
           </div>
           <div class="admin-row-actions">
             <button class="status-pill" type="button" @click="toggleStatus(song)">
@@ -206,7 +214,7 @@
           <div>
             <strong>{{ album.title }}</strong>
             <span>{{ album.artistName || "未知歌手" }}</span>
-            <small>{{ album.coverUrl || "无专辑图" }}</small>
+            <small>{{ album.coverUrl ? "专辑图已上传" : "暂无专辑图" }}</small>
           </div>
           <div class="admin-row-actions">
             <button class="secondary-action mini-action" type="button" @click="bindAlbum(album)">
@@ -227,7 +235,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { Disc3, ListMusic, Mic2, Music2, Plus, RefreshCw, Trash2, Upload, Wand2 } from "lucide-vue-next";
+import { Disc3, ListMusic, Mic2, Music2, Plus, RefreshCw, Trash2, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
 import type { Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
@@ -240,10 +248,16 @@ const songs = ref<Song[]>([]);
 const artists = ref<Artist[]>([]);
 const albums = ref<Album[]>([]);
 const artistName = ref("");
-const uploadType = ref<"AUDIO" | "COVER" | "LYRIC">("AUDIO");
-const selectedFile = ref<File | null>(null);
-const uploadedUrl = ref("");
 const lyricMatching = ref(false);
+const savingSong = ref(false);
+const savingAlbum = ref(false);
+const songFileInputKey = ref(0);
+const albumFileInputKey = ref(0);
+
+const songAudioFile = ref<File | null>(null);
+const songCoverFile = ref<File | null>(null);
+const songLyricFile = ref<File | null>(null);
+const albumCoverFile = ref<File | null>(null);
 
 const songForm = reactive({
   title: "",
@@ -270,6 +284,9 @@ const filteredAlbums = computed(() => {
   if (!songForm.artistId) return albums.value;
   return albums.value.filter((album) => album.artistId === songForm.artistId);
 });
+
+const selectedSongArtist = computed(() => artists.value.find((item) => item.id === songForm.artistId) ?? null);
+const selectedSongAlbum = computed(() => albums.value.find((item) => item.id === songForm.albumId) ?? null);
 
 watch(
   () => songForm.artistId,
@@ -313,94 +330,213 @@ async function createAlbum() {
     ui.toast("请填写专辑名并选择歌手");
     return;
   }
-  const album = await adminApi.createAlbum({
-    title: albumForm.title,
-    artistId: albumForm.artistId,
-    coverUrl: albumForm.coverUrl || undefined,
-    releaseDate: albumForm.releaseDate || undefined
-  });
-  albums.value.unshift(album);
-  songForm.artistId = album.artistId;
-  songForm.albumId = album.id;
-  if (album.coverUrl && !songForm.coverUrl) {
-    songForm.coverUrl = album.coverUrl;
-  }
-  albumForm.title = "";
-  albumForm.coverUrl = "";
-  albumForm.releaseDate = "";
-  ui.toast("专辑已创建");
-}
-
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  selectedFile.value = input.files?.[0] ?? null;
-}
-
-async function uploadFile() {
-  if (!selectedFile.value) {
-    ui.toast("请选择文件");
+  if (!albumCoverFile.value && !albumForm.coverUrl) {
+    ui.toast("请选择专辑图文件");
     return;
   }
-  const file = await adminApi.upload(selectedFile.value, uploadType.value);
-  uploadedUrl.value = file.url;
-  if (file.fileType === "AUDIO") songForm.audioUrl = file.url;
-  if (file.fileType === "COVER") {
-    songForm.coverUrl = file.url;
-    albumForm.coverUrl = file.url;
+
+  savingAlbum.value = true;
+  try {
+    const coverUrl = await ensureAlbumCoverUrl();
+    const album = await adminApi.createAlbum({
+      title: albumForm.title,
+      artistId: albumForm.artistId,
+      coverUrl,
+      releaseDate: albumForm.releaseDate || undefined
+    });
+    albums.value.unshift(album);
+    songForm.artistId = album.artistId;
+    songForm.albumId = album.id;
+    if (album.coverUrl && !songForm.coverUrl) {
+      songForm.coverUrl = album.coverUrl;
+    }
+    resetAlbumForm();
+    ui.toast("专辑已创建");
+  } finally {
+    savingAlbum.value = false;
   }
-  if (file.fileType === "LYRIC") songForm.lyricUrl = file.url;
-  ui.toast("资源上传成功");
+}
+
+function onSongAudioChange(event: Event) {
+  songAudioFile.value = getInputFile(event);
+  songForm.audioUrl = "";
+  if (songAudioFile.value) {
+    readAudioDuration(songAudioFile.value);
+  }
+}
+
+function onSongCoverChange(event: Event) {
+  songCoverFile.value = getInputFile(event);
+  songForm.coverUrl = "";
+}
+
+function onSongLyricChange(event: Event) {
+  songLyricFile.value = getInputFile(event);
+  songForm.lyricUrl = "";
+}
+
+function onAlbumCoverChange(event: Event) {
+  albumCoverFile.value = getInputFile(event);
+  albumForm.coverUrl = "";
+}
+
+function getInputFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  return input.files?.[0] ?? null;
+}
+
+function fileStatus(file: File | null, uploadedUrl: string, emptyText: string) {
+  if (uploadedUrl) return "已上传到网站媒体库";
+  if (file) return file.name;
+  return emptyText;
 }
 
 async function matchLyrics() {
-  const artist = artists.value.find((item) => item.id === songForm.artistId);
-  const album = albums.value.find((item) => item.id === songForm.albumId);
-  if (!songForm.title || !artist || !album || !songForm.audioUrl) {
-    ui.toast("请先填写歌曲名、歌手、专辑和音频 URL");
-    return;
-  }
+  if (!validateSongBase()) return;
 
   lyricMatching.value = true;
   try {
-    const result = await adminApi.importLddcLyrics({
-      title: songForm.title,
-      artist: artist.name,
-      album: album.title,
-      audioUrl: songForm.audioUrl,
-      durationSeconds: songForm.durationSeconds || undefined
-    });
-    songForm.lyricUrl = result.lyricUrl;
-    ui.toast(`歌词已匹配：${result.matchedTitle || songForm.title}`);
+    const audioUrl = await ensureSongAudioUrl();
+    songForm.lyricUrl = await importLddcLyrics(audioUrl);
+    ui.toast("歌词已匹配并写入表单");
   } finally {
     lyricMatching.value = false;
   }
 }
 
 async function createSong() {
-  if (!songForm.title || !songForm.artistId || !songForm.albumId || !songForm.audioUrl) {
-    ui.toast("请填写歌曲名、歌手、专辑和音频 URL");
+  if (!validateSongBase()) return;
+  if (!songAudioFile.value && !songForm.audioUrl) {
+    ui.toast("请选择歌曲音频文件");
     return;
   }
-  await adminApi.createSong({
+
+  savingSong.value = true;
+  try {
+    const audioUrl = await ensureSongAudioUrl();
+    const coverUrl = await ensureSongCoverUrl();
+    const lyricUrl = await ensureSongLyricUrl(audioUrl);
+
+    await adminApi.createSong({
+      title: songForm.title,
+      artistId: songForm.artistId,
+      albumId: songForm.albumId,
+      audioUrl,
+      coverUrl: coverUrl || null,
+      lyricUrl: lyricUrl || null,
+      durationSeconds: Number(songForm.durationSeconds) || 0,
+      language: songForm.language,
+      genre: songForm.genre,
+      mood: songForm.mood,
+      status: songForm.status
+    });
+    ui.toast("歌曲已创建");
+    resetSongForm();
+    await loadAdmin();
+  } finally {
+    savingSong.value = false;
+  }
+}
+
+function validateSongBase() {
+  if (!songForm.title || !songForm.artistId || !songForm.albumId) {
+    ui.toast("请填写歌曲名、歌手和专辑");
+    return false;
+  }
+  if (!selectedSongArtist.value || !selectedSongAlbum.value) {
+    ui.toast("请选择有效的歌手和专辑");
+    return false;
+  }
+  return true;
+}
+
+async function ensureSongAudioUrl() {
+  if (songForm.audioUrl) return songForm.audioUrl;
+  if (!songAudioFile.value) {
+    throw new Error("Missing song audio file");
+  }
+  const upload = await adminApi.upload(songAudioFile.value, "AUDIO");
+  songForm.audioUrl = upload.url;
+  return upload.url;
+}
+
+async function ensureSongCoverUrl() {
+  if (songForm.coverUrl) return songForm.coverUrl;
+  if (songCoverFile.value) {
+    const upload = await adminApi.upload(songCoverFile.value, "COVER");
+    songForm.coverUrl = upload.url;
+    return upload.url;
+  }
+  return selectedSongAlbum.value?.coverUrl ?? "";
+}
+
+async function ensureSongLyricUrl(audioUrl: string) {
+  if (songForm.lyricUrl) return songForm.lyricUrl;
+  if (songLyricFile.value) {
+    const upload = await adminApi.upload(songLyricFile.value, "LYRIC");
+    songForm.lyricUrl = upload.url;
+    return upload.url;
+  }
+  songForm.lyricUrl = await importLddcLyrics(audioUrl);
+  return songForm.lyricUrl;
+}
+
+async function ensureAlbumCoverUrl() {
+  if (albumForm.coverUrl) return albumForm.coverUrl;
+  if (!albumCoverFile.value) {
+    throw new Error("Missing album cover file");
+  }
+  const upload = await adminApi.upload(albumCoverFile.value, "COVER");
+  albumForm.coverUrl = upload.url;
+  return upload.url;
+}
+
+async function importLddcLyrics(audioUrl: string) {
+  if (!selectedSongArtist.value || !selectedSongAlbum.value) {
+    throw new Error("Missing artist or album");
+  }
+  const result = await adminApi.importLddcLyrics({
     title: songForm.title,
-    artistId: songForm.artistId,
-    albumId: songForm.albumId,
-    audioUrl: songForm.audioUrl,
-    coverUrl: songForm.coverUrl || null,
-    lyricUrl: songForm.lyricUrl || null,
-    durationSeconds: Number(songForm.durationSeconds) || 0,
-    language: songForm.language,
-    genre: songForm.genre,
-    mood: songForm.mood,
-    status: songForm.status
+    artist: selectedSongArtist.value.name,
+    album: selectedSongAlbum.value.title,
+    audioUrl,
+    durationSeconds: songForm.durationSeconds || undefined
   });
-  ui.toast("歌曲已创建");
+  return result.lyricUrl;
+}
+
+function readAudioDuration(file: File) {
+  const audio = document.createElement("audio");
+  const objectUrl = URL.createObjectURL(file);
+  audio.preload = "metadata";
+  audio.onloadedmetadata = () => {
+    if (Number.isFinite(audio.duration) && audio.duration > 0) {
+      songForm.durationSeconds = Math.round(audio.duration);
+    }
+    URL.revokeObjectURL(objectUrl);
+  };
+  audio.onerror = () => URL.revokeObjectURL(objectUrl);
+  audio.src = objectUrl;
+}
+
+function resetSongForm() {
   songForm.title = "";
   songForm.audioUrl = "";
   songForm.coverUrl = "";
   songForm.lyricUrl = "";
   songForm.durationSeconds = 0;
-  await loadAdmin();
+  songAudioFile.value = null;
+  songCoverFile.value = null;
+  songLyricFile.value = null;
+  songFileInputKey.value += 1;
+}
+
+function resetAlbumForm() {
+  albumForm.title = "";
+  albumForm.coverUrl = "";
+  albumForm.releaseDate = "";
+  albumCoverFile.value = null;
+  albumFileInputKey.value += 1;
 }
 
 async function toggleStatus(song: Song) {

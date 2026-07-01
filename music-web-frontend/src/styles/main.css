@@ -1043,6 +1043,54 @@ button {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.file-picker-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.file-picker {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.file-picker span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.file-picker input[type="file"] {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  padding: 6px;
+  background: #ffffff;
+}
+
+.file-picker small,
+.form-help {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .form-row {
   display: grid;
   gap: 10px;
@@ -2108,7 +2156,8 @@ button {
   }
 
   .metrics,
-  .form-row {
+  .form-row,
+  .file-picker-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2198,7 +2247,8 @@ button {
   }
 
   .metrics,
-  .form-row {
+  .form-row,
+  .file-picker-grid {
     grid-template-columns: 1fr;
   }
 
