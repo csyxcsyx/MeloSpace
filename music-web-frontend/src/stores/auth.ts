@@ -60,5 +60,13 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  return { token, user, isAuthenticated, login, register, refreshMe, logout, clearSession };
+  async function deleteAccount() {
+    try {
+      await userApi.deleteMe();
+    } finally {
+      clearSession();
+    }
+  }
+
+  return { token, user, isAuthenticated, login, register, refreshMe, logout, deleteAccount, clearSession };
 });

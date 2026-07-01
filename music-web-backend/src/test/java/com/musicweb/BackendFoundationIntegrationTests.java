@@ -714,6 +714,64 @@ class BackendFoundationIntegrationTests {
         assertThat(playlistsJson).doesNotContain("阶段四搜索私有歌单");
     }
 
+    @Test
+    void usersCanBeListedAndDeletedWithoutExposingPasswordHashes() {
+        ResponseEntity<JsonNode> managedUser = restTemplate.postForEntity(
+                url("/api/auth/register"),
+                Map.of("username", "manageduser", "password", "Managed@123456", "nickname", "Managed User"),
+                JsonNode.class
+        );
+        assertThat(managedUser.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long managedUserId = managedUser.getBody().get("data").get("user").get("id").asLong();
+
+        String adminToken = login("admin", "Admin@123456").get("data").get("token").asText();
+        ResponseEntity<JsonNode> users = exchangeWithToken(
+                "/api/admin/users?keyword=manageduser&page=1&size=20",
+                HttpMethod.GET,
+                adminToken,
+                null
+        );
+        assertThat(users.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode user = users.getBody().get("data").get("items").get(0);
+        assertThat(user.get("username").asText()).isEqualTo("manageduser");
+        assertThat(user.get("passwordState").asText()).contains("加密");
+        assertThat(users.getBody().toString()).doesNotContain("passwordHash");
+
+        ResponseEntity<JsonNode> deleteSelfAsAdmin = exchangeWithToken(
+                "/api/admin/users/1",
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(deleteSelfAsAdmin.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<JsonNode> deletedByAdmin = exchangeWithToken(
+                "/api/admin/users/" + managedUserId,
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(deletedByAdmin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<JsonNode> deletedLogin = restTemplate.postForEntity(
+                url("/api/auth/login"),
+                Map.of("username", "manageduser", "password", "Managed@123456"),
+                JsonNode.class
+        );
+        assertThat(deletedLogin.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<JsonNode> selfUser = restTemplate.postForEntity(
+                url("/api/auth/register"),
+                Map.of("username", "selfdelete", "password", "SelfDelete@123456", "nickname", "Self Delete"),
+                JsonNode.class
+        );
+        assertThat(selfUser.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String selfToken = selfUser.getBody().get("data").get("token").asText();
+        ResponseEntity<JsonNode> deletedSelf = exchangeWithToken("/api/users/me", HttpMethod.DELETE, selfToken, null);
+        assertThat(deletedSelf.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<JsonNode> staleTokenMe = exchangeWithToken("/api/users/me", HttpMethod.GET, selfToken, null);
+        assertThat(staleTokenMe.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     private JsonNode login(String username, String password) {
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 url("/api/auth/login"),

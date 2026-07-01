@@ -1,6 +1,7 @@
 import { http, unwrap } from "@/api/http";
 import type {
   Album,
+  AdminUser,
   Artist,
   AuthResponse,
   CommentItem,
@@ -28,6 +29,7 @@ export const authApi = {
 
 export const userApi = {
   me: () => unwrap<UserSummary>(http.get("/api/users/me")),
+  deleteMe: () => unwrap<void>(http.delete("/api/users/me")),
   playlists: (page = 1, size = 20) =>
     unwrap<PageResult<Playlist>>(http.get("/api/users/me/playlists", { params: { page, size } })),
   favorites: (page = 1, size = 20) =>
@@ -89,6 +91,9 @@ export const searchApi = {
 
 export const adminApi = {
   dashboard: () => unwrap<Record<string, number>>(http.get("/api/admin/dashboard")),
+  users: (params: { page?: number; size?: number; keyword?: string; role?: string; status?: number } = {}) =>
+    unwrap<PageResult<AdminUser>>(http.get("/api/admin/users", { params })),
+  deleteUser: (id: number) => unwrap<void>(http.delete(`/api/admin/users/${id}`)),
   songs: (params: { page?: number; size?: number; keyword?: string; status?: number } = {}) =>
     unwrap<PageResult<Song>>(http.get("/api/admin/songs", { params })),
   createSong: (payload: Partial<Song> & { title: string; artistId: number; albumId: number; audioUrl: string }) =>

@@ -20,6 +20,18 @@ export interface UserSummary {
   role: "USER" | "ADMIN";
 }
 
+export interface AdminUser {
+  id: number;
+  username: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  role: "USER" | "ADMIN";
+  status: number;
+  passwordState: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: UserSummary;

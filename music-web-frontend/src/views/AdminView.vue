@@ -230,23 +230,54 @@
         <EmptyState v-if="!albums.length">暂无专辑。</EmptyState>
       </div>
     </section>
+
+    <section class="compact-panel admin-list-section">
+      <div class="section-head">
+        <Users :size="18" />
+        <h2>用户管理</h2>
+      </div>
+      <div class="admin-song-list">
+        <div v-for="user in users" :key="user.id" class="admin-song-row">
+          <div>
+            <strong>{{ user.username }}</strong>
+            <span>{{ user.nickname || "未设置昵称" }} · {{ user.role === "ADMIN" ? "管理员" : "普通用户" }}</span>
+            <small>{{ user.status === 1 ? "正常" : "禁用" }} · {{ user.passwordState }} · {{ displayDate(user.createdAt) }}</small>
+          </div>
+          <div class="admin-row-actions">
+            <button
+              class="danger-action"
+              type="button"
+              :disabled="user.id === auth.user?.id"
+              @click="deleteUser(user)"
+            >
+              <Trash2 :size="15" />
+              <span>注销</span>
+            </button>
+          </div>
+        </div>
+        <EmptyState v-if="!users.length">暂无用户。</EmptyState>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Wand2 } from "lucide-vue-next";
+import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Users, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
-import type { Album, Artist, Song } from "@/api/types";
+import type { AdminUser, Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
+import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 
 const ui = useUiStore();
+const auth = useAuthStore();
 const dashboard = reactive<Record<string, number>>({});
 const songs = ref<Song[]>([]);
 const artists = ref<Artist[]>([]);
 const albums = ref<Album[]>([]);
+const users = ref<AdminUser[]>([]);
 const artistName = ref("");
 const lyricMatching = ref(false);
 const savingSong = ref(false);
@@ -294,13 +325,15 @@ watch(
 onMounted(loadAdmin);
 
 async function loadAdmin() {
-  const [stats, songPage, artistPage, albumPage] = await Promise.all([
+  const [stats, userPage, songPage, artistPage, albumPage] = await Promise.all([
     adminApi.dashboard(),
+    adminApi.users({ page: 1, size: 100 }),
     adminApi.songs({ page: 1, size: 100 }),
     artistApi.list({ page: 1, size: 200 }),
     albumApi.list({ page: 1, size: 200 })
   ]);
   Object.assign(dashboard, stats);
+  users.value = userPage.items;
   songs.value = songPage.items;
   artists.value = artistPage;
   albums.value = albumPage;
@@ -591,5 +624,20 @@ async function deleteAlbum(album: Album) {
   }
   ui.toast("专辑已删除");
   await loadAdmin();
+}
+async function deleteUser(user: AdminUser) {
+  if (user.id === auth.user?.id) {
+    ui.toast("请在个人页注销当前登录账号");
+    return;
+  }
+  if (!window.confirm(`确定注销用户 ${user.username} 吗？该用户的歌单、收藏、评论和播放记录会一起删除。`)) return;
+  await adminApi.deleteUser(user.id);
+  ui.toast("用户已注销");
+  await loadAdmin();
+}
+
+function displayDate(value: string) {
+  if (!value) return "未知时间";
+  return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 </script>

@@ -47,14 +47,27 @@
           <p v-if="!recent.length" class="muted-line">暂无最近播放。</p>
         </div>
       </div>
+
+      <div class="compact-panel">
+        <div class="section-head">
+          <h2>账号</h2>
+          <span class="chevron">›</span>
+        </div>
+        <div class="profile-list">
+          <p class="muted-line">{{ auth.user?.username }}</p>
+          <button class="danger-action" type="button" @click="deleteMyAccount">注销账号</button>
+        </div>
+      </div>
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { playlistApi, songApi, userApi } from "@/api";
 import type { FavoriteItem, PlayHistoryItem, Playlist, Song } from "@/api/types";
+import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 
 interface FavoriteDisplayItem extends FavoriteItem {
@@ -67,6 +80,8 @@ interface RecentDisplayItem extends PlayHistoryItem {
 }
 
 const ui = useUiStore();
+const auth = useAuthStore();
+const router = useRouter();
 const playlists = ref<Playlist[]>([]);
 const favorites = ref<FavoriteDisplayItem[]>([]);
 const recent = ref<RecentDisplayItem[]>([]);
@@ -149,5 +164,12 @@ async function createPlaylist() {
   playlistTitle.value = "";
   ui.toast("歌单已创建");
   await loadProfile();
+}
+
+async function deleteMyAccount() {
+  if (!window.confirm("确定注销当前账号吗？账号的歌单、收藏、评论和播放记录会一起删除。")) return;
+  await auth.deleteAccount();
+  ui.toast("账号已注销");
+  router.push("/login");
 }
 </script>
