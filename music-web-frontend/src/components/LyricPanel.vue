@@ -80,7 +80,6 @@ interface TimeToken {
   raw: string;
 }
 
-const LYRIC_SYNC_DELAY_SECONDS = 0.13;
 const MIN_WORD_DURATION_SECONDS = 0.16;
 
 const props = defineProps<{
@@ -105,7 +104,7 @@ let browsingTimer: ReturnType<typeof setTimeout> | null = null;
 let autoScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
-const syncedTime = computed(() => props.currentTime - LYRIC_SYNC_DELAY_SECONDS);
+const syncedTime = computed(() => props.currentTime);
 const activeIndex = computed(() => {
   if (!props.isCurrentSong || !lines.value.length) return -1;
   let index = -1;
