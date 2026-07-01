@@ -51,6 +51,7 @@ apt install -y nodejs
 |npm|10.8.2|
 |MySQL|8.0.46|
 |Nginx|1.24.0|
+|Python|3.12.3|
 
 ## 4. 计划部署目录
 
@@ -60,6 +61,8 @@ apt install -y nodejs
   app/backend.jar        # 后端运行 jar
   frontend/dist/         # 前端构建产物
   media/                 # 音频、封面、歌词和后续上传文件
+  lddc-src/              # LDDC v0.9.2 源码
+  venv-lddc/             # LDDC 专用 Python 虚拟环境
   logs/                  # 后端日志
   env/backend.env        # 后端环境变量，包含数据库密码和 JWT secret，不提交仓库
 ```
@@ -205,3 +208,47 @@ curl --noproxy "*" --resolve www.melospace.asia:80:47.89.235.138 http://www.melo
 ```
 
 结果分别为前端 HTTP 200、主域名健康检查 `UP`、www 健康检查 `UP`。剩余动作是等待阿里云 DNS 中的 A 记录生效。
+
+## 10. LDDC 歌词导入修复记录
+
+执行时间为 2026-07-02 02:12 CST 左右。
+
+问题现象：
+
+* 管理后台点击“用 LDDC 匹配歌词”时报错 `LDDC 歌词导入脚本不存在`。
+* 原因是后端服务运行目录为 `/opt/melospace/app`，默认相对路径会解析到 `/opt/melospace/scripts/import_lddc_lyrics.py`；真实脚本位于 `/opt/melospace/repo/scripts/import_lddc_lyrics.py`。
+* 线上服务器也缺少 LDDC 源码、Python 虚拟环境和运行依赖。
+
+已完成：
+
+* 安装 `python3-venv` 和 `python3-pip`。
+* 克隆 `chenmozhijin/LDDC` v0.9.2 到 `/opt/melospace/lddc-src`。
+* 创建 LDDC 专用虚拟环境 `/opt/melospace/venv-lddc`。
+* 安装 LDDC 运行依赖：`PySide6-Essentials`、`httpx[brotli,http2]`、`mutagen`、`diskcache`、`charset-normalizer`、`pyaes`、`psutil`。
+* 为 `melospace` 用户创建 `/opt/melospace/.config`、`/opt/melospace/.cache`、`/opt/melospace/.local/share`，解决 LDDC 写配置目录权限问题。
+* 在 `/opt/melospace/env/backend.env` 中加入 LDDC 生产配置，并重启后端。
+
+当前 LDDC 环境变量：
+
+```bash
+MUSIC_WEB_LDDC_PYTHON=/opt/melospace/venv-lddc/bin/python
+MUSIC_WEB_LDDC_SCRIPT_PATH=/opt/melospace/repo/scripts/import_lddc_lyrics.py
+MUSIC_WEB_LDDC_SRC_PATH=/opt/melospace/lddc-src
+MUSIC_WEB_LDDC_LYRICS_DIR=/opt/melospace/media/lyrics
+MUSIC_WEB_LDDC_TIMEOUT_SECONDS=240
+```
+
+已验证：
+
+* `scripts/import_lddc_lyrics.py --help` 可在服务器上正常执行。
+* 使用 LDDC dry-run 匹配 `I Do / 周杰伦 / 太阳之子` 成功，来源为 `KG`。
+* 通过后端接口 `POST /api/admin/lyrics/lddc` 验证成功，返回 `code: 0` 和歌词 URL `/media/lyrics/%E5%91%A8%E6%9D%B0%E4%BC%A6%20-%20I%20Do.lrc`。
+
+常用排查命令：
+
+```bash
+melospace-health
+journalctl -u melospace-backend -f
+grep '^MUSIC_WEB_LDDC' /opt/melospace/env/backend.env
+sudo -u melospace /opt/melospace/venv-lddc/bin/python /opt/melospace/repo/scripts/import_lddc_lyrics.py --help
+```
