@@ -692,7 +692,7 @@ button {
 
 .secondary-action {
   background: var(--side-active);
-  color: var(--text);
+  color: #fa233b;
 }
 
 .primary-action:disabled,
@@ -845,8 +845,8 @@ button {
 }
 
 .lyric-line.active {
-  --lyric-word-fill-end: #d40f2d;
   --lyric-word-fill-start: #fa233b;
+  --lyric-word-fill-end: #fa233b;
   --lyric-word-rest: #303036;
   color: var(--text);
   font-size: 22px;
@@ -1877,10 +1877,10 @@ button {
 }
 
 .player-lyrics-panel .lyric-line.active {
-  --lyric-word-fill-end: #ff6a7c;
-  --lyric-word-fill-start: #ffffff;
+  --lyric-word-fill-start: #ff2d55;
+  --lyric-word-fill-end: #ff2d55;
   --lyric-word-rest: rgba(255, 255, 255, 0.76);
-  color: #ffffff;
+  color: #ff2d55;
   font-size: 35px;
   text-shadow: 0 0 30px var(--player-theme), 0 8px 26px rgba(0, 0, 0, 0.58);
 }
