@@ -40,6 +40,18 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
 ```
 
+实际安装验证：
+
+|依赖|版本|
+|-|-|
+|Git|2.43.0|
+|OpenJDK|17.0.19|
+|Maven|3.8.7|
+|Node.js|20.20.2|
+|npm|10.8.2|
+|MySQL|8.0.46|
+|Nginx|1.24.0|
+
 ## 4. 计划部署目录
 
 ```text
@@ -68,6 +80,7 @@ apt install -y nodejs
 
 ```bash
 journalctl -u melospace-backend -f
+systemctl status melospace-backend --no-pager -l
 tail -f /var/log/nginx/access.log
 tail -f /var/log/nginx/error.log
 ```
@@ -103,15 +116,50 @@ systemctl restart melospace-backend
 systemctl reload nginx
 ```
 
+服务器已补充一键更新脚本，日常可直接执行：
+
+```bash
+melospace-update
+```
+
+健康检查脚本：
+
+```bash
+melospace-health
+```
+
 ## 7. 验证清单
 
-* [ ] `ssh root@47.89.235.138` 可登录。
-* [ ] `java -version`、`mvn -version`、`node -v`、`npm -v`、`mysql --version`、`nginx -v` 正常。
-* [ ] GitHub 仓库 `https://github.com/csyxcsyx/MeloSpace.git` 已拉取到 `/opt/melospace/repo`。
-* [ ] MySQL 已创建 `music_web` 数据库和 `music_user` 用户。
-* [ ] 后端服务 `melospace-backend` 为 `active (running)`。
-* [ ] Nginx 配置检查 `nginx -t` 通过。
-* [ ] `http://47.89.235.138/` 可打开前端。
-* [ ] `http://47.89.235.138/api/actuator/health` 返回 `UP`。
-* [ ] 服务器重启后服务可自启。
+* [x] `ssh root@47.89.235.138` 可登录。
+* [x] `java -version`、`mvn -version`、`node -v`、`npm -v`、`mysql --version`、`nginx -v` 正常。
+* [x] GitHub 仓库 `https://github.com/csyxcsyx/MeloSpace.git` 已拉取到 `/opt/melospace/repo`。
+* [x] MySQL 已创建 `music_web` 数据库和 `music_user` 用户。
+* [x] 后端服务 `melospace-backend` 为 `active (running)`。
+* [x] Nginx 配置检查 `nginx -t` 通过。
+* [x] `http://47.89.235.138/` 可打开前端。
+* [x] `http://47.89.235.138/api/actuator/health` 返回 `UP`。
+* [x] 服务器重启后服务已设置为 systemd 开机自启。
 
+## 8. 本次执行结果
+
+首次部署完成时间为 2026-07-02 01:34 CST 左右。应用首次构建验证版本为 `b9c6a1e`，提交说明为 `docs: move aliyun deployment earlier`。
+
+已完成：
+
+* 创建 2GB swap，降低 2GB 内存服务器构建时的风险。
+* 安装 Git、OpenJDK 17、Maven、Node.js 20、npm、MySQL、Nginx。
+* 拉取 `https://github.com/csyxcsyx/MeloSpace.git` 到 `/opt/melospace/repo`。
+* 初始化 MySQL 数据库 `music_web` 和应用用户 `music_user`。
+* 构建后端 jar 并部署到 `/opt/melospace/app/backend.jar`。
+* 构建前端 dist 并部署到 `/opt/melospace/frontend/dist`。
+* 同步本机演示媒体到 `/opt/melospace/media`，共 36 个文件，约 619MB。
+* 写入并启用 `melospace-backend` systemd 服务。
+* 写入 Nginx 站点配置并启用 80 端口访问。
+* 新增服务器脚本 `melospace-update` 和 `melospace-health`。
+
+已验证：
+
+* `http://47.89.235.138/` 返回前端页面，HTTP 200。
+* `http://47.89.235.138/api/actuator/health` 返回 `{"status":"UP"}`。
+* `http://47.89.235.138/api/songs?page=1&size=2` 返回歌曲数据。
+* 示例媒体文件 `/media/audio/I%20Do%20-%20%E5%91%A8%E6%9D%B0%E4%BC%A6.flac` 返回 HTTP 200。
