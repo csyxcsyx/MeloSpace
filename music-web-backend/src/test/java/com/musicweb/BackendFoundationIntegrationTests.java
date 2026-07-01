@@ -206,14 +206,18 @@ class BackendFoundationIntegrationTests {
         assertThat(updatedAlbum.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(updatedAlbum.getBody().get("data").get("title").asText()).isEqualTo("阶段三专辑改");
 
-        ResponseEntity<JsonNode> mismatch = exchangeWithToken(
+        ResponseEntity<JsonNode> collaborationSong = exchangeWithToken(
                 "/api/admin/songs",
                 HttpMethod.POST,
                 adminToken,
-                Map.of("title", "关系错误歌曲", "artistId", artistId, "albumId", 1, "audioUrl", "/media/audio/bad.flac")
+                Map.of("title", "合作歌手歌曲", "artistId", artistId, "albumId", 1, "audioUrl", "/media/audio/collab.flac")
         );
-        assertThat(mismatch.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(mismatch.getBody().get("code").asInt()).isEqualTo(400);
+        assertThat(collaborationSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(collaborationSong.getBody().get("data").get("artistId").asLong()).isEqualTo(artistId);
+        assertThat(collaborationSong.getBody().get("data").get("albumId").asLong()).isEqualTo(1);
+        long collaborationSongId = collaborationSong.getBody().get("data").get("id").asLong();
+        assertThat(exchangeWithToken("/api/admin/songs/" + collaborationSongId, HttpMethod.DELETE, adminToken, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
         ResponseEntity<JsonNode> song = exchangeWithToken(
                 "/api/admin/songs",

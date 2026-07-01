@@ -230,9 +230,6 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         if (album == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "专辑不存在", HttpStatus.NOT_FOUND);
         }
-        if (!Objects.equals(album.getArtistId(), artistId)) {
-            throw new BusinessException(ErrorCode.PARAM_ERROR, "专辑不属于该歌手", HttpStatus.BAD_REQUEST);
-        }
     }
 
     private void applySongRequest(Song song, SongUpsertRequest request) {

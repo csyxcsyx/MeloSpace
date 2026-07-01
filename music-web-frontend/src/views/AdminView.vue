@@ -32,7 +32,7 @@
       <div class="compact-panel">
         <div class="section-head">
           <Music2 :size="18" />
-          <h2>新增歌曲</h2>
+          <h2>{{ editingSongId ? "编辑歌曲" : "新增歌曲" }}</h2>
         </div>
 
         <form class="admin-form" @submit.prevent="createSong">
@@ -52,7 +52,7 @@
               专辑
               <select v-model.number="songForm.albumId" required>
                 <option :value="0">选择专辑</option>
-                <option v-for="album in filteredAlbums" :key="album.id" :value="album.id">
+                <option v-for="album in albums" :key="album.id" :value="album.id">
                   {{ album.title }}{{ album.artistName ? ` - ${album.artistName}` : "" }}
                 </option>
               </select>
@@ -69,7 +69,7 @@
               <input
                 :key="songFileInputKey"
                 accept="audio/*,.flac"
-                required
+                :required="!editingSongId && !songForm.audioUrl"
                 type="file"
                 @change="onSongAudioChange"
               />
@@ -111,8 +111,9 @@
           </div>
           <button class="primary-action" type="submit" :disabled="savingSong">
             <Plus :size="16" />
-            <span>{{ savingSong ? "创建中..." : "创建歌曲" }}</span>
+            <span>{{ savingSong ? "保存中..." : editingSongId ? "保存歌曲" : "创建歌曲" }}</span>
           </button>
+          <button v-if="editingSongId" class="secondary-action" type="button" @click="cancelSongEdit">取消编辑</button>
         </form>
       </div>
 
@@ -131,7 +132,7 @@
 
         <div class="section-head">
           <Disc3 :size="18" />
-          <h2>新增专辑</h2>
+          <h2>{{ editingAlbumId ? "编辑专辑" : "新增专辑" }}</h2>
         </div>
         <form class="admin-form" @submit.prevent="createAlbum">
           <label>
@@ -150,7 +151,7 @@
             <input
               :key="albumFileInputKey"
               accept="image/*"
-              required
+              :required="!editingAlbumId && !albumForm.coverUrl"
               type="file"
               @change="onAlbumCoverChange"
             />
@@ -162,8 +163,9 @@
           </label>
           <button class="secondary-action" type="submit" :disabled="savingAlbum">
             <Plus :size="16" />
-            <span>{{ savingAlbum ? "创建中..." : "创建专辑" }}</span>
+            <span>{{ savingAlbum ? "保存中..." : editingAlbumId ? "保存专辑" : "创建专辑" }}</span>
           </button>
+          <button v-if="editingAlbumId" class="secondary-action" type="button" @click="cancelAlbumEdit">取消编辑</button>
         </form>
       </div>
     </section>
@@ -181,6 +183,10 @@
             <small>{{ song.lyricUrl ? "歌词已配置" : "暂无歌词" }} · 封面跟随专辑图</small>
           </div>
           <div class="admin-row-actions">
+            <button class="secondary-action mini-action" type="button" @click="editSong(song)">
+              <Pencil :size="15" />
+              <span>编辑</span>
+            </button>
             <button class="status-pill" type="button" @click="toggleStatus(song)">
               {{ song.status === 1 ? "上架中" : "已下架" }}
             </button>
@@ -207,6 +213,10 @@
             <small>{{ album.coverUrl ? "专辑图已上传" : "暂无专辑图" }}</small>
           </div>
           <div class="admin-row-actions">
+            <button class="secondary-action mini-action" type="button" @click="editAlbum(album)">
+              <Pencil :size="15" />
+              <span>编辑</span>
+            </button>
             <button class="secondary-action mini-action" type="button" @click="bindAlbum(album)">
               <Disc3 :size="15" />
               <span>绑定</span>
@@ -225,7 +235,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { Disc3, ListMusic, Mic2, Music2, Plus, RefreshCw, Trash2, Wand2 } from "lucide-vue-next";
+import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
 import type { Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
@@ -241,6 +251,8 @@ const artistName = ref("");
 const lyricMatching = ref(false);
 const savingSong = ref(false);
 const savingAlbum = ref(false);
+const editingSongId = ref<number | null>(null);
+const editingAlbumId = ref<number | null>(null);
 const songFileInputKey = ref(0);
 const albumFileInputKey = ref(0);
 
@@ -268,11 +280,6 @@ const albumForm = reactive({
   releaseDate: ""
 });
 
-const filteredAlbums = computed(() => {
-  if (!songForm.artistId) return albums.value;
-  return albums.value.filter((album) => album.artistId === songForm.artistId);
-});
-
 const selectedSongArtist = computed(() => artists.value.find((item) => item.id === songForm.artistId) ?? null);
 const selectedSongAlbum = computed(() => albums.value.find((item) => item.id === songForm.albumId) ?? null);
 
@@ -281,10 +288,6 @@ watch(
   (artistId) => {
     if (!artistId) return;
     albumForm.artistId = artistId;
-    const selectedAlbum = albums.value.find((album) => album.id === songForm.albumId);
-    if (selectedAlbum && selectedAlbum.artistId !== artistId) {
-      songForm.albumId = 0;
-    }
   }
 );
 
@@ -326,17 +329,24 @@ async function createAlbum() {
   savingAlbum.value = true;
   try {
     const coverUrl = await ensureAlbumCoverUrl();
-    const album = await adminApi.createAlbum({
+    const isEditing = Boolean(editingAlbumId.value);
+    const payload = {
       title: albumForm.title,
       artistId: albumForm.artistId,
       coverUrl,
       releaseDate: albumForm.releaseDate || undefined
-    });
-    albums.value.unshift(album);
-    songForm.artistId = album.artistId;
-    songForm.albumId = album.id;
+    };
+    const album = editingAlbumId.value
+      ? await adminApi.updateAlbum(editingAlbumId.value, payload)
+      : await adminApi.createAlbum(payload);
+    if (isEditing) {
+      albums.value = albums.value.map((item) => (item.id === album.id ? album : item));
+    } else {
+      albums.value.unshift(album);
+      songForm.albumId = album.id;
+    }
     resetAlbumForm();
-    ui.toast("专辑已创建");
+    ui.toast(isEditing ? "专辑已更新" : "专辑已创建");
   } finally {
     savingAlbum.value = false;
   }
@@ -396,8 +406,9 @@ async function createSong() {
     const audioUrl = await ensureSongAudioUrl();
     const coverUrl = selectedSongAlbum.value?.coverUrl ?? "";
     const lyricUrl = await ensureSongLyricUrl(audioUrl);
+    const isEditing = Boolean(editingSongId.value);
 
-    await adminApi.createSong({
+    const payload = {
       title: songForm.title,
       artistId: songForm.artistId,
       albumId: songForm.albumId,
@@ -409,8 +420,13 @@ async function createSong() {
       genre: songForm.genre,
       mood: songForm.mood,
       status: songForm.status
-    });
-    ui.toast("歌曲已创建");
+    };
+    if (isEditing && editingSongId.value) {
+      await adminApi.updateSong(editingSongId.value, payload);
+    } else {
+      await adminApi.createSong(payload);
+    }
+    ui.toast(isEditing ? "歌曲已更新" : "歌曲已创建");
     resetSongForm();
     await loadAdmin();
   } finally {
@@ -490,21 +506,65 @@ function readAudioDuration(file: File) {
 }
 
 function resetSongForm() {
+  editingSongId.value = null;
   songForm.title = "";
+  songForm.artistId = 0;
+  songForm.albumId = 0;
   songForm.audioUrl = "";
   songForm.lyricUrl = "";
   songForm.durationSeconds = 0;
+  songForm.language = "中文";
+  songForm.genre = "Pop";
+  songForm.mood = "";
+  songForm.status = 1;
   songAudioFile.value = null;
   songLyricFile.value = null;
   songFileInputKey.value += 1;
 }
 
 function resetAlbumForm() {
+  editingAlbumId.value = null;
   albumForm.title = "";
+  albumForm.artistId = 0;
   albumForm.coverUrl = "";
   albumForm.releaseDate = "";
   albumCoverFile.value = null;
   albumFileInputKey.value += 1;
+}
+
+function editSong(song: Song) {
+  editingSongId.value = song.id;
+  songForm.title = song.title;
+  songForm.artistId = song.artistId;
+  songForm.albumId = song.albumId ?? 0;
+  songForm.audioUrl = song.audioUrl;
+  songForm.lyricUrl = song.lyricUrl ?? "";
+  songForm.durationSeconds = song.durationSeconds ?? 0;
+  songForm.language = song.language ?? "";
+  songForm.genre = song.genre ?? "";
+  songForm.mood = song.mood ?? "";
+  songForm.status = song.status;
+  songAudioFile.value = null;
+  songLyricFile.value = null;
+  songFileInputKey.value += 1;
+}
+
+function cancelSongEdit() {
+  resetSongForm();
+}
+
+function editAlbum(album: Album) {
+  editingAlbumId.value = album.id;
+  albumForm.title = album.title;
+  albumForm.artistId = album.artistId;
+  albumForm.coverUrl = album.coverUrl ?? "";
+  albumForm.releaseDate = album.releaseDate ?? "";
+  albumCoverFile.value = null;
+  albumFileInputKey.value += 1;
+}
+
+function cancelAlbumEdit() {
+  resetAlbumForm();
 }
 
 async function toggleStatus(song: Song) {
@@ -520,7 +580,6 @@ async function deleteSong(song: Song) {
 }
 
 function bindAlbum(album: Album) {
-  songForm.artistId = album.artistId;
   songForm.albumId = album.id;
 }
 
