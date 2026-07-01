@@ -22,7 +22,17 @@
           :class="{ active: index === activeIndex, past: isCurrentSong && index < activeIndex, seekable: Boolean(song) }"
           @click="selectLine(line)"
         >
-          {{ line.text }}
+          <template v-if="line.words.length">
+            <span
+              v-for="(word, wordIndex) in line.words"
+              :key="`${word.time}-${wordIndex}-${word.text}`"
+              class="lyric-word"
+              :class="{ active: isWordActive(word, line), past: isWordPast(word) }"
+            >
+              {{ word.text }}
+            </span>
+          </template>
+          <template v-else>{{ line.text }}</template>
         </button>
       </template>
       <button
@@ -52,7 +62,22 @@ import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
 interface LyricLine {
   time: number;
+  endTime?: number;
   text: string;
+  words: LyricWord[];
+}
+
+interface LyricWord {
+  time: number;
+  endTime?: number;
+  text: string;
+}
+
+interface TimeToken {
+  time: number;
+  start: number;
+  end: number;
+  raw: string;
 }
 
 const props = defineProps<{
@@ -136,27 +161,92 @@ async function loadLyrics(url: string) {
 
 function parseLrc(text: string) {
   const parsed: LyricLine[] = [];
-  const timestampPattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+  const timestampPattern = /(\[|<)(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?(\]|>)/g;
 
   for (const rawLine of text.split(/\r?\n/)) {
-    const matches = [...rawLine.matchAll(timestampPattern)];
-    if (!matches.length) continue;
+    const tokens = [...rawLine.matchAll(timestampPattern)].map((match) => toTimeToken(match));
+    if (!tokens.length) continue;
+
+    if (hasTokenAfterLyricText(rawLine, tokens)) {
+      const line = parseWordTimedLine(rawLine, tokens);
+      if (line) parsed.push(line);
+      continue;
+    }
 
     const lyricText = rawLine.replace(timestampPattern, "").trim();
     if (!lyricText) continue;
 
-    for (const match of matches) {
-      const minutes = Number(match[1]);
-      const seconds = Number(match[2]);
-      const milliseconds = Number((match[3] ?? "0").padEnd(3, "0"));
+    for (const token of tokens) {
       parsed.push({
-        time: minutes * 60 + seconds + milliseconds / 1000,
-        text: lyricText
+        time: token.time,
+        text: lyricText,
+        words: []
       });
     }
   }
 
   return parsed.sort((first, second) => first.time - second.time);
+}
+
+function toTimeToken(match: RegExpMatchArray): TimeToken {
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  const milliseconds = Number((match[4] ?? "0").padEnd(3, "0"));
+  const start = match.index ?? 0;
+  return {
+    time: minutes * 60 + seconds + milliseconds / 1000,
+    start,
+    end: start + match[0].length,
+    raw: match[0]
+  };
+}
+
+function hasTokenAfterLyricText(rawLine: string, tokens: TimeToken[]) {
+  let cursor = 0;
+  for (const token of tokens) {
+    if (rawLine.slice(cursor, token.start).trim()) {
+      return true;
+    }
+    cursor = token.end;
+  }
+  return false;
+}
+
+function parseWordTimedLine(rawLine: string, tokens: TimeToken[]): LyricLine | null {
+  const words: LyricWord[] = [];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const nextToken = tokens[index + 1];
+    const rawText = rawLine.slice(token.end, nextToken?.start ?? rawLine.length);
+    if (!rawText.trim()) continue;
+
+    words.push({
+      time: token.time,
+      endTime: nextToken?.time,
+      text: rawText.replace(/\s+/g, " ")
+    });
+  }
+
+  const lineText = words.map((word) => word.text).join("").trim();
+  if (!lineText) return null;
+
+  return {
+    time: tokens[0].time,
+    endTime: words[words.length - 1]?.endTime,
+    text: lineText,
+    words
+  };
+}
+
+function isWordActive(word: LyricWord, line: LyricLine) {
+  if (!props.isCurrentSong) return false;
+  const endTime = word.endTime ?? line.endTime ?? word.time + 0.4;
+  return props.currentTime + 0.03 >= word.time && props.currentTime < endTime;
+}
+
+function isWordPast(word: LyricWord) {
+  if (!props.isCurrentSong) return false;
+  return props.currentTime >= (word.endTime ?? word.time);
 }
 
 function setLineRef(element: Element | ComponentPublicInstance | null, index: number) {
