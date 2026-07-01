@@ -28,15 +28,18 @@ http.interceptors.response.use(
     const auth = useAuthStore();
     const ui = useUiStore();
     const status = error.response?.status;
+    const url = String(error.config?.url || "");
     const message = error.response?.data?.message || error.message || "网络请求失败";
 
-    if (status === 401 && String(error.config?.url || "").startsWith("/api/auth/")) {
+    if (status === 401 && url.startsWith("/api/auth/")) {
       ui.toast(message);
     } else if (status === 401) {
       auth.clearSession();
       ui.toast("请先登录后继续操作");
     } else if (status === 403) {
       ui.toast("当前账号没有权限执行该操作");
+    } else if (status === 404 && url.includes("/api/admin/lyrics/lddc") && message === "资源不存在") {
+      ui.toast("后端 LDDC 接口未加载，请重启后端服务后再匹配歌词");
     } else {
       ui.toast(message);
     }

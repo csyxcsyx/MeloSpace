@@ -76,16 +76,6 @@
               <small>{{ fileStatus(songAudioFile, songForm.audioUrl, "请选择 MP3、FLAC、WAV 等音频") }}</small>
             </label>
             <label class="file-picker">
-              <span>歌曲封面</span>
-              <input
-                :key="songFileInputKey + '-cover'"
-                accept="image/*"
-                type="file"
-                @change="onSongCoverChange"
-              />
-              <small>{{ fileStatus(songCoverFile, songForm.coverUrl, "可选，未选时使用专辑图") }}</small>
-            </label>
-            <label class="file-picker">
               <span>歌词文件</span>
               <input
                 :key="songFileInputKey + '-lyric'"
@@ -102,7 +92,7 @@
               <Wand2 :size="16" />
               <span>{{ lyricMatching ? "匹配中..." : "用 LDDC 匹配歌词" }}</span>
             </button>
-            <span class="form-help">音频会先上传到网站媒体库，再用于本地 LDDC 匹配。</span>
+            <span class="form-help">音频会先上传到网站媒体库，再用于本地 LDDC 匹配；歌曲封面自动使用所选专辑图。</span>
           </div>
 
           <div class="form-row">
@@ -188,7 +178,7 @@
           <div>
             <strong>{{ song.title }}</strong>
             <span>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未绑定专辑" }}</span>
-            <small>{{ song.lyricUrl ? "歌词已配置" : "暂无歌词" }} · {{ song.coverUrl ? "封面已配置" : "使用默认封面" }}</small>
+            <small>{{ song.lyricUrl ? "歌词已配置" : "暂无歌词" }} · 封面跟随专辑图</small>
           </div>
           <div class="admin-row-actions">
             <button class="status-pill" type="button" @click="toggleStatus(song)">
@@ -255,7 +245,6 @@ const songFileInputKey = ref(0);
 const albumFileInputKey = ref(0);
 
 const songAudioFile = ref<File | null>(null);
-const songCoverFile = ref<File | null>(null);
 const songLyricFile = ref<File | null>(null);
 const albumCoverFile = ref<File | null>(null);
 
@@ -264,7 +253,6 @@ const songForm = reactive({
   artistId: 0,
   albumId: 0,
   audioUrl: "",
-  coverUrl: "",
   lyricUrl: "",
   durationSeconds: 0,
   language: "中文",
@@ -347,9 +335,6 @@ async function createAlbum() {
     albums.value.unshift(album);
     songForm.artistId = album.artistId;
     songForm.albumId = album.id;
-    if (album.coverUrl && !songForm.coverUrl) {
-      songForm.coverUrl = album.coverUrl;
-    }
     resetAlbumForm();
     ui.toast("专辑已创建");
   } finally {
@@ -363,11 +348,6 @@ function onSongAudioChange(event: Event) {
   if (songAudioFile.value) {
     readAudioDuration(songAudioFile.value);
   }
-}
-
-function onSongCoverChange(event: Event) {
-  songCoverFile.value = getInputFile(event);
-  songForm.coverUrl = "";
 }
 
 function onSongLyricChange(event: Event) {
@@ -414,7 +394,7 @@ async function createSong() {
   savingSong.value = true;
   try {
     const audioUrl = await ensureSongAudioUrl();
-    const coverUrl = await ensureSongCoverUrl();
+    const coverUrl = selectedSongAlbum.value?.coverUrl ?? "";
     const lyricUrl = await ensureSongLyricUrl(audioUrl);
 
     await adminApi.createSong({
@@ -458,16 +438,6 @@ async function ensureSongAudioUrl() {
   const upload = await adminApi.upload(songAudioFile.value, "AUDIO");
   songForm.audioUrl = upload.url;
   return upload.url;
-}
-
-async function ensureSongCoverUrl() {
-  if (songForm.coverUrl) return songForm.coverUrl;
-  if (songCoverFile.value) {
-    const upload = await adminApi.upload(songCoverFile.value, "COVER");
-    songForm.coverUrl = upload.url;
-    return upload.url;
-  }
-  return selectedSongAlbum.value?.coverUrl ?? "";
 }
 
 async function ensureSongLyricUrl(audioUrl: string) {
@@ -522,11 +492,9 @@ function readAudioDuration(file: File) {
 function resetSongForm() {
   songForm.title = "";
   songForm.audioUrl = "";
-  songForm.coverUrl = "";
   songForm.lyricUrl = "";
   songForm.durationSeconds = 0;
   songAudioFile.value = null;
-  songCoverFile.value = null;
   songLyricFile.value = null;
   songFileInputKey.value += 1;
 }
@@ -554,9 +522,6 @@ async function deleteSong(song: Song) {
 function bindAlbum(album: Album) {
   songForm.artistId = album.artistId;
   songForm.albumId = album.id;
-  if (album.coverUrl && !songForm.coverUrl) {
-    songForm.coverUrl = album.coverUrl;
-  }
 }
 
 async function deleteAlbum(album: Album) {
