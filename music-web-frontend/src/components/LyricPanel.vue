@@ -22,17 +22,7 @@
           :class="{ active: index === activeIndex, past: isCurrentSong && index < activeIndex, seekable: Boolean(song) }"
           @click="selectLine(line)"
         >
-          <template v-if="line.words.length">
-            <span
-              v-for="(word, wordIndex) in line.words"
-              :key="`${line.time}-${wordIndex}`"
-              class="lyric-word"
-              :class="{ active: isWordActive(word, line) }"
-            >
-              {{ word.text }}
-            </span>
-          </template>
-          <template v-else>{{ line.text }}</template>
+          {{ line.text }}
         </button>
       </template>
       <button
@@ -62,14 +52,6 @@ import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
 interface LyricLine {
   time: number;
-  endTime?: number;
-  text: string;
-  words: LyricWord[];
-}
-
-interface LyricWord {
-  time: number | null;
-  endTime?: number | null;
   text: string;
 }
 
@@ -157,20 +139,6 @@ function parseLrc(text: string) {
   const timestampPattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
 
   for (const rawLine of text.split(/\r?\n/)) {
-    if (/^\[[a-zA-Z]+:/u.test(rawLine)) continue;
-
-    const enhancedLine = parseEnhancedLrcLine(rawLine);
-    if (enhancedLine) {
-      parsed.push(enhancedLine);
-      continue;
-    }
-
-    const verbatimLine = parseVerbatimLrcLine(rawLine);
-    if (verbatimLine) {
-      parsed.push(verbatimLine);
-      continue;
-    }
-
     const matches = [...rawLine.matchAll(timestampPattern)];
     if (!matches.length) continue;
 
@@ -183,95 +151,12 @@ function parseLrc(text: string) {
       const milliseconds = Number((match[3] ?? "0").padEnd(3, "0"));
       parsed.push({
         time: minutes * 60 + seconds + milliseconds / 1000,
-        text: lyricText,
-        words: []
+        text: lyricText
       });
     }
   }
 
-  return withLineEndTimes(parsed.sort((first, second) => first.time - second.time));
-}
-
-function parseEnhancedLrcLine(rawLine: string): LyricLine | null {
-  const lineStartMatch = rawLine.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/u);
-  if (!lineStartMatch || !/<\d{1,2}:\d{2}(?:\.\d{1,3})?>/u.test(rawLine)) return null;
-
-  const lineTime = parseTimestampMatch(lineStartMatch);
-  const content = rawLine.slice(lineStartMatch[0].length);
-  const words = withWordEndTimes(parseTimedText(content, /<(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?>/gu));
-  const textOnly = words.map((word) => word.text).join("").trim();
-  if (!textOnly) return null;
-  return { time: lineTime, text: textOnly, words };
-}
-
-function parseVerbatimLrcLine(rawLine: string): LyricLine | null {
-  const tokens = [...rawLine.matchAll(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/gu)];
-  if (tokens.length < 2) return null;
-
-  const hasInterleavedText = tokens.slice(0, -1).some((token, index) => {
-    const currentEnd = (token.index ?? 0) + token[0].length;
-    const nextStart = tokens[index + 1]?.index ?? currentEnd;
-    return rawLine.slice(currentEnd, nextStart).length > 0;
-  });
-  if (!hasInterleavedText) return null;
-
-  const lineTime = parseTimestampMatch(tokens[0]);
-  const content = rawLine.slice((tokens[0].index ?? 0) + tokens[0].length);
-  const words = withWordEndTimes(parseTimedText(content, /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/gu, lineTime));
-  const textOnly = words.map((word) => word.text).join("").trim();
-  if (!textOnly) return null;
-  return { time: lineTime, text: textOnly, words };
-}
-
-function parseTimedText(content: string, markerPattern: RegExp, fallbackStart?: number) {
-  const words: LyricWord[] = [];
-  const markers = [...content.matchAll(markerPattern)];
-  let cursor = 0;
-  let currentTime: number | null = fallbackStart ?? null;
-
-  for (const marker of markers) {
-    const markerStart = marker.index ?? 0;
-    const textChunk = content.slice(cursor, markerStart);
-    if (textChunk) {
-      words.push({ time: currentTime, text: textChunk });
-    }
-    currentTime = parseTimestampMatch(marker);
-    cursor = markerStart + marker[0].length;
-  }
-
-  const tail = content.slice(cursor);
-  if (tail) {
-    words.push({ time: currentTime, text: tail });
-  }
-
-  return words.filter((word) => word.text.length > 0);
-}
-
-function withWordEndTimes(words: LyricWord[]) {
-  return words.map((word, index) => ({
-    ...word,
-    endTime: word.endTime ?? words.slice(index + 1).find((next) => next.time !== null)?.time ?? null
-  }));
-}
-
-function withLineEndTimes(parsed: LyricLine[]) {
-  return parsed.map((line, index) => ({
-    ...line,
-    endTime: line.endTime ?? parsed[index + 1]?.time
-  }));
-}
-
-function parseTimestampMatch(match: RegExpMatchArray) {
-  const minutes = Number(match[1]);
-  const seconds = Number(match[2]);
-  const milliseconds = Number((match[3] ?? "0").padEnd(3, "0"));
-  return minutes * 60 + seconds + milliseconds / 1000;
-}
-
-function isWordActive(word: LyricWord, line: LyricLine) {
-  if (!props.isCurrentSong || word.time === null) return false;
-  const endTime = word.endTime ?? line.endTime ?? Number.POSITIVE_INFINITY;
-  return props.currentTime + 0.05 >= word.time && props.currentTime < endTime;
+  return parsed.sort((first, second) => first.time - second.time);
 }
 
 function setLineRef(element: Element | ComponentPublicInstance | null, index: number) {

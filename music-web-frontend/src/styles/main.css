@@ -816,16 +816,6 @@ button {
   transition: color 160ms ease, font-size 160ms ease, transform 160ms ease;
 }
 
-.lyric-word {
-  transition: color 160ms ease, opacity 160ms ease, text-shadow 160ms ease;
-}
-
-.lyric-word.active {
-  color: var(--text);
-  opacity: 1;
-  text-shadow: 0 8px 24px rgba(255, 90, 82, 0.18);
-}
-
 .lyric-line.seekable {
   cursor: pointer;
 }
@@ -1780,11 +1770,6 @@ button {
   color: #ffffff;
   font-size: 35px;
   text-shadow: 0 0 30px var(--player-theme), 0 8px 26px rgba(0, 0, 0, 0.58);
-}
-
-.player-lyrics-panel .lyric-word.active {
-  color: #ffffff;
-  text-shadow: 0 0 24px var(--player-theme), 0 10px 28px rgba(0, 0, 0, 0.68);
 }
 
 .player-lyrics-panel .lyric-line.seekable:hover,
