@@ -29,6 +29,6 @@ public record LddcProperties(
         sources = sources == null || sources.isBlank() ? "QM,KG,NE" : sources;
         langs = langs == null || langs.isBlank() ? "orig" : langs;
         minScore = minScore <= 0 ? 55.0 : minScore;
-        timeoutSeconds = timeoutSeconds <= 0 ? 120 : timeoutSeconds;
+        timeoutSeconds = timeoutSeconds <= 0 ? 180 : timeoutSeconds;
     }
 }

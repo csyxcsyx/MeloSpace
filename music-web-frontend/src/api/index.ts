@@ -16,6 +16,8 @@ import type {
   UserSummary
 } from "@/api/types";
 
+const LDDC_IMPORT_TIMEOUT_MS = 190000;
+
 export const authApi = {
   login: (username: string, password: string) =>
     unwrap<AuthResponse>(http.post("/api/auth/login", { username, password })),
@@ -104,7 +106,7 @@ export const adminApi = {
     unwrap<Album>(http.put(`/api/admin/albums/${id}`, payload)),
   deleteAlbum: (id: number) => unwrap<void>(http.delete(`/api/admin/albums/${id}`)),
   importLddcLyrics: (payload: { title: string; artist: string; album?: string; audioUrl: string; durationSeconds?: number }) =>
-    unwrap<LddcLyricResult>(http.post("/api/admin/lyrics/lddc", payload)),
+    unwrap<LddcLyricResult>(http.post("/api/admin/lyrics/lddc", payload, { timeout: LDDC_IMPORT_TIMEOUT_MS })),
   upload: (file: File, fileType: string) => {
     const form = new FormData();
     form.append("file", file);
