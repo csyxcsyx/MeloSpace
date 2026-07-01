@@ -30,7 +30,9 @@ http.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message || "网络请求失败";
 
-    if (status === 401) {
+    if (status === 401 && String(error.config?.url || "").startsWith("/api/auth/")) {
+      ui.toast(message);
+    } else if (status === 401) {
       auth.clearSession();
       ui.toast("请先登录后继续操作");
     } else if (status === 403) {

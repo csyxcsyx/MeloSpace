@@ -7,6 +7,7 @@ import com.musicweb.dto.RegisterRequest;
 import com.musicweb.entity.User;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.security.JwtService;
+import com.musicweb.service.AdminAccountService;
 import com.musicweb.service.AuthService;
 import com.musicweb.service.UserService;
 import com.musicweb.vo.AuthResponse;
@@ -26,11 +27,18 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AdminAccountService adminAccountService;
 
-    public AuthServiceImpl(UserService userService, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthServiceImpl(
+            UserService userService,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AdminAccountService adminAccountService
+    ) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.adminAccountService = adminAccountService;
     }
 
     @Override
@@ -57,14 +65,24 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
         String username = request.username().trim();
-        User user = userService.getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username), false);
+        User user = findExactUser(username);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            if (adminAccountService.isBootstrapAdminCredentials(username, request.password())) {
+                return toAuthResponse(adminAccountService.ensureAdminAccount());
+            }
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
         }
         if (user.getStatus() == null || user.getStatus() != STATUS_ENABLED) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "用户已被禁用", HttpStatus.FORBIDDEN);
         }
         return toAuthResponse(user);
+    }
+
+    private User findExactUser(String username) {
+        return userService.list(new LambdaQueryWrapper<User>().eq(User::getUsername, username)).stream()
+                .filter(user -> username.equals(user.getUsername()))
+                .findFirst()
+                .orElse(null);
     }
 
     private AuthResponse toAuthResponse(User user) {

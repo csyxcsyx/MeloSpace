@@ -856,6 +856,7 @@ button {
 
 .lyric-word {
   display: inline-block;
+  white-space: pre;
   background:
     linear-gradient(
       90deg,

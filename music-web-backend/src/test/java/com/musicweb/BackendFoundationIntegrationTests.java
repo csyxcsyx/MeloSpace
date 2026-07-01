@@ -17,6 +17,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -30,6 +31,9 @@ class BackendFoundationIntegrationTests {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void healthEndpointIsPublic() {
@@ -93,6 +97,22 @@ class BackendFoundationIntegrationTests {
     void seededYuxiandeAdminCanLogin() {
         JsonNode adminLogin = login("YUXIANde", "rex1234567");
         assertThat(adminLogin.get("data").get("user").get("role").asText()).isEqualTo("ADMIN");
+    }
+
+    @Test
+    void yuxiandeAdminLoginRepairsMissingSeedAccount() {
+        jdbcTemplate.update("DELETE FROM `user` WHERE username = ?", "YUXIANde");
+
+        JsonNode adminLogin = login("YUXIANde", "rex1234567");
+
+        assertThat(adminLogin.get("data").get("user").get("username").asText()).isEqualTo("YUXIANde");
+        assertThat(adminLogin.get("data").get("user").get("role").asText()).isEqualTo("ADMIN");
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM `user` WHERE username = ? AND role = 'ADMIN' AND status = 1",
+                Integer.class,
+                "YUXIANde"
+        );
+        assertThat(count).isEqualTo(1);
     }
 
     @Test
