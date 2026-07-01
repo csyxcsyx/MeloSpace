@@ -165,6 +165,7 @@ const queueOpen = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
 let activePlayRequest: Promise<boolean> | null = null;
 let playRequestToken = 0;
+let progressAnimationFrame: number | null = null;
 
 interface PlayRequestDetail {
   song: Song;
@@ -177,9 +178,12 @@ watch(
   () => player.isPlaying,
   (isPlaying) => {
     if (isPlaying) {
-      playAudio();
+      void playAudio().then((played) => {
+        if (played) startProgressLoop();
+      });
     } else {
       audioRef.value?.pause();
+      stopProgressLoop();
     }
   },
   { flush: "post" }
@@ -215,6 +219,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+  stopProgressLoop();
 });
 
 function playAudio() {
@@ -281,7 +286,34 @@ function onTimeUpdate() {
   player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : 0);
 }
 
+function startProgressLoop() {
+  if (progressAnimationFrame !== null) return;
+  progressAnimationFrame = window.requestAnimationFrame(syncProgressFrame);
+}
+
+function stopProgressLoop() {
+  if (progressAnimationFrame === null) return;
+  window.cancelAnimationFrame(progressAnimationFrame);
+  progressAnimationFrame = null;
+}
+
+function syncProgressFrame() {
+  const audio = audioRef.value;
+  if (!audio) {
+    progressAnimationFrame = null;
+    return;
+  }
+
+  player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : 0);
+  if (player.isPlaying && !audio.paused && !audio.ended) {
+    progressAnimationFrame = window.requestAnimationFrame(syncProgressFrame);
+  } else {
+    progressAnimationFrame = null;
+  }
+}
+
 function onAudioError() {
+  stopProgressLoop();
   player.setError("音频加载失败，请检查媒体文件或代理配置");
 }
 

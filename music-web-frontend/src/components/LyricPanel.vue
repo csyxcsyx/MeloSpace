@@ -27,7 +27,7 @@
               v-for="(word, wordIndex) in line.words"
               :key="`${word.time}-${wordIndex}-${word.text}`"
               class="lyric-word"
-              :class="{ active: isWordActive(word, line), past: isWordPast(word) }"
+              :style="wordStyle(word, line)"
             >
               {{ word.text }}
             </span>
@@ -80,6 +80,10 @@ interface TimeToken {
   raw: string;
 }
 
+const LYRIC_SYNC_LEAD_SECONDS = 0.28;
+const LINE_LOOKAHEAD_SECONDS = 0.08;
+const MIN_WORD_DURATION_SECONDS = 0.16;
+
 const props = defineProps<{
   song: Song | null;
   currentTime: number;
@@ -102,11 +106,12 @@ let browsingTimer: ReturnType<typeof setTimeout> | null = null;
 let autoScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
+const syncedTime = computed(() => props.currentTime + LYRIC_SYNC_LEAD_SECONDS);
 const activeIndex = computed(() => {
   if (!props.isCurrentSong || !lines.value.length) return -1;
   let index = -1;
   for (let i = 0; i < lines.value.length; i += 1) {
-    if (lines.value[i].time <= props.currentTime + 0.2) {
+    if (lines.value[i].time <= syncedTime.value + LINE_LOOKAHEAD_SECONDS) {
       index = i;
     } else {
       break;
@@ -238,15 +243,19 @@ function parseWordTimedLine(rawLine: string, tokens: TimeToken[]): LyricLine | n
   };
 }
 
-function isWordActive(word: LyricWord, line: LyricLine) {
-  if (!props.isCurrentSong) return false;
-  const endTime = word.endTime ?? line.endTime ?? word.time + 0.4;
-  return props.currentTime + 0.03 >= word.time && props.currentTime < endTime;
+function wordStyle(word: LyricWord, line: LyricLine) {
+  return {
+    "--lyric-word-progress": `${Math.round(getWordProgress(word, line) * 100)}%`
+  };
 }
 
-function isWordPast(word: LyricWord) {
-  if (!props.isCurrentSong) return false;
-  return props.currentTime >= (word.endTime ?? word.time);
+function getWordProgress(word: LyricWord, line: LyricLine) {
+  if (!props.isCurrentSong) return 0;
+  const startTime = word.time;
+  const endTime = Math.max(word.endTime ?? line.endTime ?? startTime + MIN_WORD_DURATION_SECONDS, startTime + MIN_WORD_DURATION_SECONDS);
+  if (syncedTime.value <= startTime) return 0;
+  if (syncedTime.value >= endTime) return 1;
+  return (syncedTime.value - startTime) / (endTime - startTime);
 }
 
 function setLineRef(element: Element | ComponentPublicInstance | null, index: number) {
