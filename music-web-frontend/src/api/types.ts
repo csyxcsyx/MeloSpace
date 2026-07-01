@@ -138,3 +138,14 @@ export interface UploadFile {
   sizeBytes: number;
   createdAt: string;
 }
+
+export interface LddcLyricResult {
+  lyricUrl: string;
+  outputPath: string;
+  source: string | null;
+  matchedTitle: string | null;
+  matchedArtist: string | null;
+  matchedAlbum: string | null;
+  durationMs: number | null;
+  format: string | null;
+}

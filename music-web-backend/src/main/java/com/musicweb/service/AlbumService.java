@@ -10,4 +10,6 @@ public interface AlbumService extends IService<Album> {
     AlbumResponse createAlbum(AlbumUpsertRequest request);
 
     AlbumResponse updateAlbum(Long id, AlbumUpsertRequest request);
+
+    void deleteAlbum(Long id);
 }

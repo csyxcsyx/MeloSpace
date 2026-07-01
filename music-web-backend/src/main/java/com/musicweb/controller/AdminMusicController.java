@@ -4,21 +4,25 @@ import com.musicweb.common.ApiResponse;
 import com.musicweb.common.PageResult;
 import com.musicweb.dto.AlbumUpsertRequest;
 import com.musicweb.dto.ArtistUpsertRequest;
+import com.musicweb.dto.LddcLyricRequest;
 import com.musicweb.dto.SongStatusRequest;
 import com.musicweb.dto.SongUpsertRequest;
 import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.AlbumService;
 import com.musicweb.service.ArtistService;
+import com.musicweb.service.LddcLyricService;
 import com.musicweb.service.SongService;
 import com.musicweb.service.UploadFileService;
 import com.musicweb.vo.AlbumResponse;
 import com.musicweb.vo.ArtistResponse;
+import com.musicweb.vo.LddcLyricResponse;
 import com.musicweb.vo.SongResponse;
 import com.musicweb.vo.UploadFileResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,17 +45,20 @@ public class AdminMusicController {
     private final ArtistService artistService;
     private final AlbumService albumService;
     private final UploadFileService uploadFileService;
+    private final LddcLyricService lddcLyricService;
 
     public AdminMusicController(
             SongService songService,
             ArtistService artistService,
             AlbumService albumService,
-            UploadFileService uploadFileService
+            UploadFileService uploadFileService,
+            LddcLyricService lddcLyricService
     ) {
         this.songService = songService;
         this.artistService = artistService;
         this.albumService = albumService;
         this.uploadFileService = uploadFileService;
+        this.lddcLyricService = lddcLyricService;
     }
 
     @GetMapping("/songs")
@@ -85,6 +92,12 @@ public class AdminMusicController {
         return ApiResponse.ok(songService.updateSongStatus(id, request));
     }
 
+    @DeleteMapping("/songs/{id}")
+    public ApiResponse<Void> deleteSong(@PathVariable @Positive Long id) {
+        songService.deleteSong(id);
+        return ApiResponse.ok();
+    }
+
     @PostMapping("/artists")
     public ApiResponse<ArtistResponse> createArtist(@Valid @RequestBody ArtistUpsertRequest request) {
         return ApiResponse.ok(artistService.createArtist(request));
@@ -109,6 +122,17 @@ public class AdminMusicController {
             @Valid @RequestBody AlbumUpsertRequest request
     ) {
         return ApiResponse.ok(albumService.updateAlbum(id, request));
+    }
+
+    @DeleteMapping("/albums/{id}")
+    public ApiResponse<Void> deleteAlbum(@PathVariable @Positive Long id) {
+        albumService.deleteAlbum(id);
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/lyrics/lddc")
+    public ApiResponse<LddcLyricResponse> importLddcLyrics(@Valid @RequestBody LddcLyricRequest request) {
+        return ApiResponse.ok(lddcLyricService.importLyrics(request));
     }
 
     @PostMapping("/upload")

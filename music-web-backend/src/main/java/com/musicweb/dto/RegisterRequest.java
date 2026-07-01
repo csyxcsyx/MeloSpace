@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 public record RegisterRequest(
         @NotBlank
         @Size(min = 3, max = 50)
-        @Pattern(regexp = "^[A-Za-z0-9_]+$", message = "只能包含字母、数字和下划线")
+        @Pattern(regexp = "^[A-Za-z]+$", message = "账号名只能包含英文字母")
         String username,
 
         @NotBlank

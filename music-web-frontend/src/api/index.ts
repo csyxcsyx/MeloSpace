@@ -5,6 +5,7 @@ import type {
   AuthResponse,
   CommentItem,
   FavoriteItem,
+  LddcLyricResult,
   PageResult,
   PlayHistoryItem,
   Playlist,
@@ -88,16 +89,22 @@ export const adminApi = {
   dashboard: () => unwrap<Record<string, number>>(http.get("/api/admin/dashboard")),
   songs: (params: { page?: number; size?: number; keyword?: string; status?: number } = {}) =>
     unwrap<PageResult<Song>>(http.get("/api/admin/songs", { params })),
-  createSong: (payload: Partial<Song> & { title: string; artistId: number; audioUrl: string }) =>
+  createSong: (payload: Partial<Song> & { title: string; artistId: number; albumId: number; audioUrl: string }) =>
     unwrap<Song>(http.post("/api/admin/songs", payload)),
-  updateSong: (id: number, payload: Partial<Song> & { title: string; artistId: number; audioUrl: string }) =>
+  updateSong: (id: number, payload: Partial<Song> & { title: string; artistId: number; albumId: number; audioUrl: string }) =>
     unwrap<Song>(http.put(`/api/admin/songs/${id}`, payload)),
   updateSongStatus: (id: number, status: number) =>
     unwrap<Song>(http.patch(`/api/admin/songs/${id}/status`, { status })),
+  deleteSong: (id: number) => unwrap<void>(http.delete(`/api/admin/songs/${id}`)),
   createArtist: (payload: { name: string; bio?: string; avatarUrl?: string }) =>
     unwrap<Artist>(http.post("/api/admin/artists", payload)),
   createAlbum: (payload: { title: string; artistId: number; coverUrl?: string; releaseDate?: string }) =>
     unwrap<Album>(http.post("/api/admin/albums", payload)),
+  updateAlbum: (id: number, payload: { title: string; artistId: number; coverUrl?: string; releaseDate?: string }) =>
+    unwrap<Album>(http.put(`/api/admin/albums/${id}`, payload)),
+  deleteAlbum: (id: number) => unwrap<void>(http.delete(`/api/admin/albums/${id}`)),
+  importLddcLyrics: (payload: { title: string; artist: string; album?: string; audioUrl: string; durationSeconds?: number }) =>
+    unwrap<LddcLyricResult>(http.post("/api/admin/lyrics/lddc", payload)),
   upload: (file: File, fileType: string) => {
     const form = new FormData();
     form.append("file", file);

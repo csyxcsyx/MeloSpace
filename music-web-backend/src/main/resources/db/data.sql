@@ -7,6 +7,15 @@ VALUES
   (1, 'admin', '$2a$10$N6VyIIcvlTGLKQFOgRGcmewyKaHS14Fx/eGzpnMqt1KuN934Bn/ry', '系统管理员', NULL, 'ADMIN', 1),
   (2, 'demo', '$2a$10$SqhOBKQjwQM4PwFMXofE7.K2uvA1KpxlntBb8KXAPoC4z5IsjPrke', '演示用户', NULL, 'USER', 1)
 ON DUPLICATE KEY UPDATE
+  password_hash = VALUES(password_hash),
+  nickname = VALUES(nickname),
+  role = VALUES(role),
+  status = VALUES(status);
+
+INSERT INTO `user` (username, password_hash, nickname, avatar_url, role, status)
+VALUES ('YUXIANde', '$2a$10$QIFYgZVqulcg7x4nXIVOpO.nW9AGE7o7skDYZFdf3HATPLXA0LlRG', 'YUXIANde', NULL, 'ADMIN', 1)
+ON DUPLICATE KEY UPDATE
+  password_hash = VALUES(password_hash),
   nickname = VALUES(nickname),
   role = VALUES(role),
   status = VALUES(status);

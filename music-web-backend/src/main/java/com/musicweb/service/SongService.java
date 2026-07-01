@@ -23,4 +23,6 @@ public interface SongService extends IService<Song> {
     SongResponse updateSong(Long id, SongUpsertRequest request);
 
     SongResponse updateSongStatus(Long id, SongStatusRequest request);
+
+    void deleteSong(Long id);
 }

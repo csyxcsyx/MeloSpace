@@ -105,10 +105,11 @@ function play() {
   player.playSong(song.value, [song.value]);
 }
 
-function seekLyric(time: number) {
+async function seekLyric(time: number) {
   if (!song.value) return;
   if (!isCurrentSong.value) {
-    player.playSong(song.value, [song.value]);
+    const played = await player.playSong(song.value, [song.value]);
+    if (!played) return;
   }
   player.seekTo(time, true);
 }

@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import type { Song } from "@/api/types";
 import { songApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
+import { useUiStore } from "@/stores/ui";
 
 export const PLAYER_PLAY_REQUEST_EVENT = "melospace-player-play-request";
 export type PlayMode = "order" | "shuffle" | "repeat-one";
@@ -80,6 +81,7 @@ export const usePlayerStore = defineStore("player", () => {
   });
 
   function playSong(song: Song, songs: Song[] = []) {
+    if (!ensurePlaybackAllowed()) return Promise.resolve(false);
     currentSong.value = song;
     queue.value = songs.length ? songs : [song];
     isPlaying.value = false;
@@ -140,6 +142,7 @@ export const usePlayerStore = defineStore("player", () => {
   }
 
   function seekTo(time: number, shouldPlay = true) {
+    if (shouldPlay && !ensurePlaybackAllowed()) return Promise.resolve(false);
     seekTarget.value = Math.max(0, time);
     seekShouldPlay.value = shouldPlay;
     seekRequestId.value += 1;
@@ -148,6 +151,7 @@ export const usePlayerStore = defineStore("player", () => {
 
   function resumeCurrent() {
     if (!currentSong.value) return Promise.resolve(false);
+    if (!ensurePlaybackAllowed()) return Promise.resolve(false);
     errorMessage.value = "";
     return dispatchPlayRequest(currentSong.value, currentTime.value, true);
   }
@@ -250,6 +254,15 @@ export const usePlayerStore = defineStore("player", () => {
     currentTime.value = 0;
     duration.value = 0;
     errorMessage.value = "";
+  }
+
+  function ensurePlaybackAllowed() {
+    const auth = useAuthStore();
+    if (auth.isAuthenticated) return true;
+    const message = "请先登录后播放音乐";
+    useUiStore().toast(message);
+    setError(message);
+    return false;
   }
 
   async function maybeRecordPlay() {

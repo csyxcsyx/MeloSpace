@@ -67,7 +67,7 @@ class BackendFoundationIntegrationTests {
     @Test
     void registrationRejectsDuplicateUsername() {
         Map<String, String> payload = Map.of(
-                "username", "new_user",
+                "username", "newuser",
                 "password", "NewUser@123456",
                 "nickname", "New User"
         );
@@ -79,6 +79,20 @@ class BackendFoundationIntegrationTests {
         ResponseEntity<JsonNode> duplicate = restTemplate.postForEntity(url("/api/auth/register"), payload, JsonNode.class);
         assertThat(duplicate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(duplicate.getBody().get("code").asInt()).isEqualTo(409);
+
+        ResponseEntity<JsonNode> invalidUsername = restTemplate.postForEntity(
+                url("/api/auth/register"),
+                Map.of("username", "new_user1", "password", "NewUser@123456", "nickname", "Invalid User"),
+                JsonNode.class
+        );
+        assertThat(invalidUsername.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(invalidUsername.getBody().get("code").asInt()).isEqualTo(400);
+    }
+
+    @Test
+    void seededYuxiandeAdminCanLogin() {
+        JsonNode adminLogin = login("YUXIANde", "rex1234567");
+        assertThat(adminLogin.get("data").get("user").get("role").asText()).isEqualTo("ADMIN");
     }
 
     @Test
@@ -236,6 +250,32 @@ class BackendFoundationIntegrationTests {
         assertThat(online.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> blockedAlbumDelete = exchangeWithToken(
+                "/api/admin/albums/" + albumId,
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(blockedAlbumDelete.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        ResponseEntity<JsonNode> deletedSong = exchangeWithToken(
+                "/api/admin/songs/" + songId,
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(deletedSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<JsonNode> deletedAlbum = exchangeWithToken(
+                "/api/admin/albums/" + albumId,
+                HttpMethod.DELETE,
+                adminToken,
+                null
+        );
+        assertThat(deletedAlbum.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

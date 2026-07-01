@@ -150,6 +150,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ListMusic, Maximize2, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Trash2, Volume2, X } from "lucide-vue-next";
 import { usePlayerStore } from "@/stores/player";
+import { useAuthStore } from "@/stores/auth";
+import { useUiStore } from "@/stores/ui";
 import type { Song } from "@/api/types";
 import { PLAYER_PLAY_REQUEST_EVENT } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
@@ -160,6 +162,8 @@ withDefaults(defineProps<{ hidden?: boolean }>(), {
 
 const router = useRouter();
 const player = usePlayerStore();
+const auth = useAuthStore();
+const ui = useUiStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
 const queueOpen = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
@@ -198,6 +202,16 @@ watch(
 );
 
 watch(
+  () => auth.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) return;
+    audioRef.value?.pause();
+    player.setPlaying(false);
+    player.setLoading(false);
+  }
+);
+
+watch(
   () => player.seekRequestId,
   () => {
     const audio = audioRef.value;
@@ -223,6 +237,9 @@ onBeforeUnmount(() => {
 });
 
 function playAudio() {
+  if (!ensureAuthenticatedPlayback()) {
+    return Promise.resolve(false);
+  }
   const audio = audioRef.value;
   if (!audio || !audioSrc.value) {
     player.setPlaying(false);
@@ -271,6 +288,7 @@ function togglePlay() {
     player.setPlaying(false);
     return;
   }
+  if (!ensureAuthenticatedPlayback()) return;
   playAudio();
 }
 
@@ -318,6 +336,7 @@ function onAudioError() {
 }
 
 async function handleEnded() {
+  if (!ensureAuthenticatedPlayback()) return;
   const audio = audioRef.value;
   const nextSong = player.getNextSong(false);
   if (!audio || !nextSong) {
@@ -347,6 +366,15 @@ async function handleEnded() {
     .catch((error: unknown) => {
       player.setError(playbackErrorMessage(error));
     });
+}
+
+function ensureAuthenticatedPlayback() {
+  if (auth.isAuthenticated) return true;
+  const message = "请先登录后播放音乐";
+  audioRef.value?.pause();
+  player.setError(message);
+  ui.toast(message);
+  return false;
 }
 
 function seek(event: MouseEvent) {

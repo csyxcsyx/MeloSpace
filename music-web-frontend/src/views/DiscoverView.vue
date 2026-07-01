@@ -116,8 +116,8 @@ function toggleSongPlayback(song: Song) {
   player.playSong(song, songs.value);
 }
 
-function openPlayer(song: Song) {
-  player.playSong(song, songs.value);
-  router.push("/player");
+async function openPlayer(song: Song) {
+  const played = await player.playSong(song, songs.value);
+  if (played) router.push("/player");
 }
 </script>

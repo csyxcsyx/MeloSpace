@@ -1,7 +1,8 @@
 INSERT INTO `user` (id, username, password_hash, nickname, avatar_url, role, status)
 VALUES
   (1, 'admin', '$2a$10$N6VyIIcvlTGLKQFOgRGcmewyKaHS14Fx/eGzpnMqt1KuN934Bn/ry', '系统管理员', NULL, 'ADMIN', 1),
-  (2, 'demo', '$2a$10$SqhOBKQjwQM4PwFMXofE7.K2uvA1KpxlntBb8KXAPoC4z5IsjPrke', '演示用户', NULL, 'USER', 1);
+  (2, 'demo', '$2a$10$SqhOBKQjwQM4PwFMXofE7.K2uvA1KpxlntBb8KXAPoC4z5IsjPrke', '演示用户', NULL, 'USER', 1),
+  (3, 'YUXIANde', '$2a$10$QIFYgZVqulcg7x4nXIVOpO.nW9AGE7o7skDYZFdf3HATPLXA0LlRG', 'YUXIANde', NULL, 'ADMIN', 1);
 
 INSERT INTO artist (id, name, bio, avatar_url)
 VALUES (1, '周杰伦', '测试歌手', NULL);

@@ -6,7 +6,7 @@ USE music_web;
 
 CREATE TABLE IF NOT EXISTS `user` (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL,
+  username VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_cs NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50) NOT NULL,
   avatar_url VARCHAR(500) NULL,
@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS `user` (
   KEY idx_user_role (role),
   KEY idx_user_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE `user`
+  MODIFY username VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_cs NOT NULL;
 
 CREATE TABLE IF NOT EXISTS artist (
   id BIGINT NOT NULL AUTO_INCREMENT,

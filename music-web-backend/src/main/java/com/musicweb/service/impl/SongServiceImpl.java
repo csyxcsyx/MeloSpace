@@ -9,10 +9,16 @@ import com.musicweb.dto.SongStatusRequest;
 import com.musicweb.dto.SongUpsertRequest;
 import com.musicweb.entity.Album;
 import com.musicweb.entity.Artist;
+import com.musicweb.entity.Comment;
+import com.musicweb.entity.Favorite;
+import com.musicweb.entity.PlayHistory;
 import com.musicweb.entity.Playlist;
 import com.musicweb.entity.PlaylistSong;
 import com.musicweb.entity.Song;
 import com.musicweb.exception.BusinessException;
+import com.musicweb.mapper.CommentMapper;
+import com.musicweb.mapper.FavoriteMapper;
+import com.musicweb.mapper.PlayHistoryMapper;
 import com.musicweb.mapper.PlaylistMapper;
 import com.musicweb.mapper.SongMapper;
 import com.musicweb.service.AlbumService;
@@ -34,6 +40,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -41,23 +48,33 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
 
     private static final int STATUS_PUBLISHED = 1;
     private static final String VISIBILITY_PUBLIC = "PUBLIC";
+    private static final String TARGET_TYPE_SONG = "SONG";
     private static final int SEARCH_LIMIT = 10;
 
     private final ArtistService artistService;
     private final AlbumService albumService;
     private final PlaylistMapper playlistMapper;
     private final PlaylistSongService playlistSongService;
+    private final FavoriteMapper favoriteMapper;
+    private final CommentMapper commentMapper;
+    private final PlayHistoryMapper playHistoryMapper;
 
     public SongServiceImpl(
             ArtistService artistService,
             AlbumService albumService,
             PlaylistMapper playlistMapper,
-            PlaylistSongService playlistSongService
+            PlaylistSongService playlistSongService,
+            FavoriteMapper favoriteMapper,
+            CommentMapper commentMapper,
+            PlayHistoryMapper playHistoryMapper
     ) {
         this.artistService = artistService;
         this.albumService = albumService;
         this.playlistMapper = playlistMapper;
         this.playlistSongService = playlistSongService;
+        this.favoriteMapper = favoriteMapper;
+        this.commentMapper = commentMapper;
+        this.playHistoryMapper = playHistoryMapper;
     }
 
     @Override
@@ -172,6 +189,21 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         song.setStatus(request.status());
         updateById(song);
         return toSongResponses(List.of(getById(id))).get(0);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSong(Long id) {
+        getExistingSong(id);
+        playlistSongService.remove(new LambdaQueryWrapper<PlaylistSong>().eq(PlaylistSong::getSongId, id));
+        playHistoryMapper.delete(new LambdaQueryWrapper<PlayHistory>().eq(PlayHistory::getSongId, id));
+        favoriteMapper.delete(new LambdaQueryWrapper<Favorite>()
+                .eq(Favorite::getTargetType, TARGET_TYPE_SONG)
+                .eq(Favorite::getTargetId, id));
+        commentMapper.delete(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getTargetType, TARGET_TYPE_SONG)
+                .eq(Comment::getTargetId, id));
+        removeById(id);
     }
 
     private LambdaQueryWrapper<Song> basePublishedWrapper() {

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 public record SongUpsertRequest(
         @NotBlank @Size(max = 100) String title,
         @NotNull @Positive Long artistId,
-        @Positive Long albumId,
+        @NotNull @Positive Long albumId,
         @Size(max = 500) String coverUrl,
         @NotBlank @Size(max = 500) String audioUrl,
         @Size(max = 500) String lyricUrl,
