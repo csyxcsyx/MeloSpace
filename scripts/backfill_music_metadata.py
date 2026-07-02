@@ -535,8 +535,17 @@ def lookup_netease(album: dict[str, Any]) -> dict[str, Any] | None:
             "Referer": "https://music.163.com/",
         },
     )
+    result = data.get("result", {})
+    if not isinstance(result, dict):
+        return None
+    albums = result.get("albums", [])
+    if not isinstance(albums, list):
+        return None
+
     best: dict[str, Any] | None = None
-    for item in data.get("result", {}).get("albums", []) or []:
+    for item in albums:
+        if not isinstance(item, dict):
+            continue
         publish_time = item.get("publishTime")
         if not publish_time:
             continue
