@@ -1,7 +1,7 @@
 <template>
-  <div class="app-shell" :class="{ 'immersive-shell': isImmersive }">
+  <div class="app-shell" :class="{ 'immersive-shell': isImmersive, 'discover-shell': isDiscover }">
     <AppSidebar v-if="!isImmersive" />
-    <main class="main" :class="{ 'immersive-main': isImmersive }">
+    <main class="main" :class="{ 'immersive-main': isImmersive, 'discover-main': isDiscover }">
       <RouterView v-slot="{ Component, route }">
         <KeepAlive>
           <component :is="Component" v-if="route.meta.keepAlive" />
@@ -24,4 +24,5 @@ import ToastHost from "@/components/ToastHost.vue";
 
 const route = useRoute();
 const isImmersive = computed(() => route.meta.immersive === true);
+const isDiscover = computed(() => route.name === "discover" && !isImmersive.value);
 </script>

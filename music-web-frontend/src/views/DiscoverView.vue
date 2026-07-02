@@ -1,5 +1,5 @@
 <template>
-  <section>
+  <section class="discover-page">
     <h1 class="page-title">新发现</h1>
 
     <button class="discover-banner" type="button" @click="scrollToRecommendations">
@@ -7,7 +7,7 @@
     </button>
 
     <EmptyState v-if="discover.loading && !discover.loaded">正在加载音乐内容...</EmptyState>
-    <section v-else ref="recommendationRef">
+    <section v-else ref="recommendationRef" class="discover-recommendations">
       <div class="section-head recommendation-head">
         <h2>推荐歌曲</h2>
         <button class="secondary-action refresh-recommendation" type="button" @click="refreshRecommendations">

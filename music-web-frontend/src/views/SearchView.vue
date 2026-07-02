@@ -29,12 +29,34 @@
       <section class="result-grid">
         <div class="result-panel">
           <h2>歌手</h2>
-          <p v-for="artist in result.artists" :key="artist.id">{{ artist.name }}</p>
+          <div v-if="result.artists.length" class="result-list">
+            <RouterLink v-for="artist in result.artists" :key="artist.id" class="result-link" :to="`/artists/${artist.id}`">
+              <span class="result-thumb">
+                <img v-if="artist.avatarUrl" :src="resolveMediaUrl(artist.avatarUrl)" alt="" />
+                <UserRound v-else :size="18" />
+              </span>
+              <span>
+                <strong>{{ artist.name }}</strong>
+                <small>{{ artist.bio || "歌手主页" }}</small>
+              </span>
+            </RouterLink>
+          </div>
           <p v-if="!result.artists.length" class="muted-line">暂无歌手结果</p>
         </div>
         <div class="result-panel">
           <h2>专辑</h2>
-          <p v-for="album in result.albums" :key="album.id">{{ album.title }}</p>
+          <div v-if="result.albums.length" class="result-list">
+            <RouterLink v-for="album in result.albums" :key="album.id" class="result-link" :to="`/albums/${album.id}`">
+              <span class="result-thumb">
+                <img v-if="album.coverUrl" :src="resolveMediaUrl(album.coverUrl)" alt="" />
+                <Disc3 v-else :size="18" />
+              </span>
+              <span>
+                <strong>{{ album.title }}</strong>
+                <small>{{ album.artistName || "专辑主页" }}</small>
+              </span>
+            </RouterLink>
+          </div>
           <p v-if="!result.albums.length" class="muted-line">暂无专辑结果</p>
         </div>
       </section>
@@ -46,6 +68,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { Disc3, UserRound } from "lucide-vue-next";
 import { searchApi } from "@/api";
 import type { SearchResponse, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
@@ -53,6 +76,7 @@ import PageToolbar from "@/components/PageToolbar.vue";
 import PlaylistSection from "@/components/PlaylistSection.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import { usePlayerStore } from "@/stores/player";
+import { resolveMediaUrl } from "@/utils/format";
 
 const route = useRoute();
 const router = useRouter();
