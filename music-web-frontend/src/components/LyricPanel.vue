@@ -80,7 +80,10 @@ interface TimeToken {
   raw: string;
 }
 
+const LYRIC_LEAD_SECONDS = 0.07;
 const MIN_WORD_DURATION_SECONDS = 0.16;
+const AUTO_SCROLL_DURATION_MS = 560;
+const AUTO_SCROLL_MIN_DELTA = 2;
 
 const props = defineProps<{
   song: Song | null;
@@ -101,10 +104,10 @@ const scrollRef = ref<HTMLElement | null>(null);
 const userBrowsing = ref(false);
 const autoScrolling = ref(false);
 let browsingTimer: ReturnType<typeof setTimeout> | null = null;
-let autoScrollTimer: ReturnType<typeof setTimeout> | null = null;
+let scrollAnimationFrame: number | null = null;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
-const syncedTime = computed(() => props.currentTime);
+const syncedTime = computed(() => props.currentTime + LYRIC_LEAD_SECONDS);
 const activeIndex = computed(() => {
   if (!props.isCurrentSong || !lines.value.length) return -1;
   let index = -1;
@@ -134,7 +137,7 @@ onBeforeUpdate(() => {
 
 onBeforeUnmount(() => {
   if (browsingTimer) clearTimeout(browsingTimer);
-  if (autoScrollTimer) clearTimeout(autoScrollTimer);
+  stopAutoScrollAnimation();
 });
 
 async function loadLyrics(url: string) {
@@ -242,8 +245,9 @@ function parseWordTimedLine(rawLine: string, tokens: TimeToken[]): LyricLine | n
 }
 
 function wordStyle(word: LyricWord, line: LyricLine) {
+  const progress = getWordProgress(word, line);
   return {
-    "--lyric-word-progress": `${Math.round(getWordProgress(word, line) * 100)}%`
+    "--lyric-word-progress": `${(progress * 100).toFixed(2)}%`
   };
 }
 
@@ -289,12 +293,64 @@ function scrollToLine(index: number, behavior: ScrollBehavior) {
   const line = lineRefs.value[index];
   if (!container || !line) return;
 
-  autoScrolling.value = true;
   const nextTop = line.offsetTop - container.clientHeight / 2 + line.clientHeight / 2;
-  container.scrollTo({ top: Math.max(0, nextTop), behavior });
-  if (autoScrollTimer) clearTimeout(autoScrollTimer);
-  autoScrollTimer = setTimeout(() => {
+  const targetTop = Math.max(0, nextTop);
+
+  if (behavior === "smooth") {
+    animateScrollTo(container, targetTop);
+    return;
+  }
+
+  stopAutoScrollAnimation();
+  autoScrolling.value = true;
+  container.scrollTo({ top: targetTop, behavior });
+  requestAnimationFrame(() => {
     autoScrolling.value = false;
-  }, 700);
+  });
+}
+
+function animateScrollTo(container: HTMLElement, targetTop: number) {
+  stopAutoScrollAnimation();
+
+  const startTop = container.scrollTop;
+  const distance = targetTop - startTop;
+  if (Math.abs(distance) < AUTO_SCROLL_MIN_DELTA) {
+    return;
+  }
+
+  autoScrolling.value = true;
+  const startedAt = performance.now();
+
+  const step = (now: number) => {
+    const elapsed = now - startedAt;
+    const progress = Math.min(elapsed / AUTO_SCROLL_DURATION_MS, 1);
+    const easedProgress = easeInOutCubic(progress);
+
+    container.scrollTop = startTop + distance * easedProgress;
+
+    if (progress < 1) {
+      scrollAnimationFrame = requestAnimationFrame(step);
+      return;
+    }
+
+    container.scrollTop = targetTop;
+    autoScrolling.value = false;
+    scrollAnimationFrame = null;
+  };
+
+  scrollAnimationFrame = requestAnimationFrame(step);
+}
+
+function stopAutoScrollAnimation() {
+  if (scrollAnimationFrame === null) return;
+  cancelAnimationFrame(scrollAnimationFrame);
+  scrollAnimationFrame = null;
+  autoScrolling.value = false;
+}
+
+function easeInOutCubic(progress: number) {
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - (-2 * progress + 2) ** 3 / 2;
 }
 </script>
