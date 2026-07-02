@@ -8,7 +8,13 @@
       <span class="lyric-clock">{{ isCurrentSong ? formatDuration(currentTime) : "--:--" }}</span>
     </div>
 
-    <div ref="scrollRef" class="lyric-scroll" @scroll="onManualScroll">
+    <div
+      ref="scrollRef"
+      class="lyric-scroll"
+      @scroll="onScroll"
+      @wheel.passive="onUserScrollIntent"
+      @touchmove.passive="onUserScrollIntent"
+    >
       <p v-if="loading" class="lyric-state">正在加载歌词...</p>
       <p v-else-if="errorMessage" class="lyric-state">{{ errorMessage }}</p>
       <p v-else-if="!lines.length" class="lyric-state">暂无歌词。</p>
@@ -105,6 +111,8 @@ const userBrowsing = ref(false);
 const autoScrolling = ref(false);
 let browsingTimer: ReturnType<typeof setTimeout> | null = null;
 let scrollAnimationFrame: number | null = null;
+let centerAnimationFrame: number | null = null;
+let lastProgrammaticScrollAt = 0;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
 const syncedTime = computed(() => props.currentTime + LYRIC_LEAD_SECONDS);
@@ -128,8 +136,21 @@ watch(activeIndex, async (index) => {
   if (index < 0 || !props.isCurrentSong) return;
   if (userBrowsing.value) return;
   await nextTick();
-  scrollToLine(index, "smooth");
+  if (props.fullscreen) {
+    queueActiveLineCenter("auto");
+  } else {
+    scrollToLine(index, "smooth");
+  }
 });
+
+watch(
+  () => props.currentTime,
+  () => {
+    if (!props.fullscreen || !props.isCurrentSong || userBrowsing.value || activeIndex.value < 0) return;
+    queueActiveLineCenter("auto");
+  },
+  { flush: "post" }
+);
 
 onBeforeUpdate(() => {
   lineRefs.value = [];
@@ -138,6 +159,7 @@ onBeforeUpdate(() => {
 onBeforeUnmount(() => {
   if (browsingTimer) clearTimeout(browsingTimer);
   stopAutoScrollAnimation();
+  cancelQueuedCentering();
 });
 
 async function loadLyrics(url: string) {
@@ -277,12 +299,26 @@ function selectLine(line: LyricLine) {
   emit("seek", line.time);
 }
 
-function onManualScroll() {
+function onScroll() {
   if (autoScrolling.value || !lines.value.length) return;
+  if (performance.now() - lastProgrammaticScrollAt < 140) return;
+  pauseFollowingForBrowsing();
+}
+
+function onUserScrollIntent() {
+  pauseFollowingForBrowsing();
+}
+
+function pauseFollowingForBrowsing() {
   userBrowsing.value = true;
+  stopAutoScrollAnimation();
+  cancelQueuedCentering();
   if (browsingTimer) clearTimeout(browsingTimer);
   browsingTimer = setTimeout(() => {
     userBrowsing.value = false;
+    if (props.fullscreen && props.isCurrentSong && activeIndex.value >= 0) {
+      queueActiveLineCenter("auto");
+    }
   }, 4200);
 }
 
@@ -290,7 +326,7 @@ async function resumeFollowing() {
   userBrowsing.value = false;
   await nextTick();
   if (activeIndex.value >= 0) {
-    scrollToLine(activeIndex.value, "smooth");
+    scrollToLine(activeIndex.value, props.fullscreen ? "auto" : "smooth");
   }
 }
 
@@ -314,9 +350,19 @@ function scrollToLine(index: number, behavior: ScrollBehavior) {
 
   stopAutoScrollAnimation();
   autoScrolling.value = true;
+  lastProgrammaticScrollAt = performance.now();
   container.scrollTo({ top: targetTop, behavior });
   requestAnimationFrame(() => {
     autoScrolling.value = false;
+  });
+}
+
+function queueActiveLineCenter(behavior: ScrollBehavior) {
+  if (centerAnimationFrame !== null) return;
+  centerAnimationFrame = requestAnimationFrame(() => {
+    centerAnimationFrame = null;
+    if (userBrowsing.value || activeIndex.value < 0) return;
+    scrollToLine(activeIndex.value, behavior);
   });
 }
 
@@ -337,6 +383,7 @@ function animateScrollTo(container: HTMLElement, targetTop: number) {
     const progress = Math.min(elapsed / AUTO_SCROLL_DURATION_MS, 1);
     const easedProgress = easeInOutCubic(progress);
 
+    lastProgrammaticScrollAt = now;
     container.scrollTop = startTop + distance * easedProgress;
 
     if (progress < 1) {
@@ -357,6 +404,12 @@ function stopAutoScrollAnimation() {
   cancelAnimationFrame(scrollAnimationFrame);
   scrollAnimationFrame = null;
   autoScrolling.value = false;
+}
+
+function cancelQueuedCentering() {
+  if (centerAnimationFrame === null) return;
+  cancelAnimationFrame(centerAnimationFrame);
+  centerAnimationFrame = null;
 }
 
 function easeInOutCubic(progress: number) {

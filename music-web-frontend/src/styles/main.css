@@ -218,8 +218,8 @@ button {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
-  padding-top: 16px;
-  padding-bottom: 112px;
+  padding-top: 14px;
+  padding-bottom: 104px;
 }
 
 .main.immersive-main {
@@ -295,15 +295,15 @@ button {
 
 .discover-page .page-title {
   flex: 0 0 auto;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .discover-banner {
   display: block;
   flex: 0 0 auto;
   overflow: hidden;
-  width: min(100%, 960px);
-  margin: 0 auto 18px;
+  width: 100%;
+  margin: 0 0 12px;
   padding: 0;
   border: 1px solid var(--soft-line);
   border-radius: 18px;
@@ -342,7 +342,8 @@ button {
 
 .discover-recommendations .recommendation-head {
   flex: 0 0 auto;
-  margin-top: 4px;
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 .discover-recommendations .song-columns {
@@ -352,7 +353,7 @@ button {
 }
 
 .discover-recommendations .song-row {
-  min-height: clamp(52px, 5.7dvh, 64px);
+  min-height: clamp(48px, 5.55dvh, 63px);
 }
 
 .refresh-recommendation {
@@ -1155,6 +1156,7 @@ button {
 .lyric-scroll {
   position: relative;
   overflow-y: auto;
+  overflow-anchor: none;
   min-height: 0;
   padding: 86px 28px;
   scroll-behavior: smooth;
@@ -2248,7 +2250,7 @@ button {
 
 .player-lyrics-panel .lyric-scroll {
   height: 100%;
-  padding: 80px 24px;
+  padding: clamp(120px, 31vh, 290px) 24px;
   mask-image: linear-gradient(180deg, transparent, #000000 18%, #000000 78%, transparent);
   background: transparent;
   scrollbar-width: none;
@@ -2601,7 +2603,7 @@ button {
   .player-lyrics-panel .lyric-scroll {
     height: 52vh;
     max-height: none;
-    padding: 90px 8px;
+    padding: clamp(110px, 27vh, 220px) 8px;
   }
 
   .player-bottom-dock {
