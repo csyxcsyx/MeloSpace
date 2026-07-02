@@ -55,6 +55,57 @@
       </section>
 
       <footer class="player-bottom-dock" aria-label="播放控制">
+        <section v-if="queueOpen" class="play-queue-panel player-page-queue-panel" aria-label="播放列表" @wheel.stop @touchmove.stop>
+          <div class="play-queue-head">
+            <div>
+              <strong>播放列表</strong>
+              <span>{{ player.queue.length }} 首 · {{ player.playModeLabel }}</span>
+            </div>
+            <button type="button" aria-label="关闭播放列表" @click="queueOpen = false">
+              <X :size="16" />
+            </button>
+          </div>
+
+          <div class="play-mode-tabs" aria-label="播放模式">
+            <button type="button" :class="{ active: player.playMode === 'order' }" @click="player.setPlayMode('order')">
+              <Repeat :size="15" />
+              <span>顺序</span>
+            </button>
+            <button type="button" :class="{ active: player.playMode === 'shuffle' }" @click="player.setPlayMode('shuffle')">
+              <Shuffle :size="15" />
+              <span>随机</span>
+            </button>
+            <button type="button" :class="{ active: player.playMode === 'repeat-one' }" @click="player.setPlayMode('repeat-one')">
+              <Repeat1 :size="15" />
+              <span>单曲</span>
+            </button>
+          </div>
+
+          <div v-if="player.queue.length" class="play-queue-list">
+            <div
+              v-for="song in player.queue"
+              :key="song.id"
+              class="play-queue-item"
+              :class="{ active: player.currentSong?.id === song.id }"
+            >
+              <button type="button" class="play-queue-song" @click="playQueuedSong(song)">
+                <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
+                <Music v-else :size="16" />
+                <span>
+                  <strong>{{ song.title }}</strong>
+                  <small>{{ song.artistName || "未知歌手" }}</small>
+                </span>
+              </button>
+              <button type="button" class="queue-remove" :aria-label="`从播放列表移除 ${song.title}`" @click="player.removeFromQueue(song.id)">
+                <Trash2 :size="15" />
+              </button>
+            </div>
+          </div>
+          <p v-else class="queue-empty">播放列表为空。</p>
+
+          <button v-if="player.queue.length" type="button" class="queue-clear" @click="player.clearQueue()">清空播放列表</button>
+        </section>
+
         <div class="player-progress-control">
           <span>{{ formatDuration(player.currentTime) }}</span>
           <input
@@ -80,6 +131,11 @@
           </div>
 
           <div class="player-page-controls">
+            <button type="button" :aria-label="player.playModeLabel" :title="player.playModeLabel" @click="player.cyclePlayMode()">
+              <Shuffle v-if="player.playMode === 'shuffle'" :size="20" />
+              <Repeat1 v-else-if="player.playMode === 'repeat-one'" :size="20" />
+              <Repeat v-else :size="20" />
+            </button>
             <button type="button" aria-label="上一首" @click="player.previous">
               <SkipBack :size="22" />
             </button>
@@ -89,6 +145,9 @@
             </button>
             <button type="button" aria-label="下一首" @click="player.next">
               <SkipForward :size="22" />
+            </button>
+            <button type="button" aria-label="打开播放列表" :aria-expanded="queueOpen" @click="queueOpen = !queueOpen">
+              <ListMusic :size="20" />
             </button>
           </div>
 
@@ -113,14 +172,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
-import { ArrowLeft, Home, Music, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-vue-next";
+import { ArrowLeft, Home, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Trash2, Volume2, X } from "lucide-vue-next";
 import EmptyState from "@/components/EmptyState.vue";
 import LyricPanel from "@/components/LyricPanel.vue";
 import { usePlayerStore } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import type { Song } from "@/api/types";
 
 const router = useRouter();
 const player = usePlayerStore();
+const queueOpen = ref(false);
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
 const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
 const THEME_CACHE_PREFIX = "melospace-player-theme:";
@@ -178,6 +239,10 @@ function seekFromRange(event: Event) {
 function setVolume(event: Event) {
   const input = event.target as HTMLInputElement;
   player.setVolume(Number(input.value));
+}
+
+function playQueuedSong(song: Song) {
+  void player.playSong(song, player.queue);
 }
 
 function extractThemeColor(coverUrl?: string | null) {

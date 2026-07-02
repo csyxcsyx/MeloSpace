@@ -88,8 +88,10 @@ interface TimeToken {
 
 const LYRIC_LEAD_SECONDS = 0.14;
 const MIN_WORD_DURATION_SECONDS = 0.16;
-const AUTO_SCROLL_DURATION_MS = 720;
+const AUTO_SCROLL_DURATION_MS = 860;
 const AUTO_SCROLL_MIN_DELTA = 2;
+const DEFAULT_ACTIVE_ANCHOR = 0.5;
+const FULLSCREEN_ACTIVE_ANCHOR = 0.36;
 
 const props = defineProps<{
   song: Song | null;
@@ -327,7 +329,7 @@ async function resumeFollowing() {
   userBrowsing.value = false;
   await nextTick();
   if (activeIndex.value >= 0) {
-    scrollToLine(activeIndex.value, props.fullscreen ? "auto" : "smooth");
+    scrollToLine(activeIndex.value, "smooth");
   }
 }
 
@@ -341,7 +343,8 @@ function scrollToLine(index: number, behavior: ScrollBehavior) {
   const line = lineRefs.value[index];
   if (!container || !line) return;
 
-  const nextTop = line.offsetTop - container.clientHeight / 2 + line.clientHeight / 2;
+  const activeAnchor = props.fullscreen ? FULLSCREEN_ACTIVE_ANCHOR : DEFAULT_ACTIVE_ANCHOR;
+  const nextTop = line.offsetTop - container.clientHeight * activeAnchor + line.clientHeight / 2;
   const targetTop = Math.max(0, nextTop);
 
   if (behavior === "smooth") {

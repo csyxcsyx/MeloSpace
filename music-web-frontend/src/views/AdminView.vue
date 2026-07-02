@@ -370,7 +370,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Users, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
-import type { AdminUser, Album, Artist, Song } from "@/api/types";
+import type { AdminUser, Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -535,16 +535,28 @@ onMounted(loadAdmin);
 async function loadAdmin() {
   const [stats, userPage, songPage, artistPage, albumPage] = await Promise.all([
     adminApi.dashboard(),
-    adminApi.users({ page: 1, size: 500 }),
-    adminApi.songs({ page: 1, size: 500 }),
-    artistApi.list({ page: 1, size: 200 }),
-    albumApi.list({ page: 1, size: 500 })
+    fetchAllPageItems((page, size) => adminApi.users({ page, size })),
+    fetchAllPageItems((page, size) => adminApi.songs({ page, size })),
+    artistApi.list({ page: 1, size: 100 }),
+    albumApi.list({ page: 1, size: 100 })
   ]);
   Object.assign(dashboard, stats);
-  users.value = userPage.items;
-  songs.value = songPage.items;
+  users.value = userPage;
+  songs.value = songPage;
   artists.value = artistPage;
   albums.value = albumPage;
+}
+
+async function fetchAllPageItems<T>(loader: (page: number, size: number) => Promise<PageResult<T>>) {
+  const size = 100;
+  const firstPage = await loader(1, size);
+  const items = [...firstPage.items];
+  const totalPages = Math.ceil(firstPage.total / size);
+  for (let page = 2; page <= totalPages; page += 1) {
+    const nextPage = await loader(page, size);
+    items.push(...nextPage.items);
+  }
+  return items;
 }
 
 function setAdminPage(key: AdminListKey, page: number) {

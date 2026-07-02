@@ -130,7 +130,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { playlistApi, songApi, userApi } from "@/api";
-import type { FavoriteItem, PlayHistoryItem, Playlist, Song } from "@/api/types";
+import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 
@@ -217,13 +217,25 @@ onMounted(loadProfile);
 
 async function loadProfile() {
   const [playlistPage, favoritePage, recentPage] = await Promise.all([
-    userApi.playlists(1, 200),
-    userApi.favorites(1, 200),
-    userApi.recentPlays(1, 200)
+    fetchAllPageItems((page, size) => userApi.playlists(page, size)),
+    fetchAllPageItems((page, size) => userApi.favorites(page, size)),
+    fetchAllPageItems((page, size) => userApi.recentPlays(page, size))
   ]);
-  playlists.value = playlistPage.items;
-  favorites.value = await hydrateFavorites(favoritePage.items);
-  recent.value = await hydrateRecentPlays(recentPage.items);
+  playlists.value = playlistPage;
+  favorites.value = await hydrateFavorites(favoritePage);
+  recent.value = await hydrateRecentPlays(recentPage);
+}
+
+async function fetchAllPageItems<T>(loader: (page: number, size: number) => Promise<PageResult<T>>) {
+  const size = 100;
+  const firstPage = await loader(1, size);
+  const items = [...firstPage.items];
+  const totalPages = Math.ceil(firstPage.total / size);
+  for (let page = 2; page <= totalPages; page += 1) {
+    const nextPage = await loader(page, size);
+    items.push(...nextPage.items);
+  }
+  return items;
 }
 
 function setProfilePage(key: keyof typeof profilePages, page: number) {

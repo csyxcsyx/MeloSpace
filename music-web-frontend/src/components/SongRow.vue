@@ -76,6 +76,8 @@ const props = defineProps<{
   isPlaying?: boolean;
 }>();
 
+const SONG_ROW_MENU_OPEN_EVENT = "melospace-song-row-menu-open";
+
 defineEmits<{
   togglePlay: [song: Song];
   openPlayer: [song: Song];
@@ -101,10 +103,12 @@ const coverLabel = computed(() => {
 
 onMounted(() => {
   document.addEventListener("click", handleDocumentClick);
+  window.addEventListener(SONG_ROW_MENU_OPEN_EVENT, handleAnotherMenuOpen);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleDocumentClick);
+  window.removeEventListener(SONG_ROW_MENU_OPEN_EVENT, handleAnotherMenuOpen);
 });
 
 function handleDocumentClick(event: MouseEvent) {
@@ -113,10 +117,20 @@ function handleDocumentClick(event: MouseEvent) {
 }
 
 function toggleMenu() {
-  menuOpen.value = !menuOpen.value;
+  const nextOpen = !menuOpen.value;
+  menuOpen.value = nextOpen;
+  if (nextOpen) {
+    window.dispatchEvent(new CustomEvent(SONG_ROW_MENU_OPEN_EVENT, { detail: props.song.id }));
+  }
   if (!menuOpen.value) {
     playlistPickerOpen.value = false;
   }
+}
+
+function handleAnotherMenuOpen(event: Event) {
+  const activeSongId = (event as CustomEvent<number>).detail;
+  if (activeSongId === props.song.id) return;
+  closeMenu();
 }
 
 function closeMenu() {
