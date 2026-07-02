@@ -80,7 +80,7 @@ interface TimeToken {
   raw: string;
 }
 
-const LYRIC_LEAD_SECONDS = 0.07;
+const LYRIC_LEAD_SECONDS = 0.14;
 const MIN_WORD_DURATION_SECONDS = 0.16;
 const AUTO_SCROLL_DURATION_MS = 560;
 const AUTO_SCROLL_MIN_DELTA = 2;
