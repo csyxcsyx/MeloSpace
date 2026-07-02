@@ -1,5 +1,5 @@
 <template>
-  <div class="song-columns">
+  <div class="song-columns" :style="gridStyle">
     <div v-for="(column, index) in columns" :key="index" class="song-list">
       <SongRow
         v-for="song in column"
@@ -38,4 +38,8 @@ const columns = computed(() => {
   const count = props.columnCount ?? 4;
   return Array.from({ length: count }, (_, columnIndex) => props.songs.filter((_, index) => index % count === columnIndex));
 });
+
+const gridStyle = computed<Record<string, string>>(() => ({
+  "--song-column-count": String(columns.value.length)
+}));
 </script>

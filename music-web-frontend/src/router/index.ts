@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 import DiscoverView from "@/views/DiscoverView.vue";
 import SearchView from "@/views/SearchView.vue";
+import AlbumDetailView from "@/views/AlbumDetailView.vue";
+import ArtistDetailView from "@/views/ArtistDetailView.vue";
 import SongDetailView from "@/views/SongDetailView.vue";
 import PlaylistDetailView from "@/views/PlaylistDetailView.vue";
 import ProfileView from "@/views/ProfileView.vue";
@@ -15,6 +17,8 @@ const router = createRouter({
     { path: "/", redirect: "/discover" },
     { path: "/discover", name: "discover", component: DiscoverView },
     { path: "/search", name: "search", component: SearchView },
+    { path: "/albums/:id", name: "album-detail", component: AlbumDetailView, props: true },
+    { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true },
     { path: "/songs/:id", name: "song-detail", component: SongDetailView, props: true },
     { path: "/playlists/:id", name: "playlist-detail", component: PlaylistDetailView, props: true },
     { path: "/me", name: "profile", component: ProfileView, meta: { requiresAuth: true } },

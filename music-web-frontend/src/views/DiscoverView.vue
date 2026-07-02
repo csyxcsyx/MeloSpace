@@ -4,56 +4,44 @@
 
     <EmptyState v-if="loading">正在加载音乐内容...</EmptyState>
     <template v-else>
-      <FeatureScroller v-if="songs.length || playlists.length">
-        <article class="feature-unit">
-          <p class="feature-label">推荐歌单</p>
-          <h2 class="feature-title">{{ playlists[0]?.title || "MeloSpace 代表作" }}</h2>
-          <p class="feature-subtitle">MeloSpace 国语流行</p>
-          <button class="feature-card feature-card-a" type="button" @click="playFirst">
-            <div class="feature-art-text">
-              <strong>{{ songs[0]?.title || "代表作" }}</strong>
-              <span>{{ songs[0]?.artistName || "MeloSpace" }}</span>
-            </div>
-            <div class="feature-caption">从项目曲库里挑选适合开场演示的歌曲。</div>
-          </button>
-        </article>
-
-        <article class="feature-unit">
-          <p class="feature-label">歌曲已更新</p>
-          <h2 class="feature-title">今日热门</h2>
-          <p class="feature-subtitle">MeloSpace 热门</p>
-          <button class="feature-card feature-card-b" type="button" @click="playSong(songs[1] || songs[0])">
-            <div class="feature-art-text">
-              <strong>{{ songs[1]?.title || songs[0]?.title || "今日热门" }}</strong>
-              <span>{{ songs[1]?.mood || songs[0]?.mood || "热门播放" }}</span>
-            </div>
-            <div class="feature-caption">根据播放、收藏和评论构成的课程项目热门入口。</div>
-          </button>
-        </article>
-
-        <article class="feature-unit">
-          <p class="feature-label">排行榜更新</p>
-          <h2 class="feature-title">每周热门 100 首：中国大陆</h2>
-          <p class="feature-subtitle">MeloSpace</p>
-          <div class="feature-card chart-card">
-            <p class="chart-title">每周热门 100 首</p>
-            <p class="chart-region">中国大陆</p>
-            <div class="heat-grid" aria-hidden="true">
-              <span v-for="index in 24" :key="index" />
-            </div>
-            <div class="feature-caption">追踪每周热单，展示推荐和榜单能力。</div>
+      <div v-if="recommendedAlbum || recommendedArtist" class="discover-feature-grid">
+        <button
+          v-if="recommendedAlbum"
+          class="recommendation-card album-recommendation"
+          type="button"
+          @click="openAlbum(recommendedAlbum.id)"
+        >
+          <img v-if="recommendedAlbum.coverUrl" :src="resolveMediaUrl(recommendedAlbum.coverUrl)" alt="" />
+          <div class="recommendation-copy">
+            <span>随机专辑</span>
+            <strong>{{ recommendedAlbum.title }}</strong>
+            <small>{{ recommendedAlbum.artistName || "MeloSpace" }} · {{ albumSongCount }} 首歌</small>
           </div>
-        </article>
-      </FeatureScroller>
+        </button>
+
+        <button
+          v-if="recommendedArtist"
+          class="recommendation-card artist-recommendation"
+          type="button"
+          @click="openArtist(recommendedArtist.id)"
+        >
+          <img v-if="recommendedArtistImage" :src="resolveMediaUrl(recommendedArtistImage)" alt="" />
+          <div class="recommendation-copy">
+            <span>随机歌手</span>
+            <strong>{{ recommendedArtist.name }}</strong>
+            <small>{{ artistSongCount }} 首歌 · {{ artistAlbumCount }} 张专辑</small>
+          </div>
+        </button>
+      </div>
 
       <section>
         <div class="section-head">
-          <h2>2026 上半年歌曲收藏榜</h2>
-          <span class="chevron">›</span>
+          <h2>推荐歌曲</h2>
         </div>
         <SongColumnList
-          v-if="songs.length"
-          :songs="songs"
+          v-if="recommendedSongs.length"
+          :songs="recommendedSongs"
+          :column-count="3"
           @toggle-play="toggleSongPlayback"
           @open-player="openPlayer"
         />
@@ -64,44 +52,63 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { playlistApi, songApi } from "@/api";
-import type { Playlist, Song } from "@/api/types";
+import { albumApi, artistApi, songApi } from "@/api";
+import type { Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
-import FeatureScroller from "@/components/FeatureScroller.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import { usePlayerStore } from "@/stores/player";
+import { resolveMediaUrl } from "@/utils/format";
 
 const player = usePlayerStore();
 const router = useRouter();
 const loading = ref(true);
 const songs = ref<Song[]>([]);
-const playlists = ref<Playlist[]>([]);
+const albums = ref<Album[]>([]);
+const artists = ref<Artist[]>([]);
+const recommendedAlbum = ref<Album | null>(null);
+const recommendedArtist = ref<Artist | null>(null);
+
+const recommendedSongs = computed(() => pickDiverseSongs(songs.value, 12));
+const albumSongCount = computed(() => {
+  if (!recommendedAlbum.value) return 0;
+  return songs.value.filter((song) => song.albumId === recommendedAlbum.value?.id).length;
+});
+const artistSongCount = computed(() => {
+  if (!recommendedArtist.value) return 0;
+  return songs.value.filter((song) => song.artistId === recommendedArtist.value?.id).length;
+});
+const artistAlbumCount = computed(() => {
+  if (!recommendedArtist.value) return 0;
+  return albums.value.filter((album) => album.artistId === recommendedArtist.value?.id).length;
+});
+const recommendedArtistImage = computed(() => {
+  if (!recommendedArtist.value) return "";
+  return recommendedArtist.value.avatarUrl
+    || songs.value.find((song) => song.artistId === recommendedArtist.value?.id)?.coverUrl
+    || albums.value.find((album) => album.artistId === recommendedArtist.value?.id)?.coverUrl
+    || "";
+});
 
 onMounted(loadDiscover);
 
 async function loadDiscover() {
   loading.value = true;
   try {
-    const [songPage, playlistPage] = await Promise.all([
-      songApi.list({ page: 1, size: 16 }),
-      playlistApi.list({ page: 1, size: 6 })
+    const [songPage, albumList, artistList] = await Promise.all([
+      songApi.list({ page: 1, size: 100 }),
+      albumApi.list(),
+      artistApi.list()
     ]);
     songs.value = songPage.items;
-    playlists.value = playlistPage.items;
+    albums.value = albumList;
+    artists.value = artistList;
+    recommendedAlbum.value = randomItem(albumList.filter((album) => album.coverUrl));
+    recommendedArtist.value = randomItem(artistList);
   } finally {
     loading.value = false;
   }
-}
-
-function playFirst() {
-  playSong(songs.value[0]);
-}
-
-function playSong(song?: Song) {
-  if (!song) return;
-  player.playSong(song, songs.value);
 }
 
 function toggleSongPlayback(song: Song) {
@@ -113,11 +120,41 @@ function toggleSongPlayback(song: Song) {
     }
     return;
   }
-  player.playSong(song, songs.value);
+  player.playSong(song, recommendedSongs.value);
 }
 
 async function openPlayer(song: Song) {
-  const played = await player.playSong(song, songs.value);
+  const played = await player.playSong(song, recommendedSongs.value);
   if (played) router.push("/player");
+}
+
+function openAlbum(id: number) {
+  router.push(`/albums/${id}`);
+}
+
+function openArtist(id: number) {
+  router.push(`/artists/${id}`);
+}
+
+function randomItem<T>(items: T[]) {
+  if (!items.length) return null;
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function pickDiverseSongs(source: Song[], limit: number) {
+  const selected: Song[] = [];
+  const usedArtists = new Set<number>();
+  for (const song of source) {
+    if (selected.length >= limit) break;
+    if (usedArtists.has(song.artistId)) continue;
+    selected.push(song);
+    usedArtists.add(song.artistId);
+  }
+  for (const song of source) {
+    if (selected.length >= limit) break;
+    if (selected.some((item) => item.id === song.id)) continue;
+    selected.push(song);
+  }
+  return selected;
 }
 </script>
