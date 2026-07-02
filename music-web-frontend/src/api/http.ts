@@ -8,6 +8,14 @@ export const http = axios.create({
   timeout: 15000
 });
 
+type RetryableConfig = NonNullable<AxiosError<ApiResponse<null>>["config"]> & {
+  __retryCount?: number;
+};
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 http.interceptors.request.use((config) => {
   const auth = useAuthStore();
   if (auth.token) {
@@ -24,10 +32,22 @@ http.interceptors.response.use(
     }
     return response;
   },
-  (error: AxiosError<ApiResponse<null>>) => {
+  async (error: AxiosError<ApiResponse<null>>) => {
+    const config = error.config as RetryableConfig | undefined;
+    const method = config?.method?.toUpperCase();
+    const status = error.response?.status;
+    const canRetry = config
+      && (method === "GET" || method === "HEAD")
+      && (status == null || status >= 500)
+      && (config.__retryCount ?? 0) < 1;
+    if (canRetry) {
+      config.__retryCount = (config.__retryCount ?? 0) + 1;
+      await wait(600);
+      return http.request(config);
+    }
+
     const auth = useAuthStore();
     const ui = useUiStore();
-    const status = error.response?.status;
     const url = String(error.config?.url || "");
     const message = error.response?.data?.message || error.message || "网络请求失败";
 

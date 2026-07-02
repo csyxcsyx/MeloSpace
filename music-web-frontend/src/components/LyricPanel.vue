@@ -143,6 +143,8 @@ onBeforeUnmount(() => {
 async function loadLyrics(url: string) {
   lines.value = [];
   errorMessage.value = "";
+  userBrowsing.value = false;
+  if (browsingTimer) clearTimeout(browsingTimer);
   if (!url) {
     loading.value = false;
     return;
@@ -156,12 +158,16 @@ async function loadLyrics(url: string) {
     }
     const text = await response.text();
     lines.value = parseLrc(text);
-    await nextTick();
-    scrollRef.value?.scrollTo({ top: 0 });
   } catch {
     errorMessage.value = "歌词加载失败。";
   } finally {
     loading.value = false;
+    await nextTick();
+    if (!errorMessage.value && lines.value.length && props.isCurrentSong && activeIndex.value >= 0) {
+      syncToActiveLine("auto");
+    } else {
+      scrollRef.value?.scrollTo({ top: 0 });
+    }
   }
 }
 
@@ -286,6 +292,11 @@ async function resumeFollowing() {
   if (activeIndex.value >= 0) {
     scrollToLine(activeIndex.value, "smooth");
   }
+}
+
+function syncToActiveLine(behavior: ScrollBehavior) {
+  if (activeIndex.value < 0) return;
+  scrollToLine(activeIndex.value, behavior);
 }
 
 function scrollToLine(index: number, behavior: ScrollBehavior) {

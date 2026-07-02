@@ -122,7 +122,9 @@ import { formatDuration, resolveMediaUrl } from "@/utils/format";
 const router = useRouter();
 const player = usePlayerStore();
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
-const theme = ref({ r: 250, g: 117, b: 42 });
+const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
+const THEME_CACHE_PREFIX = "melospace-player-theme:";
+const theme = ref(readCachedTheme(player.currentSong?.coverUrl) ?? DEFAULT_THEME);
 const themeStyle = computed(() => ({
   "--player-theme": `rgb(${theme.value.r}, ${theme.value.g}, ${theme.value.b})`,
   "--player-theme-soft": `rgba(${theme.value.r}, ${theme.value.g}, ${theme.value.b}, 0.34)`,
@@ -130,11 +132,19 @@ const themeStyle = computed(() => ({
   "--player-bg-start": `rgb(${Math.max(theme.value.r - 82, 18)}, ${Math.max(theme.value.g - 72, 18)}, ${Math.max(theme.value.b - 68, 18)})`,
   "--player-bg-end": `rgb(${Math.max(theme.value.r - 118, 12)}, ${Math.max(theme.value.g - 104, 12)}, ${Math.max(theme.value.b - 98, 12)})`
 }));
+let themeRequestId = 0;
 
 watch(
   () => player.currentSong?.coverUrl,
   async (coverUrl) => {
-    theme.value = await extractThemeColor(coverUrl);
+    const requestId = themeRequestId + 1;
+    themeRequestId = requestId;
+    const cachedTheme = readCachedTheme(coverUrl);
+    theme.value = cachedTheme ?? DEFAULT_THEME;
+    const extractedTheme = await extractThemeColor(coverUrl);
+    if (requestId !== themeRequestId) return;
+    theme.value = extractedTheme;
+    writeCachedTheme(coverUrl, extractedTheme);
   },
   { immediate: true }
 );
@@ -173,7 +183,7 @@ function setVolume(event: Event) {
 function extractThemeColor(coverUrl?: string | null) {
   return new Promise<{ r: number; g: number; b: number }>((resolve) => {
     if (!coverUrl) {
-      resolve({ r: 250, g: 117, b: 42 });
+      resolve(DEFAULT_THEME);
       return;
     }
 
@@ -186,7 +196,7 @@ function extractThemeColor(coverUrl?: string | null) {
       canvas.height = size;
       const context = canvas.getContext("2d", { willReadFrequently: true });
       if (!context) {
-        resolve({ r: 250, g: 117, b: 42 });
+        resolve(DEFAULT_THEME);
         return;
       }
 
@@ -214,7 +224,7 @@ function extractThemeColor(coverUrl?: string | null) {
       }
 
       if (!weightTotal) {
-        resolve({ r: 250, g: 117, b: 42 });
+        resolve(DEFAULT_THEME);
         return;
       }
       resolve({
@@ -223,8 +233,28 @@ function extractThemeColor(coverUrl?: string | null) {
         b: Math.round(blue / weightTotal)
       });
     };
-    image.onerror = () => resolve({ r: 250, g: 117, b: 42 });
+    image.onerror = () => resolve(DEFAULT_THEME);
     image.src = resolveMediaUrl(coverUrl);
   });
+}
+
+function readCachedTheme(coverUrl?: string | null) {
+  if (!coverUrl) return null;
+  const raw = localStorage.getItem(`${THEME_CACHE_PREFIX}${coverUrl}`);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { r?: number; g?: number; b?: number };
+    if ([parsed.r, parsed.g, parsed.b].every((value) => typeof value === "number")) {
+      return { r: parsed.r as number, g: parsed.g as number, b: parsed.b as number };
+    }
+  } catch {
+    localStorage.removeItem(`${THEME_CACHE_PREFIX}${coverUrl}`);
+  }
+  return null;
+}
+
+function writeCachedTheme(coverUrl: string | null | undefined, nextTheme: { r: number; g: number; b: number }) {
+  if (!coverUrl) return;
+  localStorage.setItem(`${THEME_CACHE_PREFIX}${coverUrl}`, JSON.stringify(nextTheme));
 }
 </script>

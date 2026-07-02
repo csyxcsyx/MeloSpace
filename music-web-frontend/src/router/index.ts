@@ -15,7 +15,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", redirect: "/discover" },
-    { path: "/discover", name: "discover", component: DiscoverView },
+    { path: "/discover", name: "discover", component: DiscoverView, meta: { keepAlive: true } },
     { path: "/search", name: "search", component: SearchView },
     { path: "/albums/:id", name: "album-detail", component: AlbumDetailView, props: true },
     { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true },

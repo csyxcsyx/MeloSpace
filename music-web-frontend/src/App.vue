@@ -2,7 +2,12 @@
   <div class="app-shell" :class="{ 'immersive-shell': isImmersive }">
     <AppSidebar v-if="!isImmersive" />
     <main class="main" :class="{ 'immersive-main': isImmersive }">
-      <RouterView />
+      <RouterView v-slot="{ Component, route }">
+        <KeepAlive>
+          <component :is="Component" v-if="route.meta.keepAlive" />
+        </KeepAlive>
+        <component :is="Component" v-if="!route.meta.keepAlive" />
+      </RouterView>
     </main>
     <GlobalPlayer :hidden="isImmersive" />
     <ToastHost />
