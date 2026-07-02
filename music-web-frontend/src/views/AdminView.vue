@@ -175,8 +175,38 @@
         <ListMusic :size="18" />
         <h2>歌曲管理</h2>
       </div>
+      <div class="list-controls admin-list-controls">
+        <label>
+          <span>搜索</span>
+          <input v-model.trim="songFilters.keyword" placeholder="歌曲、歌手或专辑" />
+        </label>
+        <label>
+          <span>状态</span>
+          <select v-model="songFilters.status">
+            <option value="ALL">全部</option>
+            <option value="PUBLISHED">上架中</option>
+            <option value="OFFLINE">已下架</option>
+          </select>
+        </label>
+        <label>
+          <span>歌手</span>
+          <select v-model.number="songFilters.artistId">
+            <option :value="0">全部歌手</option>
+            <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
+          </select>
+        </label>
+        <label>
+          <span>排序</span>
+          <select v-model="songFilters.sort">
+            <option value="createdDesc">最近创建</option>
+            <option value="titleAsc">歌曲 A-Z</option>
+            <option value="artistAsc">歌手 A-Z</option>
+            <option value="playsDesc">播放最多</option>
+          </select>
+        </label>
+      </div>
       <div class="admin-song-list">
-        <div v-for="song in songs" :key="song.id" class="admin-song-row">
+        <div v-for="song in pagedSongs" :key="song.id" class="admin-song-row">
           <div>
             <strong>{{ song.title }}</strong>
             <span>{{ song.artistName || "未知歌手" }} · {{ song.albumTitle || "未绑定专辑" }}</span>
@@ -196,7 +226,12 @@
             </button>
           </div>
         </div>
-        <EmptyState v-if="!songs.length">暂无歌曲。</EmptyState>
+        <EmptyState v-if="!filteredSongs.length">暂无匹配歌曲。</EmptyState>
+      </div>
+      <div v-if="songPageCount > 1" class="list-pagination">
+        <button type="button" :disabled="adminPages.songs <= 1" @click="setAdminPage('songs', adminPages.songs - 1)">上一页</button>
+        <span>{{ adminPages.songs }} / {{ songPageCount }} · {{ filteredSongs.length }} 首</span>
+        <button type="button" :disabled="adminPages.songs >= songPageCount" @click="setAdminPage('songs', adminPages.songs + 1)">下一页</button>
       </div>
     </section>
 
@@ -205,8 +240,38 @@
         <Disc3 :size="18" />
         <h2>专辑管理</h2>
       </div>
+      <div class="list-controls admin-list-controls">
+        <label>
+          <span>搜索</span>
+          <input v-model.trim="albumFilters.keyword" placeholder="专辑或歌手" />
+        </label>
+        <label>
+          <span>歌手</span>
+          <select v-model.number="albumFilters.artistId">
+            <option :value="0">全部歌手</option>
+            <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
+          </select>
+        </label>
+        <label>
+          <span>封面</span>
+          <select v-model="albumFilters.cover">
+            <option value="ALL">全部</option>
+            <option value="WITH_COVER">有封面</option>
+            <option value="NO_COVER">无封面</option>
+          </select>
+        </label>
+        <label>
+          <span>排序</span>
+          <select v-model="albumFilters.sort">
+            <option value="createdDesc">最近创建</option>
+            <option value="titleAsc">专辑 A-Z</option>
+            <option value="artistAsc">歌手 A-Z</option>
+            <option value="releaseDesc">发行日期新到旧</option>
+          </select>
+        </label>
+      </div>
       <div class="admin-album-list">
-        <div v-for="album in albums" :key="album.id" class="admin-song-row">
+        <div v-for="album in pagedAlbums" :key="album.id" class="admin-song-row">
           <div>
             <strong>{{ album.title }}</strong>
             <span>{{ album.artistName || "未知歌手" }}</span>
@@ -227,7 +292,12 @@
             </button>
           </div>
         </div>
-        <EmptyState v-if="!albums.length">暂无专辑。</EmptyState>
+        <EmptyState v-if="!filteredAlbums.length">暂无匹配专辑。</EmptyState>
+      </div>
+      <div v-if="albumPageCount > 1" class="list-pagination">
+        <button type="button" :disabled="adminPages.albums <= 1" @click="setAdminPage('albums', adminPages.albums - 1)">上一页</button>
+        <span>{{ adminPages.albums }} / {{ albumPageCount }} · {{ filteredAlbums.length }} 张</span>
+        <button type="button" :disabled="adminPages.albums >= albumPageCount" @click="setAdminPage('albums', adminPages.albums + 1)">下一页</button>
       </div>
     </section>
 
@@ -236,8 +306,38 @@
         <Users :size="18" />
         <h2>用户管理</h2>
       </div>
+      <div class="list-controls admin-list-controls">
+        <label>
+          <span>搜索</span>
+          <input v-model.trim="userFilters.keyword" placeholder="用户名或昵称" />
+        </label>
+        <label>
+          <span>角色</span>
+          <select v-model="userFilters.role">
+            <option value="ALL">全部</option>
+            <option value="ADMIN">管理员</option>
+            <option value="USER">普通用户</option>
+          </select>
+        </label>
+        <label>
+          <span>状态</span>
+          <select v-model="userFilters.status">
+            <option value="ALL">全部</option>
+            <option value="ACTIVE">正常</option>
+            <option value="DISABLED">禁用</option>
+          </select>
+        </label>
+        <label>
+          <span>排序</span>
+          <select v-model="userFilters.sort">
+            <option value="createdDesc">最近注册</option>
+            <option value="usernameAsc">用户名 A-Z</option>
+            <option value="roleAsc">角色</option>
+          </select>
+        </label>
+      </div>
       <div class="admin-song-list">
-        <div v-for="user in users" :key="user.id" class="admin-song-row">
+        <div v-for="user in pagedUsers" :key="user.id" class="admin-song-row">
           <div>
             <strong>{{ user.username }}</strong>
             <span>{{ user.nickname || "未设置昵称" }} · {{ user.role === "ADMIN" ? "管理员" : "普通用户" }}</span>
@@ -255,7 +355,12 @@
             </button>
           </div>
         </div>
-        <EmptyState v-if="!users.length">暂无用户。</EmptyState>
+        <EmptyState v-if="!filteredUsers.length">暂无匹配用户。</EmptyState>
+      </div>
+      <div v-if="userPageCount > 1" class="list-pagination">
+        <button type="button" :disabled="adminPages.users <= 1" @click="setAdminPage('users', adminPages.users - 1)">上一页</button>
+        <span>{{ adminPages.users }} / {{ userPageCount }} · {{ filteredUsers.length }} 位</span>
+        <button type="button" :disabled="adminPages.users >= userPageCount" @click="setAdminPage('users', adminPages.users + 1)">下一页</button>
       </div>
     </section>
   </section>
@@ -311,8 +416,78 @@ const albumForm = reactive({
   releaseDate: ""
 });
 
+type AdminListKey = "songs" | "albums" | "users";
+const ADMIN_PAGE_SIZE = 8;
+const songFilters = reactive({
+  keyword: "",
+  status: "ALL",
+  artistId: 0,
+  sort: "createdDesc"
+});
+const albumFilters = reactive({
+  keyword: "",
+  artistId: 0,
+  cover: "ALL",
+  sort: "createdDesc"
+});
+const userFilters = reactive({
+  keyword: "",
+  role: "ALL",
+  status: "ALL",
+  sort: "createdDesc"
+});
+const adminPages = reactive({
+  songs: 1,
+  albums: 1,
+  users: 1
+});
+
 const selectedSongArtist = computed(() => artists.value.find((item) => item.id === songForm.artistId) ?? null);
 const selectedSongAlbum = computed(() => albums.value.find((item) => item.id === songForm.albumId) ?? null);
+const filteredSongs = computed(() => {
+  const query = normalizeSearch(songFilters.keyword);
+  return [...songs.value]
+    .filter((song) => matchesQuery(`${song.title} ${song.artistName ?? ""} ${song.albumTitle ?? ""}`, query))
+    .filter((song) => songFilters.status === "ALL" || (songFilters.status === "PUBLISHED" ? song.status === 1 : song.status !== 1))
+    .filter((song) => !songFilters.artistId || song.artistId === songFilters.artistId)
+    .sort((first, second) => {
+      if (songFilters.sort === "titleAsc") return compareText(first.title, second.title);
+      if (songFilters.sort === "artistAsc") return compareText(first.artistName ?? "", second.artistName ?? "");
+      if (songFilters.sort === "playsDesc") return second.playCount - first.playCount;
+      return compareDate(second.createdAt, first.createdAt);
+    });
+});
+const filteredAlbums = computed(() => {
+  const query = normalizeSearch(albumFilters.keyword);
+  return [...albums.value]
+    .filter((album) => matchesQuery(`${album.title} ${album.artistName ?? ""}`, query))
+    .filter((album) => !albumFilters.artistId || album.artistId === albumFilters.artistId)
+    .filter((album) => albumFilters.cover === "ALL" || (albumFilters.cover === "WITH_COVER" ? Boolean(album.coverUrl) : !album.coverUrl))
+    .sort((first, second) => {
+      if (albumFilters.sort === "titleAsc") return compareText(first.title, second.title);
+      if (albumFilters.sort === "artistAsc") return compareText(first.artistName ?? "", second.artistName ?? "");
+      if (albumFilters.sort === "releaseDesc") return compareDate(second.releaseDate ?? "", first.releaseDate ?? "");
+      return compareDate(second.createdAt, first.createdAt);
+    });
+});
+const filteredUsers = computed(() => {
+  const query = normalizeSearch(userFilters.keyword);
+  return [...users.value]
+    .filter((user) => matchesQuery(`${user.username} ${user.nickname ?? ""}`, query))
+    .filter((user) => userFilters.role === "ALL" || user.role === userFilters.role)
+    .filter((user) => userFilters.status === "ALL" || (userFilters.status === "ACTIVE" ? user.status === 1 : user.status !== 1))
+    .sort((first, second) => {
+      if (userFilters.sort === "usernameAsc") return compareText(first.username, second.username);
+      if (userFilters.sort === "roleAsc") return compareText(first.role, second.role) || compareText(first.username, second.username);
+      return compareDate(second.createdAt, first.createdAt);
+    });
+});
+const pagedSongs = computed(() => paginate(filteredSongs.value, adminPages.songs));
+const pagedAlbums = computed(() => paginate(filteredAlbums.value, adminPages.albums));
+const pagedUsers = computed(() => paginate(filteredUsers.value, adminPages.users));
+const songPageCount = computed(() => pageCount(filteredSongs.value.length));
+const albumPageCount = computed(() => pageCount(filteredAlbums.value.length));
+const userPageCount = computed(() => pageCount(filteredUsers.value.length));
 
 watch(
   () => songForm.artistId,
@@ -322,21 +497,87 @@ watch(
   }
 );
 
+watch(
+  () => [songFilters.keyword, songFilters.status, songFilters.artistId, songFilters.sort],
+  () => {
+    adminPages.songs = 1;
+  }
+);
+
+watch(
+  () => [albumFilters.keyword, albumFilters.artistId, albumFilters.cover, albumFilters.sort],
+  () => {
+    adminPages.albums = 1;
+  }
+);
+
+watch(
+  () => [userFilters.keyword, userFilters.role, userFilters.status, userFilters.sort],
+  () => {
+    adminPages.users = 1;
+  }
+);
+
+watch(songPageCount, (count) => {
+  adminPages.songs = Math.min(adminPages.songs, count);
+});
+
+watch(albumPageCount, (count) => {
+  adminPages.albums = Math.min(adminPages.albums, count);
+});
+
+watch(userPageCount, (count) => {
+  adminPages.users = Math.min(adminPages.users, count);
+});
+
 onMounted(loadAdmin);
 
 async function loadAdmin() {
   const [stats, userPage, songPage, artistPage, albumPage] = await Promise.all([
     adminApi.dashboard(),
-    adminApi.users({ page: 1, size: 100 }),
-    adminApi.songs({ page: 1, size: 100 }),
+    adminApi.users({ page: 1, size: 500 }),
+    adminApi.songs({ page: 1, size: 500 }),
     artistApi.list({ page: 1, size: 200 }),
-    albumApi.list({ page: 1, size: 200 })
+    albumApi.list({ page: 1, size: 500 })
   ]);
   Object.assign(dashboard, stats);
   users.value = userPage.items;
   songs.value = songPage.items;
   artists.value = artistPage;
   albums.value = albumPage;
+}
+
+function setAdminPage(key: AdminListKey, page: number) {
+  const maxPage = key === "songs" ? songPageCount.value : key === "albums" ? albumPageCount.value : userPageCount.value;
+  adminPages[key] = Math.min(Math.max(page, 1), maxPage);
+}
+
+function paginate<T>(items: T[], page: number) {
+  const start = (page - 1) * ADMIN_PAGE_SIZE;
+  return items.slice(start, start + ADMIN_PAGE_SIZE);
+}
+
+function pageCount(total: number) {
+  return Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function matchesQuery(value: string, query: string) {
+  if (!query) return true;
+  return value.toLocaleLowerCase().includes(query);
+}
+
+function compareText(first: string, second: string) {
+  return first.localeCompare(second, "zh-CN");
+}
+
+function compareDate(first: string, second: string) {
+  const firstTime = new Date(first).getTime() || 0;
+  const secondTime = new Date(second).getTime() || 0;
+  return firstTime - secondTime;
 }
 
 async function createArtist() {

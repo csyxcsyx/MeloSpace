@@ -88,7 +88,7 @@ interface TimeToken {
 
 const LYRIC_LEAD_SECONDS = 0.14;
 const MIN_WORD_DURATION_SECONDS = 0.16;
-const AUTO_SCROLL_DURATION_MS = 560;
+const AUTO_SCROLL_DURATION_MS = 720;
 const AUTO_SCROLL_MIN_DELTA = 2;
 
 const props = defineProps<{
@@ -137,7 +137,7 @@ watch(activeIndex, async (index) => {
   if (userBrowsing.value) return;
   await nextTick();
   if (props.fullscreen) {
-    queueActiveLineCenter("auto");
+    queueActiveLineCenter("smooth");
   } else {
     scrollToLine(index, "smooth");
   }
@@ -147,6 +147,7 @@ watch(
   () => props.currentTime,
   () => {
     if (!props.fullscreen || !props.isCurrentSong || userBrowsing.value || activeIndex.value < 0) return;
+    if (scrollAnimationFrame !== null) return;
     queueActiveLineCenter("auto");
   },
   { flush: "post" }

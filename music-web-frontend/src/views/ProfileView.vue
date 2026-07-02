@@ -12,11 +12,30 @@
           <input v-model.trim="playlistTitle" placeholder="新歌单名称" />
           <button type="submit">创建</button>
         </form>
+        <div class="list-controls compact-list-controls">
+          <label>
+            <span>搜索</span>
+            <input v-model.trim="playlistQuery" placeholder="歌单名" />
+          </label>
+          <label>
+            <span>排序</span>
+            <select v-model="playlistSort">
+              <option value="updatedDesc">最近更新</option>
+              <option value="titleAsc">名称 A-Z</option>
+              <option value="songCountDesc">歌曲最多</option>
+            </select>
+          </label>
+        </div>
         <div class="profile-list">
-          <RouterLink v-for="playlist in playlists" :key="playlist.id" :to="`/playlists/${playlist.id}`">
+          <RouterLink v-for="playlist in pagedPlaylists" :key="playlist.id" :to="`/playlists/${playlist.id}`">
             {{ playlist.title }} <span>{{ playlist.songCount }} 首</span>
           </RouterLink>
-          <p v-if="!playlists.length" class="muted-line">还没有创建歌单。</p>
+          <p v-if="!filteredPlaylists.length" class="muted-line">还没有匹配的歌单。</p>
+        </div>
+        <div v-if="playlistPageCount > 1" class="list-pagination">
+          <button type="button" :disabled="profilePages.playlists <= 1" @click="setProfilePage('playlists', profilePages.playlists - 1)">上一页</button>
+          <span>{{ profilePages.playlists }} / {{ playlistPageCount }}</span>
+          <button type="button" :disabled="profilePages.playlists >= playlistPageCount" @click="setProfilePage('playlists', profilePages.playlists + 1)">下一页</button>
         </div>
       </div>
 
@@ -25,12 +44,38 @@
           <h2>收藏</h2>
           <span class="chevron">›</span>
         </div>
+        <div class="list-controls">
+          <label>
+            <span>搜索</span>
+            <input v-model.trim="favoriteQuery" placeholder="歌曲或歌单" />
+          </label>
+          <label>
+            <span>类型</span>
+            <select v-model="favoriteTypeFilter">
+              <option value="ALL">全部</option>
+              <option value="SONG">歌曲</option>
+              <option value="PLAYLIST">歌单</option>
+            </select>
+          </label>
+          <label>
+            <span>排序</span>
+            <select v-model="favoriteSort">
+              <option value="newest">最近收藏</option>
+              <option value="titleAsc">名称 A-Z</option>
+            </select>
+          </label>
+        </div>
         <div class="profile-list">
-          <RouterLink v-for="favorite in favorites" :key="favorite.id" :to="favoritePath(favorite)">
+          <RouterLink v-for="favorite in pagedFavorites" :key="favorite.id" :to="favoritePath(favorite)">
             <strong>{{ favoriteTitle(favorite) }}</strong>
             <span>{{ favoriteSubtitle(favorite) }}</span>
           </RouterLink>
-          <p v-if="!favorites.length" class="muted-line">还没有收藏内容。</p>
+          <p v-if="!filteredFavorites.length" class="muted-line">还没有匹配的收藏内容。</p>
+        </div>
+        <div v-if="favoritePageCount > 1" class="list-pagination">
+          <button type="button" :disabled="profilePages.favorites <= 1" @click="setProfilePage('favorites', profilePages.favorites - 1)">上一页</button>
+          <span>{{ profilePages.favorites }} / {{ favoritePageCount }}</span>
+          <button type="button" :disabled="profilePages.favorites >= favoritePageCount" @click="setProfilePage('favorites', profilePages.favorites + 1)">下一页</button>
         </div>
       </div>
 
@@ -39,12 +84,31 @@
           <h2>最近播放</h2>
           <span class="chevron">›</span>
         </div>
+        <div class="list-controls">
+          <label>
+            <span>搜索</span>
+            <input v-model.trim="recentQuery" placeholder="歌曲或歌手" />
+          </label>
+          <label>
+            <span>排序</span>
+            <select v-model="recentSort">
+              <option value="latest">最近播放</option>
+              <option value="titleAsc">歌曲 A-Z</option>
+              <option value="artistAsc">歌手 A-Z</option>
+            </select>
+          </label>
+        </div>
         <div class="profile-list">
-          <RouterLink v-for="item in recent" :key="item.id" :to="`/songs/${item.song?.id || item.songId}`">
+          <RouterLink v-for="item in pagedRecent" :key="item.id" :to="`/songs/${item.song?.id || item.songId}`">
             <strong>{{ item.song?.title || `歌曲 #${item.songId}` }}</strong>
             <span>{{ item.song?.artistName || item.sourceType || "MeloSpace" }}</span>
           </RouterLink>
-          <p v-if="!recent.length" class="muted-line">暂无最近播放。</p>
+          <p v-if="!filteredRecent.length" class="muted-line">暂无匹配的最近播放。</p>
+        </div>
+        <div v-if="recentPageCount > 1" class="list-pagination">
+          <button type="button" :disabled="profilePages.recent <= 1" @click="setProfilePage('recent', profilePages.recent - 1)">上一页</button>
+          <span>{{ profilePages.recent }} / {{ recentPageCount }}</span>
+          <button type="button" :disabled="profilePages.recent >= recentPageCount" @click="setProfilePage('recent', profilePages.recent + 1)">下一页</button>
         </div>
       </div>
 
@@ -63,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { playlistApi, songApi, userApi } from "@/api";
 import type { FavoriteItem, PlayHistoryItem, Playlist, Song } from "@/api/types";
@@ -86,18 +150,111 @@ const playlists = ref<Playlist[]>([]);
 const favorites = ref<FavoriteDisplayItem[]>([]);
 const recent = ref<RecentDisplayItem[]>([]);
 const playlistTitle = ref("");
+const playlistQuery = ref("");
+const favoriteQuery = ref("");
+const recentQuery = ref("");
+const playlistSort = ref("updatedDesc");
+const favoriteSort = ref("newest");
+const recentSort = ref("latest");
+const favoriteTypeFilter = ref<"ALL" | "SONG" | "PLAYLIST">("ALL");
+const profilePages = reactive({
+  playlists: 1,
+  favorites: 1,
+  recent: 1
+});
+const PROFILE_PAGE_SIZE = 6;
+
+const filteredPlaylists = computed(() => {
+  const query = normalizeSearch(playlistQuery.value);
+  return [...playlists.value]
+    .filter((playlist) => matchesQuery(`${playlist.title} ${playlist.description ?? ""}`, query))
+    .sort((first, second) => {
+      if (playlistSort.value === "titleAsc") return compareText(first.title, second.title);
+      if (playlistSort.value === "songCountDesc") return second.songCount - first.songCount;
+      return compareDate(second.updatedAt, first.updatedAt);
+    });
+});
+const filteredFavorites = computed(() => {
+  const query = normalizeSearch(favoriteQuery.value);
+  return [...favorites.value]
+    .filter((favorite) => favoriteTypeFilter.value === "ALL" || favorite.targetType === favoriteTypeFilter.value)
+    .filter((favorite) => matchesQuery(`${favoriteTitle(favorite)} ${favoriteSubtitle(favorite)}`, query))
+    .sort((first, second) => {
+      if (favoriteSort.value === "titleAsc") return compareText(favoriteTitle(first), favoriteTitle(second));
+      return compareDate(second.createdAt, first.createdAt);
+    });
+});
+const filteredRecent = computed(() => {
+  const query = normalizeSearch(recentQuery.value);
+  return [...recent.value]
+    .filter((item) => matchesQuery(`${item.song?.title ?? item.songId} ${item.song?.artistName ?? item.sourceType ?? ""}`, query))
+    .sort((first, second) => {
+      if (recentSort.value === "titleAsc") return compareText(first.song?.title ?? "", second.song?.title ?? "");
+      if (recentSort.value === "artistAsc") return compareText(first.song?.artistName ?? "", second.song?.artistName ?? "");
+      return compareDate(second.playedAt, first.playedAt);
+    });
+});
+const pagedPlaylists = computed(() => paginate(filteredPlaylists.value, profilePages.playlists));
+const pagedFavorites = computed(() => paginate(filteredFavorites.value, profilePages.favorites));
+const pagedRecent = computed(() => paginate(filteredRecent.value, profilePages.recent));
+const playlistPageCount = computed(() => pageCount(filteredPlaylists.value.length));
+const favoritePageCount = computed(() => pageCount(filteredFavorites.value.length));
+const recentPageCount = computed(() => pageCount(filteredRecent.value.length));
+
+watch([playlistQuery, playlistSort], () => {
+  profilePages.playlists = 1;
+});
+
+watch([favoriteQuery, favoriteSort, favoriteTypeFilter], () => {
+  profilePages.favorites = 1;
+});
+
+watch([recentQuery, recentSort], () => {
+  profilePages.recent = 1;
+});
 
 onMounted(loadProfile);
 
 async function loadProfile() {
   const [playlistPage, favoritePage, recentPage] = await Promise.all([
-    userApi.playlists(1, 20),
-    userApi.favorites(1, 20),
-    userApi.recentPlays(1, 20)
+    userApi.playlists(1, 200),
+    userApi.favorites(1, 200),
+    userApi.recentPlays(1, 200)
   ]);
   playlists.value = playlistPage.items;
   favorites.value = await hydrateFavorites(favoritePage.items);
   recent.value = await hydrateRecentPlays(recentPage.items);
+}
+
+function setProfilePage(key: keyof typeof profilePages, page: number) {
+  const maxPage = key === "playlists" ? playlistPageCount.value : key === "favorites" ? favoritePageCount.value : recentPageCount.value;
+  profilePages[key] = Math.min(Math.max(page, 1), maxPage);
+}
+
+function paginate<T>(items: T[], page: number) {
+  const start = (page - 1) * PROFILE_PAGE_SIZE;
+  return items.slice(start, start + PROFILE_PAGE_SIZE);
+}
+
+function pageCount(total: number) {
+  return Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE));
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function matchesQuery(value: string, query: string) {
+  if (!query) return true;
+  return value.toLocaleLowerCase().includes(query);
+}
+
+function compareText(first: string, second: string) {
+  return first.localeCompare(second, "zh-CN");
+}
+
+function compareDate(first: string, second: string) {
+  return new Date(first).getTime() - new Date(second).getTime();
 }
 
 async function hydrateFavorites(items: FavoriteItem[]): Promise<FavoriteDisplayItem[]> {
