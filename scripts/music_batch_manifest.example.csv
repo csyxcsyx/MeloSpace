@@ -1,0 +1,2 @@
+title,artist,album,audio_path,cover_path,lyric_path,duration_seconds,language,genre,mood,release_date,artist_bio
+示例歌曲,示例歌手,示例专辑,./media/audio/example.flac,./media/cover/example.jpg,./media/lyrics/example.lrc,240,中文,Pop,治愈,2026-07-02,课程演示用歌手信息
