@@ -541,7 +541,13 @@ def lookup_netease(album: dict[str, Any]) -> dict[str, Any] | None:
         if not publish_time:
             continue
         date = dt.datetime.utcfromtimestamp(int(publish_time) / 1000).date().isoformat()
-        item_artist = str((item.get("artist") or {}).get("name") or "")
+        raw_artist = item.get("artist")
+        if isinstance(raw_artist, dict):
+            item_artist = str(raw_artist.get("name") or "")
+        elif isinstance(raw_artist, list):
+            item_artist = "/".join(str(part.get("name") or "") for part in raw_artist if isinstance(part, dict))
+        else:
+            item_artist = str(raw_artist or "")
         score = similarity(title, str(item.get("name", ""))) * 0.72 + similarity(artist, item_artist) * 0.28
         if best is None or score > best["score"]:
             best = {
