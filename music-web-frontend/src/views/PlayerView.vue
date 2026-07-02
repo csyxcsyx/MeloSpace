@@ -186,10 +186,15 @@ const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.
 const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
 const THEME_CACHE_PREFIX = "melospace-player-theme:";
 const theme = ref(readCachedTheme(player.currentSong?.coverUrl) ?? DEFAULT_THEME);
+const lyricPalette = computed(() => deriveLyricPalette(theme.value));
 const themeStyle = computed(() => ({
   "--player-theme": `rgb(${theme.value.r}, ${theme.value.g}, ${theme.value.b})`,
   "--player-theme-soft": `rgba(${theme.value.r}, ${theme.value.g}, ${theme.value.b}, 0.34)`,
   "--player-theme-muted": `rgba(${theme.value.r}, ${theme.value.g}, ${theme.value.b}, 0.16)`,
+  "--player-lyric-active": lyricPalette.value.active,
+  "--player-lyric-rest": lyricPalette.value.rest,
+  "--player-lyric-muted": lyricPalette.value.muted,
+  "--player-lyric-shadow": lyricPalette.value.shadow,
   "--player-bg-start": `rgb(${Math.max(theme.value.r - 82, 18)}, ${Math.max(theme.value.g - 72, 18)}, ${Math.max(theme.value.b - 68, 18)})`,
   "--player-bg-end": `rgb(${Math.max(theme.value.r - 118, 12)}, ${Math.max(theme.value.g - 104, 12)}, ${Math.max(theme.value.b - 98, 12)})`
 }));
@@ -243,6 +248,52 @@ function setVolume(event: Event) {
 
 function playQueuedSong(song: Song) {
   void player.playSong(song, player.queue);
+}
+
+function deriveLyricPalette(color: { r: number; g: number; b: number }) {
+  const hsl = rgbToHsl(color.r, color.g, color.b);
+  const saturation = Math.round(clamp(hsl.s < 16 ? 42 : hsl.s * 1.08, 38, 76));
+  const lightness = Math.round(clamp(hsl.l < 34 ? 76 : hsl.l + 28, 66, 84));
+  const hue = Math.round(hsl.h);
+  const active = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const rest = `hsla(${hue}, ${Math.round(saturation * 0.72)}%, ${Math.max(lightness - 18, 46)}%, 0.55)`;
+  const muted = `hsla(${hue}, ${Math.round(saturation * 0.58)}%, ${Math.max(lightness - 24, 42)}%, 0.34)`;
+  const shadow = `hsla(${hue}, ${saturation}%, ${Math.max(lightness - 12, 48)}%, 0.42)`;
+  return { active, rest, muted, shadow };
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+
+  if (!delta) {
+    return { h: 225, s: 24, l: lightness * 100 };
+  }
+
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  let hue = 0;
+  if (max === red) {
+    hue = ((green - blue) / delta) % 6;
+  } else if (max === green) {
+    hue = (blue - red) / delta + 2;
+  } else {
+    hue = (red - green) / delta + 4;
+  }
+
+  return {
+    h: (hue * 60 + 360) % 360,
+    s: saturation * 100,
+    l: lightness * 100
+  };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function extractThemeColor(coverUrl?: string | null) {
