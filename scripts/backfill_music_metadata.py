@@ -198,17 +198,15 @@ def initials(value: str, fallback: str = "MS") -> str:
 
 
 PALETTES = [
-    ("#fa233b", "#1d1d1f", "#fff0f2", "#f7f7f8"),
-    ("#0a84ff", "#fa233b", "#edf6ff", "#f7f7f8"),
-    ("#14b8a6", "#1d1d1f", "#e9fbf8", "#ffffff"),
-    ("#ffb300", "#fa233b", "#fff7df", "#ffffff"),
-    ("#7c3aed", "#fa233b", "#f4f0ff", "#ffffff"),
-    ("#111827", "#f43f5e", "#f3f4f6", "#ffffff"),
-    ("#22c55e", "#0f172a", "#ecfdf5", "#ffffff"),
+    ("#8dc7ee", "#f3a6ad", "#b9d9c6", "#f7fbff", "#fbf7f4"),
+    ("#9fc4f3", "#efb2c0", "#c9dfbb", "#f9fbff", "#fff7f8"),
+    ("#a9d9d2", "#f0b5aa", "#a9c8ec", "#f8fcfb", "#fff8f4"),
+    ("#c3d7a5", "#efb0b4", "#9fc8e7", "#fbfdf8", "#fff8f8"),
+    ("#bad5ee", "#f1c0a7", "#b8dccb", "#f8fbfe", "#fffaf6"),
 ]
 
 
-def palette_for(value: str) -> tuple[str, str, str, str]:
+def palette_for(value: str) -> tuple[str, str, str, str, str]:
     index = int(hashlib.sha1(value.encode("utf-8")).hexdigest()[:8], 16) % len(PALETTES)
     return PALETTES[index]
 
@@ -217,66 +215,115 @@ def svg_text(value: str) -> str:
     return html.escape(value, quote=False)
 
 
+def glass_font_size(mark: str, base: int) -> int:
+    length = max(len(mark), 1)
+    if any(is_cjk(char) for char in mark):
+        if length <= 1:
+            return base + 20
+        if length == 2:
+            return base - 40
+        return base - 72
+    if length <= 1:
+        return base + 64
+    if length == 2:
+        return base
+    return base - 44
+
+
 def album_svg(title: str, artist: str) -> str:
-    primary, secondary, soft, paper = palette_for(f"album:{artist}:{title}")
+    cool, warm, herb, paper, mist = palette_for(f"album:{artist}:{title}")
     mark = svg_text(initials(title))
     label = svg_text(title[:42])
-    artist_label = svg_text(artist[:36])
+    font_size = glass_font_size(mark, 242)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="{label}">
   <defs>
-    <linearGradient id="g" x1="64" y1="40" x2="600" y2="624" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="{paper}"/>
-      <stop offset="0.46" stop-color="{soft}"/>
-      <stop offset="1" stop-color="{primary}"/>
+    <linearGradient id="paper" x1="64" y1="40" x2="596" y2="612" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="{paper}"/>
+      <stop offset="1" stop-color="{mist}"/>
     </linearGradient>
-    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="{secondary}" stop-opacity="0.88"/>
-      <stop offset="1" stop-color="{primary}" stop-opacity="0.72"/>
+    <linearGradient id="coolWash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="{cool}" stop-opacity="0.42"/>
+      <stop offset="0.54" stop-color="{cool}" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="{cool}" stop-opacity="0"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#1d1d1f" flood-opacity="0.18"/>
+    <linearGradient id="warmWash" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="{warm}" stop-opacity="0.34"/>
+      <stop offset="0.58" stop-color="{warm}" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="{warm}" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="letterFill" x1="122" y1="120" x2="520" y2="506" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.76"/>
+      <stop offset="0.38" stop-color="{cool}" stop-opacity="0.34"/>
+      <stop offset="0.68" stop-color="{warm}" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="{herb}" stop-opacity="0.32"/>
+    </linearGradient>
+    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="30" stdDeviation="24" flood-color="#9aa8b5" flood-opacity="0.24"/>
+    </filter>
+    <filter id="glassBlur" x="-18%" y="-18%" width="136%" height="136%">
+      <feGaussianBlur stdDeviation="1.4"/>
     </filter>
   </defs>
-  <rect width="640" height="640" rx="56" fill="{paper}"/>
-  <rect x="32" y="32" width="576" height="576" rx="48" fill="url(#g)"/>
-  <rect x="74" y="76" width="492" height="488" rx="34" fill="#ffffff" opacity="0.52" filter="url(#shadow)"/>
-  <rect x="104" y="108" width="432" height="96" rx="26" fill="url(#bar)" opacity="0.94"/>
-  <path d="M104 426H536V536H104z" fill="#ffffff" opacity="0.42"/>
-  <path d="M104 214H536" stroke="#1d1d1f" stroke-opacity="0.1" stroke-width="2"/>
-  <text x="320" y="362" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="154" font-weight="820" letter-spacing="0" fill="#1d1d1f">{mark}</text>
-  <text x="320" y="492" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="25" font-weight="760" letter-spacing="0" fill="#1d1d1f">{label}</text>
-  <text x="320" y="530" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="18" font-weight="650" letter-spacing="0" fill="#6e6e73">{artist_label}</text>
+  <rect width="640" height="640" rx="58" fill="url(#paper)"/>
+  <rect x="22" y="22" width="596" height="596" rx="54" fill="#ffffff" opacity="0.48"/>
+  <rect x="22" y="22" width="596" height="596" rx="54" fill="url(#coolWash)"/>
+  <rect x="22" y="22" width="596" height="596" rx="54" fill="url(#warmWash)"/>
+  <rect x="62" y="64" width="516" height="512" rx="46" fill="#ffffff" opacity="0.28" stroke="#ffffff" stroke-opacity="0.82" stroke-width="2"/>
+  <text x="320" y="388" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="url(#letterFill)" stroke="#ffffff" stroke-opacity="0.72" stroke-width="18" paint-order="stroke fill" filter="url(#softShadow)">{mark}</text>
+  <text x="320" y="388" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="{cool}" stroke-opacity="0.45" stroke-width="7" filter="url(#glassBlur)">{mark}</text>
+  <text x="316" y="379" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5">{mark}</text>
+  <path d="M126 128C188 92 268 82 352 98" fill="none" stroke="#ffffff" stroke-opacity="0.64" stroke-width="5" stroke-linecap="round"/>
+  <path d="M130 510C214 548 354 556 486 508" fill="none" stroke="{warm}" stroke-opacity="0.18" stroke-width="10" stroke-linecap="round"/>
 </svg>
 """
 
 
 def artist_svg(name: str) -> str:
-    primary, secondary, soft, paper = palette_for(f"artist:{name}")
+    cool, warm, herb, paper, mist = palette_for(f"artist:{name}")
     mark = svg_text(initials(name))
     label = svg_text(name[:38])
+    font_size = glass_font_size(mark, 220)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="{label}">
   <defs>
-    <linearGradient id="g" x1="88" y1="54" x2="560" y2="590" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="{paper}"/>
-      <stop offset="0.48" stop-color="{soft}"/>
-      <stop offset="1" stop-color="{primary}"/>
+    <linearGradient id="paper" x1="82" y1="48" x2="560" y2="594" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="{paper}"/>
+      <stop offset="1" stop-color="{mist}"/>
     </linearGradient>
-    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="{primary}"/>
-      <stop offset="1" stop-color="{secondary}"/>
+    <linearGradient id="coolWash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="{cool}" stop-opacity="0.4"/>
+      <stop offset="0.56" stop-color="{cool}" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="{cool}" stop-opacity="0"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="24" stdDeviation="26" flood-color="#1d1d1f" flood-opacity="0.18"/>
+    <linearGradient id="herbWash" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="{herb}" stop-opacity="0.34"/>
+      <stop offset="0.58" stop-color="{herb}" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="{herb}" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="letterFill" x1="136" y1="122" x2="506" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.76"/>
+      <stop offset="0.42" stop-color="{cool}" stop-opacity="0.34"/>
+      <stop offset="0.72" stop-color="{warm}" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="{herb}" stop-opacity="0.3"/>
+    </linearGradient>
+    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="30" stdDeviation="24" flood-color="#9aa8b5" flood-opacity="0.24"/>
+    </filter>
+    <filter id="glassBlur" x="-18%" y="-18%" width="136%" height="136%">
+      <feGaussianBlur stdDeviation="1.4"/>
     </filter>
   </defs>
-  <rect width="640" height="640" fill="{paper}"/>
-  <rect x="24" y="24" width="592" height="592" rx="296" fill="url(#g)"/>
-  <circle cx="320" cy="300" r="202" fill="#ffffff" opacity="0.54" filter="url(#shadow)"/>
-  <circle cx="320" cy="300" r="174" fill="url(#ring)" opacity="0.9"/>
-  <circle cx="320" cy="300" r="126" fill="#ffffff" opacity="0.92"/>
-  <text x="320" y="344" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="126" font-weight="820" letter-spacing="0" fill="#1d1d1f">{mark}</text>
-  <text x="320" y="528" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="27" font-weight="760" letter-spacing="0" fill="#1d1d1f">{label}</text>
-  <text x="320" y="564" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="18" font-weight="650" letter-spacing="0" fill="#6e6e73">MeloSpace Artist</text>
+  <rect width="640" height="640" fill="url(#paper)"/>
+  <circle cx="320" cy="320" r="298" fill="#ffffff" opacity="0.5"/>
+  <circle cx="320" cy="320" r="298" fill="url(#coolWash)"/>
+  <circle cx="320" cy="320" r="298" fill="url(#herbWash)"/>
+  <circle cx="320" cy="320" r="240" fill="#ffffff" opacity="0.28" stroke="#ffffff" stroke-opacity="0.84" stroke-width="2"/>
+  <text x="320" y="386" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="url(#letterFill)" stroke="#ffffff" stroke-opacity="0.72" stroke-width="17" paint-order="stroke fill" filter="url(#softShadow)">{mark}</text>
+  <text x="320" y="386" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="{cool}" stroke-opacity="0.44" stroke-width="7" filter="url(#glassBlur)">{mark}</text>
+  <text x="316" y="377" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5">{mark}</text>
+  <path d="M142 168C196 118 286 96 378 112" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="5" stroke-linecap="round"/>
+  <path d="M158 494C238 540 386 550 494 486" fill="none" stroke="{warm}" stroke-opacity="0.18" stroke-width="10" stroke-linecap="round"/>
 </svg>
 """
 

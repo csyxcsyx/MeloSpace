@@ -3,7 +3,7 @@
 `scripts/backfill_music_metadata.py` is a production-side helper for deployed
 MeloSpace catalogs. It performs three scoped maintenance tasks:
 
-- Generate MeloSpace-style SVG initials art for artist avatars and selected
+- Generate light glass-style SVG initials art for artist avatars and selected
   albums that do not have a real album cover.
 - Fill empty album `release_date` values from public metadata sources.
 - Invoke the existing `scripts/import_lddc_lyrics.py` module to create LDDC
