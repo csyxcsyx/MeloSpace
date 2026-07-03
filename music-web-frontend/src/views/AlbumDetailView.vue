@@ -41,29 +41,40 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onActivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Disc3, Play } from "lucide-vue-next";
-import { albumApi, songApi } from "@/api";
 import type { Album, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
+import { useCatalogCacheStore } from "@/stores/catalogCache";
 import { usePlayerStore } from "@/stores/player";
 import { resolveMediaUrl } from "@/utils/format";
 
 const route = useRoute();
 const router = useRouter();
 const player = usePlayerStore();
+const catalogCache = useCatalogCacheStore();
 const loading = ref(true);
 const album = ref<Album | null>(null);
 const songs = ref<Song[]>([]);
+const loadedAlbumId = ref<number | null>(null);
 
 onMounted(loadAlbum);
+onActivated(loadAlbum);
 
-watch(() => route.params.id, loadAlbum);
+watch(
+  () => [route.name, route.params.id],
+  () => {
+    if (route.name === "album-detail") {
+      void loadAlbum();
+    }
+  }
+);
 
 async function loadAlbum() {
+  if (route.name !== "album-detail") return;
   const albumId = Number(route.params.id);
   if (!Number.isFinite(albumId)) {
     album.value = null;
@@ -72,14 +83,26 @@ async function loadAlbum() {
     return;
   }
 
-  loading.value = true;
+  if (loadedAlbumId.value === albumId && album.value) {
+    loading.value = false;
+    return;
+  }
+
+  const cached = catalogCache.getAlbumDetail(albumId);
+  if (cached) {
+    album.value = cached.album;
+    songs.value = cached.songs;
+    loadedAlbumId.value = albumId;
+    loading.value = false;
+    return;
+  }
+
+  loading.value = !album.value;
   try {
-    const [albumList, songPage] = await Promise.all([
-      albumApi.list(),
-      songApi.list({ page: 1, size: 100, albumId })
-    ]);
-    album.value = albumList.find((item) => item.id === albumId) ?? null;
-    songs.value = songPage.items;
+    const detail = await catalogCache.loadAlbumDetail(albumId);
+    album.value = detail.album;
+    songs.value = detail.songs;
+    loadedAlbumId.value = albumId;
   } finally {
     loading.value = false;
   }

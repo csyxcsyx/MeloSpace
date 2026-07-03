@@ -120,14 +120,32 @@
       <div class="compact-panel">
         <div class="section-head">
           <Mic2 :size="18" />
-          <h2>新增歌手</h2>
+          <h2>{{ editingArtistId ? "编辑歌手" : "新增歌手" }}</h2>
         </div>
-        <form class="inline-form" @submit.prevent="createArtist">
-          <input v-model.trim="artistName" placeholder="歌手名" />
-          <button type="submit">
-            <Plus :size="15" />
-            <span>创建</span>
+        <form class="admin-form" @submit.prevent="saveArtist">
+          <label>
+            歌手名
+            <input v-model.trim="artistForm.name" required />
+          </label>
+          <label>
+            简介
+            <textarea v-model.trim="artistForm.bio" rows="3" placeholder="可选，用于歌手主页简介"></textarea>
+          </label>
+          <label class="file-picker">
+            <span>歌手照片</span>
+            <input
+              :key="artistFileInputKey"
+              accept="image/*"
+              type="file"
+              @change="onArtistAvatarChange"
+            />
+            <small>{{ fileStatus(artistAvatarFile, artistForm.avatarUrl, "可选，建议上传真实歌手照片") }}</small>
+          </label>
+          <button class="secondary-action" type="submit" :disabled="savingArtist">
+            <Plus :size="16" />
+            <span>{{ savingArtist ? "保存中..." : editingArtistId ? "保存歌手" : "创建歌手" }}</span>
           </button>
+          <button v-if="editingArtistId" class="secondary-action" type="button" @click="cancelArtistEdit">取消编辑</button>
         </form>
 
         <div class="section-head">
@@ -253,11 +271,19 @@
           </select>
         </label>
         <label>
-          <span>封面</span>
+          <span>专辑图</span>
           <select v-model="albumFilters.cover">
             <option value="ALL">全部</option>
-            <option value="WITH_COVER">有封面</option>
-            <option value="NO_COVER">无封面</option>
+            <option value="REAL_COVER">有实际图</option>
+            <option value="MISSING_REAL_COVER">缺实际图</option>
+          </select>
+        </label>
+        <label>
+          <span>歌手图</span>
+          <select v-model="albumFilters.artistImage">
+            <option value="ALL">全部</option>
+            <option value="REAL_IMAGE">有实际图</option>
+            <option value="MISSING_REAL_IMAGE">缺实际图</option>
           </select>
         </label>
         <label>
@@ -275,7 +301,12 @@
           <div>
             <strong>{{ album.title }}</strong>
             <span>{{ album.artistName || "未知歌手" }}</span>
-            <small>{{ album.coverUrl ? "专辑图已上传" : "暂无专辑图" }}</small>
+            <div class="admin-row-tags">
+              <span v-if="isMissingRealAlbumCover(album)" class="asset-warning">缺实际专辑图</span>
+              <span v-if="isMissingRealArtistImage(album.artistId)" class="asset-warning">缺实际歌手图</span>
+              <span v-if="!isMissingRealAlbumCover(album) && !isMissingRealArtistImage(album.artistId)" class="asset-ok">图片完整</span>
+            </div>
+            <small>{{ albumCoverLabel(album) }} · {{ artistImageLabel(album.artistId) }}</small>
           </div>
           <div class="admin-row-actions">
             <button class="secondary-action mini-action" type="button" @click="editAlbum(album)">
@@ -298,6 +329,70 @@
         <button type="button" :disabled="adminPages.albums <= 1" @click="setAdminPage('albums', adminPages.albums - 1)">上一页</button>
         <span>{{ adminPages.albums }} / {{ albumPageCount }} · {{ filteredAlbums.length }} 张</span>
         <button type="button" :disabled="adminPages.albums >= albumPageCount" @click="setAdminPage('albums', adminPages.albums + 1)">下一页</button>
+      </div>
+    </section>
+
+    <section class="compact-panel admin-list-section">
+      <div class="section-head">
+        <Mic2 :size="18" />
+        <h2>歌手管理</h2>
+      </div>
+      <div class="list-controls admin-list-controls">
+        <label>
+          <span>搜索</span>
+          <input v-model.trim="artistFilters.keyword" placeholder="歌手名或简介" />
+        </label>
+        <label>
+          <span>歌手图</span>
+          <select v-model="artistFilters.image">
+            <option value="ALL">全部</option>
+            <option value="REAL_IMAGE">有实际图</option>
+            <option value="MISSING_REAL_IMAGE">缺实际图</option>
+          </select>
+        </label>
+        <label>
+          <span>排序</span>
+          <select v-model="artistFilters.sort">
+            <option value="updatedDesc">最近更新</option>
+            <option value="nameAsc">歌手 A-Z</option>
+            <option value="createdDesc">最近创建</option>
+          </select>
+        </label>
+      </div>
+      <div class="admin-song-list">
+        <div v-for="artist in pagedArtists" :key="artist.id" class="admin-song-row">
+          <div class="admin-media-row">
+            <div class="admin-thumb artist-admin-thumb">
+              <img v-if="artist.avatarUrl" :src="resolveMediaUrl(artist.avatarUrl)" alt="" />
+              <Mic2 v-else :size="20" />
+            </div>
+            <div>
+              <strong>{{ artist.name }}</strong>
+              <span>{{ artist.bio || "暂无简介" }}</span>
+              <div class="admin-row-tags">
+                <span v-if="isMissingRealArtistImage(artist.id)" class="asset-warning">缺实际歌手图</span>
+                <span v-else class="asset-ok">歌手图完整</span>
+              </div>
+              <small>{{ artistImageLabel(artist.id) }} · {{ displayDate(artist.updatedAt) }}</small>
+            </div>
+          </div>
+          <div class="admin-row-actions">
+            <button class="secondary-action mini-action" type="button" @click="editArtist(artist)">
+              <Pencil :size="15" />
+              <span>编辑</span>
+            </button>
+            <button class="danger-action" type="button" @click="deleteArtist(artist)">
+              <Trash2 :size="15" />
+              <span>删除</span>
+            </button>
+          </div>
+        </div>
+        <EmptyState v-if="!filteredArtists.length">暂无匹配歌手。</EmptyState>
+      </div>
+      <div v-if="artistPageCount > 1" class="list-pagination">
+        <button type="button" :disabled="adminPages.artists <= 1" @click="setAdminPage('artists', adminPages.artists - 1)">上一页</button>
+        <span>{{ adminPages.artists }} / {{ artistPageCount }} · {{ filteredArtists.length }} 位</span>
+        <button type="button" :disabled="adminPages.artists >= artistPageCount" @click="setAdminPage('artists', adminPages.artists + 1)">下一页</button>
       </div>
     </section>
 
@@ -375,6 +470,7 @@ import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
+import { resolveMediaUrl } from "@/utils/format";
 
 const ui = useUiStore();
 const auth = useAuthStore();
@@ -383,17 +479,20 @@ const songs = ref<Song[]>([]);
 const artists = ref<Artist[]>([]);
 const albums = ref<Album[]>([]);
 const users = ref<AdminUser[]>([]);
-const artistName = ref("");
 const lyricMatching = ref(false);
 const savingSong = ref(false);
+const savingArtist = ref(false);
 const savingAlbum = ref(false);
 const editingSongId = ref<number | null>(null);
+const editingArtistId = ref<number | null>(null);
 const editingAlbumId = ref<number | null>(null);
 const songFileInputKey = ref(0);
+const artistFileInputKey = ref(0);
 const albumFileInputKey = ref(0);
 
 const songAudioFile = ref<File | null>(null);
 const songLyricFile = ref<File | null>(null);
+const artistAvatarFile = ref<File | null>(null);
 const albumCoverFile = ref<File | null>(null);
 
 const songForm = reactive({
@@ -416,7 +515,13 @@ const albumForm = reactive({
   releaseDate: ""
 });
 
-type AdminListKey = "songs" | "albums" | "users";
+const artistForm = reactive({
+  name: "",
+  bio: "",
+  avatarUrl: ""
+});
+
+type AdminListKey = "songs" | "artists" | "albums" | "users";
 const ADMIN_PAGE_SIZE = 8;
 const songFilters = reactive({
   keyword: "",
@@ -428,7 +533,13 @@ const albumFilters = reactive({
   keyword: "",
   artistId: 0,
   cover: "ALL",
+  artistImage: "ALL",
   sort: "createdDesc"
+});
+const artistFilters = reactive({
+  keyword: "",
+  image: "ALL",
+  sort: "updatedDesc"
 });
 const userFilters = reactive({
   keyword: "",
@@ -438,12 +549,14 @@ const userFilters = reactive({
 });
 const adminPages = reactive({
   songs: 1,
+  artists: 1,
   albums: 1,
   users: 1
 });
 
 const selectedSongArtist = computed(() => artists.value.find((item) => item.id === songForm.artistId) ?? null);
 const selectedSongAlbum = computed(() => albums.value.find((item) => item.id === songForm.albumId) ?? null);
+const artistsById = computed(() => new Map(artists.value.map((artist) => [artist.id, artist])));
 const filteredSongs = computed(() => {
   const query = normalizeSearch(songFilters.keyword);
   return [...songs.value]
@@ -462,12 +575,24 @@ const filteredAlbums = computed(() => {
   return [...albums.value]
     .filter((album) => matchesQuery(`${album.title} ${album.artistName ?? ""}`, query))
     .filter((album) => !albumFilters.artistId || album.artistId === albumFilters.artistId)
-    .filter((album) => albumFilters.cover === "ALL" || (albumFilters.cover === "WITH_COVER" ? Boolean(album.coverUrl) : !album.coverUrl))
+    .filter((album) => albumFilters.cover === "ALL" || (albumFilters.cover === "REAL_COVER" ? hasRealAlbumCover(album) : isMissingRealAlbumCover(album)))
+    .filter((album) => albumFilters.artistImage === "ALL" || (albumFilters.artistImage === "REAL_IMAGE" ? hasRealArtistImage(album.artistId) : isMissingRealArtistImage(album.artistId)))
     .sort((first, second) => {
       if (albumFilters.sort === "titleAsc") return compareText(first.title, second.title);
       if (albumFilters.sort === "artistAsc") return compareText(first.artistName ?? "", second.artistName ?? "");
       if (albumFilters.sort === "releaseDesc") return compareDate(second.releaseDate ?? "", first.releaseDate ?? "");
       return compareDate(second.createdAt, first.createdAt);
+    });
+});
+const filteredArtists = computed(() => {
+  const query = normalizeSearch(artistFilters.keyword);
+  return [...artists.value]
+    .filter((artist) => matchesQuery(`${artist.name} ${artist.bio ?? ""}`, query))
+    .filter((artist) => artistFilters.image === "ALL" || (artistFilters.image === "REAL_IMAGE" ? hasRealArtistImage(artist.id) : isMissingRealArtistImage(artist.id)))
+    .sort((first, second) => {
+      if (artistFilters.sort === "nameAsc") return compareText(first.name, second.name);
+      if (artistFilters.sort === "createdDesc") return compareDate(second.createdAt, first.createdAt);
+      return compareDate(second.updatedAt, first.updatedAt);
     });
 });
 const filteredUsers = computed(() => {
@@ -484,9 +609,11 @@ const filteredUsers = computed(() => {
 });
 const pagedSongs = computed(() => paginate(filteredSongs.value, adminPages.songs));
 const pagedAlbums = computed(() => paginate(filteredAlbums.value, adminPages.albums));
+const pagedArtists = computed(() => paginate(filteredArtists.value, adminPages.artists));
 const pagedUsers = computed(() => paginate(filteredUsers.value, adminPages.users));
 const songPageCount = computed(() => pageCount(filteredSongs.value.length));
 const albumPageCount = computed(() => pageCount(filteredAlbums.value.length));
+const artistPageCount = computed(() => pageCount(filteredArtists.value.length));
 const userPageCount = computed(() => pageCount(filteredUsers.value.length));
 
 watch(
@@ -505,9 +632,16 @@ watch(
 );
 
 watch(
-  () => [albumFilters.keyword, albumFilters.artistId, albumFilters.cover, albumFilters.sort],
+  () => [albumFilters.keyword, albumFilters.artistId, albumFilters.cover, albumFilters.artistImage, albumFilters.sort],
   () => {
     adminPages.albums = 1;
+  }
+);
+
+watch(
+  () => [artistFilters.keyword, artistFilters.image, artistFilters.sort],
+  () => {
+    adminPages.artists = 1;
   }
 );
 
@@ -524,6 +658,10 @@ watch(songPageCount, (count) => {
 
 watch(albumPageCount, (count) => {
   adminPages.albums = Math.min(adminPages.albums, count);
+});
+
+watch(artistPageCount, (count) => {
+  adminPages.artists = Math.min(adminPages.artists, count);
 });
 
 watch(userPageCount, (count) => {
@@ -560,7 +698,12 @@ async function fetchAllPageItems<T>(loader: (page: number, size: number) => Prom
 }
 
 function setAdminPage(key: AdminListKey, page: number) {
-  const maxPage = key === "songs" ? songPageCount.value : key === "albums" ? albumPageCount.value : userPageCount.value;
+  const maxPage = {
+    songs: songPageCount.value,
+    artists: artistPageCount.value,
+    albums: albumPageCount.value,
+    users: userPageCount.value
+  }[key];
   adminPages[key] = Math.min(Math.max(page, 1), maxPage);
 }
 
@@ -592,14 +735,83 @@ function compareDate(first: string, second: string) {
   return firstTime - secondTime;
 }
 
-async function createArtist() {
-  if (!artistName.value) return;
-  const artist = await adminApi.createArtist({ name: artistName.value });
-  artists.value.unshift(artist);
-  songForm.artistId = artist.id;
-  albumForm.artistId = artist.id;
-  artistName.value = "";
-  ui.toast("歌手已创建");
+function mediaPath(value?: string | null) {
+  if (!value) return "";
+  try {
+    return decodeURIComponent(new URL(value, window.location.origin).pathname);
+  } catch {
+    return decodeURIComponent(value.split("?", 1)[0]);
+  }
+}
+
+function isGeneratedAlbumCover(value?: string | null) {
+  const path = mediaPath(value);
+  return /^\/media\/cover\/album-\d+-.*\.svg$/i.test(path);
+}
+
+function isGeneratedArtistImage(value?: string | null) {
+  const path = mediaPath(value);
+  return /^\/media\/artist\/artist-\d+-.*\.svg$/i.test(path);
+}
+
+function hasRealAlbumCover(album: Album) {
+  return Boolean(album.coverUrl && !isGeneratedAlbumCover(album.coverUrl));
+}
+
+function isMissingRealAlbumCover(album: Album) {
+  return !hasRealAlbumCover(album);
+}
+
+function artistById(artistId: number) {
+  return artistsById.value.get(artistId) ?? null;
+}
+
+function hasRealArtistImage(artistId: number) {
+  const artist = artistById(artistId);
+  return Boolean(artist?.avatarUrl && !isGeneratedArtistImage(artist.avatarUrl));
+}
+
+function isMissingRealArtistImage(artistId: number) {
+  return !hasRealArtistImage(artistId);
+}
+
+function albumCoverLabel(album: Album) {
+  if (!album.coverUrl) return "暂无专辑图";
+  return isGeneratedAlbumCover(album.coverUrl) ? "当前为缩写占位图" : "实际专辑图已上传";
+}
+
+function artistImageLabel(artistId: number) {
+  const artist = artistById(artistId);
+  if (!artist?.avatarUrl) return "暂无歌手图";
+  return isGeneratedArtistImage(artist.avatarUrl) ? "当前为缩写占位图" : "实际歌手图已上传";
+}
+
+async function saveArtist() {
+  if (!artistForm.name) return;
+  savingArtist.value = true;
+  try {
+    const avatarUrl = await ensureArtistAvatarUrl();
+    const isEditing = Boolean(editingArtistId.value);
+    const payload = {
+      name: artistForm.name,
+      bio: artistForm.bio || undefined,
+      avatarUrl: avatarUrl || undefined
+    };
+    const artist = editingArtistId.value
+      ? await adminApi.updateArtist(editingArtistId.value, payload)
+      : await adminApi.createArtist(payload);
+    if (isEditing) {
+      artists.value = artists.value.map((item) => (item.id === artist.id ? artist : item));
+    } else {
+      artists.value.unshift(artist);
+      songForm.artistId = artist.id;
+      albumForm.artistId = artist.id;
+    }
+    resetArtistForm();
+    ui.toast(isEditing ? "歌手已更新" : "歌手已创建");
+  } finally {
+    savingArtist.value = false;
+  }
 }
 
 async function createAlbum() {
@@ -649,6 +861,11 @@ function onSongAudioChange(event: Event) {
 function onSongLyricChange(event: Event) {
   songLyricFile.value = getInputFile(event);
   songForm.lyricUrl = "";
+}
+
+function onArtistAvatarChange(event: Event) {
+  artistAvatarFile.value = getInputFile(event);
+  artistForm.avatarUrl = "";
 }
 
 function onAlbumCoverChange(event: Event) {
@@ -753,6 +970,16 @@ async function ensureSongLyricUrl(audioUrl: string) {
   return songForm.lyricUrl;
 }
 
+async function ensureArtistAvatarUrl() {
+  if (artistForm.avatarUrl) return artistForm.avatarUrl;
+  if (!artistAvatarFile.value) {
+    return "";
+  }
+  const upload = await adminApi.upload(artistAvatarFile.value, "ARTIST");
+  artistForm.avatarUrl = upload.url;
+  return upload.url;
+}
+
 async function ensureAlbumCoverUrl() {
   if (albumForm.coverUrl) return albumForm.coverUrl;
   if (!albumCoverFile.value) {
@@ -808,6 +1035,15 @@ function resetSongForm() {
   songFileInputKey.value += 1;
 }
 
+function resetArtistForm() {
+  editingArtistId.value = null;
+  artistForm.name = "";
+  artistForm.bio = "";
+  artistForm.avatarUrl = "";
+  artistAvatarFile.value = null;
+  artistFileInputKey.value += 1;
+}
+
 function resetAlbumForm() {
   editingAlbumId.value = null;
   albumForm.title = "";
@@ -837,6 +1073,19 @@ function editSong(song: Song) {
 
 function cancelSongEdit() {
   resetSongForm();
+}
+
+function editArtist(artist: Artist) {
+  editingArtistId.value = artist.id;
+  artistForm.name = artist.name;
+  artistForm.bio = artist.bio ?? "";
+  artistForm.avatarUrl = artist.avatarUrl ?? "";
+  artistAvatarFile.value = null;
+  artistFileInputKey.value += 1;
+}
+
+function cancelArtistEdit() {
+  resetArtistForm();
 }
 
 function editAlbum(album: Album) {
@@ -878,6 +1127,23 @@ async function deleteAlbum(album: Album) {
   ui.toast("专辑已删除");
   await loadAdmin();
 }
+
+async function deleteArtist(artist: Artist) {
+  if (!window.confirm(`确定删除歌手「${artist.name}」吗？歌手下仍有专辑或歌曲时会被系统阻止。`)) return;
+  await adminApi.deleteArtist(artist.id);
+  if (songForm.artistId === artist.id) {
+    songForm.artistId = 0;
+  }
+  if (albumForm.artistId === artist.id) {
+    albumForm.artistId = 0;
+  }
+  if (editingArtistId.value === artist.id) {
+    resetArtistForm();
+  }
+  ui.toast("歌手已删除");
+  await loadAdmin();
+}
+
 async function deleteUser(user: AdminUser) {
   if (user.id === auth.user?.id) {
     ui.toast("请在个人页注销当前登录账号");

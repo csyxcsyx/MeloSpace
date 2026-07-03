@@ -52,24 +52,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { Disc3, Play, UserRound } from "lucide-vue-next";
-import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
+import { useCatalogCacheStore } from "@/stores/catalogCache";
 import { usePlayerStore } from "@/stores/player";
 import { resolveMediaUrl } from "@/utils/format";
 
 const route = useRoute();
 const router = useRouter();
 const player = usePlayerStore();
+const catalogCache = useCatalogCacheStore();
 const loading = ref(true);
 const artist = ref<Artist | null>(null);
 const albums = ref<Album[]>([]);
 const songs = ref<Song[]>([]);
+const loadedArtistId = ref<number | null>(null);
 
 const artistImage = computed(() => {
   return artist.value?.avatarUrl
@@ -79,10 +81,19 @@ const artistImage = computed(() => {
 });
 
 onMounted(loadArtist);
+onActivated(loadArtist);
 
-watch(() => route.params.id, loadArtist);
+watch(
+  () => [route.name, route.params.id],
+  () => {
+    if (route.name === "artist-detail") {
+      void loadArtist();
+    }
+  }
+);
 
 async function loadArtist() {
+  if (route.name !== "artist-detail") return;
   const artistId = Number(route.params.id);
   if (!Number.isFinite(artistId)) {
     artist.value = null;
@@ -92,16 +103,28 @@ async function loadArtist() {
     return;
   }
 
-  loading.value = true;
+  if (loadedArtistId.value === artistId && artist.value) {
+    loading.value = false;
+    return;
+  }
+
+  const cached = catalogCache.getArtistDetail(artistId);
+  if (cached) {
+    artist.value = cached.artist;
+    albums.value = cached.albums;
+    songs.value = cached.songs;
+    loadedArtistId.value = artistId;
+    loading.value = false;
+    return;
+  }
+
+  loading.value = !artist.value;
   try {
-    const [artistList, albumList, songPage] = await Promise.all([
-      artistApi.list(),
-      albumApi.list({ artistId }),
-      songApi.list({ page: 1, size: 100, artistId })
-    ]);
-    artist.value = artistList.find((item) => item.id === artistId) ?? null;
-    albums.value = albumList;
-    songs.value = songPage.items;
+    const detail = await catalogCache.loadArtistDetail(artistId);
+    artist.value = detail.artist;
+    albums.value = detail.albums;
+    songs.value = detail.songs;
+    loadedArtistId.value = artistId;
   } finally {
     loading.value = false;
   }

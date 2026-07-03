@@ -10,4 +10,6 @@ public interface ArtistService extends IService<Artist> {
     ArtistResponse createArtist(ArtistUpsertRequest request);
 
     ArtistResponse updateArtist(Long id, ArtistUpsertRequest request);
+
+    void deleteArtist(Long id);
 }

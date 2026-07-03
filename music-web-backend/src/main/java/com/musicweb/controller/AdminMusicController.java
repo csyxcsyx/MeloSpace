@@ -111,6 +111,12 @@ public class AdminMusicController {
         return ApiResponse.ok(artistService.updateArtist(id, request));
     }
 
+    @DeleteMapping("/artists/{id}")
+    public ApiResponse<Void> deleteArtist(@PathVariable @Positive Long id) {
+        artistService.deleteArtist(id);
+        return ApiResponse.ok();
+    }
+
     @PostMapping("/albums")
     public ApiResponse<AlbumResponse> createAlbum(@Valid @RequestBody AlbumUpsertRequest request) {
         return ApiResponse.ok(albumService.createAlbum(request));

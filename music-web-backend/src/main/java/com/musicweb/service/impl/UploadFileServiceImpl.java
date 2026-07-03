@@ -103,6 +103,13 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
                         mediaProperties.maxCoverSize(),
                         Set.of("image/", "application/octet-stream")
                 ),
+                "ARTIST", new UploadSpec(
+                        "ARTIST",
+                        "artist",
+                        Set.of("jpg", "jpeg", "png", "webp"),
+                        mediaProperties.maxCoverSize(),
+                        Set.of("image/", "application/octet-stream")
+                ),
                 "LYRIC", new UploadSpec(
                         "LYRIC",
                         "lyrics",

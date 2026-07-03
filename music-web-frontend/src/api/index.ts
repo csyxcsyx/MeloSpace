@@ -105,6 +105,9 @@ export const adminApi = {
   deleteSong: (id: number) => unwrap<void>(http.delete(`/api/admin/songs/${id}`)),
   createArtist: (payload: { name: string; bio?: string; avatarUrl?: string }) =>
     unwrap<Artist>(http.post("/api/admin/artists", payload)),
+  updateArtist: (id: number, payload: { name: string; bio?: string; avatarUrl?: string }) =>
+    unwrap<Artist>(http.put(`/api/admin/artists/${id}`, payload)),
+  deleteArtist: (id: number) => unwrap<void>(http.delete(`/api/admin/artists/${id}`)),
   createAlbum: (payload: { title: string; artistId: number; coverUrl?: string; releaseDate?: string }) =>
     unwrap<Album>(http.post("/api/admin/albums", payload)),
   updateAlbum: (id: number, payload: { title: string; artistId: number; coverUrl?: string; releaseDate?: string }) =>

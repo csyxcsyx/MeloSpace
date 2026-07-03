@@ -17,8 +17,8 @@ const router = createRouter({
     { path: "/", redirect: "/discover" },
     { path: "/discover", name: "discover", component: DiscoverView, meta: { keepAlive: true } },
     { path: "/search", name: "search", component: SearchView },
-    { path: "/albums/:id", name: "album-detail", component: AlbumDetailView, props: true },
-    { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true },
+    { path: "/albums/:id", name: "album-detail", component: AlbumDetailView, props: true, meta: { keepAlive: true } },
+    { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true, meta: { keepAlive: true } },
     { path: "/songs/:id", name: "song-detail", component: SongDetailView, props: true },
     { path: "/playlists/:id", name: "playlist-detail", component: PlaylistDetailView, props: true },
     { path: "/me", name: "profile", component: ProfileView, meta: { requiresAuth: true } },
@@ -26,7 +26,8 @@ const router = createRouter({
     { path: "/login", name: "login", component: LoginView },
     { path: "/player", name: "player", component: PlayerView, meta: { immersive: true } }
   ],
-  scrollBehavior() {
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) return savedPosition;
     return { top: 0 };
   }
 });
