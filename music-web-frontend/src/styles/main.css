@@ -1763,6 +1763,7 @@ button {
 
 .player-hidden {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: translateX(50%) translateY(18px);
 }
