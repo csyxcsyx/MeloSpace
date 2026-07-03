@@ -215,6 +215,13 @@ def svg_text(value: str) -> str:
     return html.escape(value, quote=False)
 
 
+def is_generated_album_art_url(value: Any) -> bool:
+    if not value:
+        return False
+    path = unquote(str(value).split("?", 1)[0])
+    return path.startswith("/media/cover/album-") and path.endswith(".svg")
+
+
 def glass_font_size(mark: str, base: int) -> int:
     length = max(len(mark), 1)
     if any(is_cjk(char) for char in mark):
@@ -436,6 +443,7 @@ def backfill_identity_art(args: argparse.Namespace, config: dict[str, str], data
             args.album_art_mode == "all"
             or (args.album_art_mode == "missing" and not has_cover)
             or (args.album_art_mode == "fallback" and (not has_cover or key in missing_real_cover_keys))
+            or is_generated_album_art_url(album.get("cover_url"))
         )
         if not should_generate:
             continue
