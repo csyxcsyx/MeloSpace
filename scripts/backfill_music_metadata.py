@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backfill MeloSpace catalog lyrics, identity art, and album dates.
+"""Backfill MeloSpace catalog lyrics, artwork, and album dates.
 
 The script is designed to run on the deployed server. It reads the same
 environment file as the backend, calls the existing LDDC import script for
@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--tasks",
         default="identity-art,release-dates,lyrics",
-        help="Comma separated tasks: identity-art,release-dates,lyrics.",
+        help="Comma separated tasks: audit-catalog,real-art,identity-art,release-dates,lyrics.",
     )
     parser.add_argument("--execute", action="store_true", help="Write files and update the database.")
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)
@@ -57,6 +57,21 @@ def parse_args() -> argparse.Namespace:
         default="fallback",
         help="Which album covers receive generated initials art.",
     )
+    parser.add_argument(
+        "--real-art-mode",
+        choices=("missing", "all"),
+        default="missing",
+        help="Which artists/albums receive downloaded real artwork.",
+    )
+    parser.add_argument(
+        "--real-art-sources",
+        default="deezer,itunes,musicbrainz",
+        help="Comma separated real artwork sources: deezer,itunes,musicbrainz.",
+    )
+    parser.add_argument("--real-art-limit", type=int, default=0, help="Maximum artists and albums to check; 0 means all.")
+    parser.add_argument("--real-art-sleep", type=float, default=0.35, help="Delay between real artwork lookups.")
+    parser.add_argument("--real-art-min-score", type=float, default=0.84, help="Minimum match score for downloaded artwork.")
+    parser.add_argument("--audit-output", type=Path, help="Write catalog audit report JSON to this path.")
     parser.add_argument(
         "--release-sources",
         default="itunes,musicbrainz",
@@ -275,6 +290,17 @@ def is_generated_album_art_url(value: Any) -> bool:
     return path.startswith("/media/cover/album-") and path.endswith(".svg")
 
 
+def is_generated_artist_art_url(value: Any) -> bool:
+    if not value:
+        return False
+    path = unquote(str(value).split("?", 1)[0])
+    return path.startswith("/media/artist/artist-") and path.endswith(".svg")
+
+
+def has_real_url(value: Any, generated_checker) -> bool:
+    return bool(value) and not generated_checker(value)
+
+
 def solid_font_size(mark: str) -> int:
     length = max(len(mark), 1)
     if length <= 1:
@@ -378,6 +404,58 @@ def query_all_albums(config: dict[str, str], database: str) -> list[dict[str, An
     )
 
 
+def query_all_songs(config: dict[str, str], database: str) -> list[dict[str, Any]]:
+    return fetch_json_rows(
+        config,
+        database,
+        """
+        SELECT JSON_OBJECT(
+          'id', s.id,
+          'title', s.title,
+          'artist_id', s.artist_id,
+          'artist_name', ar.name,
+          'album_id', s.album_id,
+          'album_title', al.title,
+          'album_artist_id', al.artist_id,
+          'album_artist_name', album_ar.name,
+          'cover_url', s.cover_url,
+          'album_cover_url', al.cover_url,
+          'audio_url', s.audio_url,
+          'lyric_url', s.lyric_url,
+          'duration_seconds', s.duration_seconds,
+          'language', s.language,
+          'genre', s.genre,
+          'mood', s.mood,
+          'play_count', s.play_count,
+          'status', s.status
+        )
+        FROM song s
+        LEFT JOIN artist ar ON ar.id = s.artist_id
+        LEFT JOIN album al ON al.id = s.album_id
+        LEFT JOIN artist album_ar ON album_ar.id = al.artist_id
+        ORDER BY s.id;
+        """,
+    )
+
+
+def query_catalog_counts(config: dict[str, str], database: str) -> dict[str, Any]:
+    rows = fetch_json_rows(
+        config,
+        database,
+        """
+        SELECT JSON_OBJECT(
+          'users', (SELECT COUNT(*) FROM `user`),
+          'artists', (SELECT COUNT(*) FROM artist),
+          'albums', (SELECT COUNT(*) FROM album),
+          'songs', (SELECT COUNT(*) FROM song),
+          'playlists', (SELECT COUNT(*) FROM playlist),
+          'comments', (SELECT COUNT(*) FROM comment)
+        );
+        """,
+    )
+    return rows[0] if rows else {}
+
+
 def backfill_identity_art(args: argparse.Namespace, config: dict[str, str], database: str) -> dict[str, int]:
     artists = query_artists(config, database)
     albums = query_all_albums(config, database)
@@ -465,6 +543,13 @@ def http_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any]
         return json.loads(response.read().decode("utf-8"))
 
 
+def http_bytes(url: str, headers: dict[str, str] | None = None) -> tuple[bytes, str]:
+    request = Request(url, headers=headers or {"User-Agent": MUSICBRAINZ_USER_AGENT})
+    with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+        content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        return response.read(), content_type
+
+
 def parse_date(value: str | None) -> str | None:
     if not value:
         return None
@@ -480,6 +565,340 @@ def parse_date(value: str | None) -> str | None:
         return dt.date(year, month, day).isoformat()
     except ValueError:
         return None
+
+
+def image_extension(content_type: str, url: str) -> str:
+    if content_type == "image/png":
+        return ".png"
+    if content_type == "image/webp":
+        return ".webp"
+    if content_type in {"image/jpeg", "image/jpg"}:
+        return ".jpg"
+    suffix = Path(unquote(url.split("?", 1)[0])).suffix.lower()
+    if suffix in {".jpg", ".jpeg", ".png", ".webp"}:
+        return ".jpg" if suffix == ".jpeg" else suffix
+    return ".jpg"
+
+
+def upscale_itunes_artwork(url: str) -> str:
+    return re.sub(r"/\d+x\d+bb\.(jpg|png|webp)$", r"/1200x1200bb.\1", url)
+
+
+def deezer_is_default_image(url: str | None) -> bool:
+    if not url:
+        return True
+    return "5639395138885805" in url or "/images/artist//" in url or "/images/cover//" in url
+
+
+def lookup_deezer_artist_image(artist: dict[str, Any]) -> dict[str, Any] | None:
+    name = str(artist["name"] or "")
+    params = urlencode({"q": name, "limit": "8"})
+    data = http_json(f"https://api.deezer.com/search/artist?{params}", {"User-Agent": MUSICBRAINZ_USER_AGENT})
+    best: dict[str, Any] | None = None
+    for item in data.get("data", []):
+        if not isinstance(item, dict):
+            continue
+        image_url = item.get("picture_xl") or item.get("picture_big") or item.get("picture_medium")
+        if deezer_is_default_image(image_url):
+            continue
+        score = similarity(name, str(item.get("name", "")))
+        if best is None or score > best["score"]:
+            best = {
+                "artwork_url": image_url,
+                "source": "deezer:artist",
+                "score": round(score, 4),
+                "matched_artist": item.get("name"),
+                "source_url": item.get("link"),
+            }
+    if best and best["score"] >= 0.84:
+        return best
+    return None
+
+
+def lookup_deezer_album_art(album: dict[str, Any]) -> dict[str, Any] | None:
+    artist = str(album["artist_name"] or "")
+    title = str(album["title"] or "")
+    queries = [
+        f'artist:"{artist}" album:"{title}"',
+        f"{artist} {title}",
+    ]
+    best: dict[str, Any] | None = None
+    for query in queries:
+        params = urlencode({"q": query, "limit": "10"})
+        data = http_json(f"https://api.deezer.com/search/album?{params}", {"User-Agent": MUSICBRAINZ_USER_AGENT})
+        for item in data.get("data", []):
+            if not isinstance(item, dict):
+                continue
+            image_url = item.get("cover_xl") or item.get("cover_big") or item.get("cover_medium")
+            if deezer_is_default_image(image_url):
+                continue
+            item_artist = ""
+            if isinstance(item.get("artist"), dict):
+                item_artist = str(item["artist"].get("name") or "")
+            score, title_score, artist_score = album_match_score(title, artist, str(item.get("title", "")), item_artist)
+            if title_score < 0.72 or artist_score < 0.60:
+                continue
+            if best is None or score > best["score"]:
+                best = {
+                    "artwork_url": image_url,
+                    "source": "deezer:album",
+                    "score": round(score, 4),
+                    "title_score": round(title_score, 4),
+                    "artist_score": round(artist_score, 4),
+                    "matched_album": item.get("title"),
+                    "matched_artist": item_artist,
+                    "source_url": item.get("link"),
+                }
+        if best and best["score"] >= 0.88:
+            return best
+    if best and best["score"] >= 0.84:
+        return best
+    return None
+
+
+def lookup_itunes_album_art(album: dict[str, Any]) -> dict[str, Any] | None:
+    artist = str(album["artist_name"] or "")
+    title = str(album["title"] or "")
+    best: dict[str, Any] | None = None
+    for country in ("CN", "TW", "HK", "SG", "US", "JP"):
+        params = urlencode(
+            {
+                "term": f"{artist} {title}",
+                "media": "music",
+                "entity": "album",
+                "limit": "16",
+                "country": country,
+            }
+        )
+        data = http_json(f"https://itunes.apple.com/search?{params}", {"User-Agent": MUSICBRAINZ_USER_AGENT})
+        for item in data.get("results", []):
+            artwork_url = item.get("artworkUrl100")
+            if not artwork_url:
+                continue
+            score, title_score, artist_score = album_match_score(
+                title,
+                artist,
+                str(item.get("collectionName", "")),
+                str(item.get("artistName", "")),
+            )
+            if title_score < 0.72 or artist_score < 0.60:
+                continue
+            if best is None or score > best["score"]:
+                best = {
+                    "artwork_url": upscale_itunes_artwork(str(artwork_url)),
+                    "source": f"itunes:{country}:album",
+                    "score": round(score, 4),
+                    "title_score": round(title_score, 4),
+                    "artist_score": round(artist_score, 4),
+                    "matched_album": item.get("collectionName"),
+                    "matched_artist": item.get("artistName"),
+                    "source_url": item.get("collectionViewUrl"),
+                }
+        if best and best["score"] >= 0.88:
+            return best
+    if best and best["score"] >= 0.84:
+        return best
+    return None
+
+
+def album_match_score(title: str, artist: str, matched_title: str, matched_artist: str) -> tuple[float, float, float]:
+    title_score = similarity(title, matched_title)
+    artist_score = similarity(artist, matched_artist)
+    score = title_score * 0.72 + artist_score * 0.28
+    return score, title_score, artist_score
+
+
+def lookup_musicbrainz_album_art(album: dict[str, Any]) -> dict[str, Any] | None:
+    artist = str(album["artist_name"] or "")
+    title = str(album["title"] or "")
+    params = urlencode({"query": f'releasegroup:"{title}" AND artist:"{artist}"', "fmt": "json", "limit": "10"})
+    data = http_json(
+        f"https://musicbrainz.org/ws/2/release-group/?{params}",
+        {"User-Agent": MUSICBRAINZ_USER_AGENT},
+    )
+    best: dict[str, Any] | None = None
+    for item in data.get("release-groups", []):
+        mbid = item.get("id")
+        if not mbid:
+            continue
+        artist_credit = " ".join(part.get("name", "") for part in item.get("artist-credit", []) if isinstance(part, dict))
+        mb_score = float(item.get("score") or 0.0) / 100.0
+        combined_score, title_score, artist_score = album_match_score(title, artist, str(item.get("title", "")), artist_credit)
+        if title_score < 0.72 or artist_score < 0.60:
+            continue
+        score = max(mb_score, combined_score)
+        if best is None or score > best["score"]:
+            best = {
+                "artwork_url": f"https://coverartarchive.org/release-group/{mbid}/front-500",
+                "source": "musicbrainz:cover-art-archive",
+                "score": round(score, 4),
+                "title_score": round(title_score, 4),
+                "artist_score": round(artist_score, 4),
+                "matched_album": item.get("title"),
+                "matched_artist": artist_credit,
+                "source_url": f"https://musicbrainz.org/release-group/{mbid}",
+            }
+    if not best or best["score"] < 0.84:
+        return None
+    try:
+        image, content_type = http_bytes(str(best["artwork_url"]), {"User-Agent": MUSICBRAINZ_USER_AGENT})
+    except Exception:
+        return None
+    if not content_type.startswith("image/") or len(image) < 1024:
+        return None
+    best["prefetched_bytes"] = image
+    best["prefetched_content_type"] = content_type
+    return best
+
+
+def download_artwork(url: str, output_dir: Path, file_stem: str, execute: bool, prefetched: bytes | None = None, content_type: str = "") -> tuple[str, Path | None]:
+    image = prefetched
+    if image is None:
+        image, content_type = http_bytes(url, {"User-Agent": MUSICBRAINZ_USER_AGENT})
+    if not content_type.startswith("image/") or len(image) < 1024:
+        raise ValueError(f"not an image response: {content_type or 'unknown'}")
+    extension = image_extension(content_type, url)
+    file_name = f"{file_stem}-{hashlib.sha1(image).hexdigest()[:10]}{extension}"
+    output_path = output_dir / file_name
+    if execute:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(image)
+    return file_name, output_path if execute else None
+
+
+def backfill_real_art(args: argparse.Namespace, config: dict[str, str], database: str) -> dict[str, int]:
+    artists = query_artists(config, database)
+    albums = query_all_albums(config, database)
+    if args.real_art_mode == "missing":
+        artists = [artist for artist in artists if not has_real_url(artist.get("avatar_url"), is_generated_artist_art_url)]
+        albums = [album for album in albums if not has_real_url(album.get("cover_url"), is_generated_album_art_url)]
+    if args.real_art_limit > 0:
+        artists = artists[: args.real_art_limit]
+        albums = albums[: args.real_art_limit]
+
+    sources = split_csv(args.real_art_sources)
+    artist_dir = args.media_root / "artist"
+    cover_dir = args.media_root / "cover"
+    state_path = args.state_dir / "real_art_results.json"
+    state = load_state(state_path)
+    statements: list[str] = []
+    checked_artists = 0
+    updated_artists = 0
+    checked_albums = 0
+    updated_albums = 0
+    failed = 0
+    album_ids: list[int] = []
+
+    for artist in artists:
+        artist_id = int(artist["id"])
+        name = str(artist["name"] or "")
+        key = f"artist:{name}"
+        result = None
+        checked_artists += 1
+        if "deezer" in sources:
+            try:
+                result = lookup_deezer_artist_image(artist)
+            except Exception as exc:
+                state[f"{key}:deezer:error"] = str(exc)
+        if result and result["score"] >= args.real_art_min_score:
+            try:
+                file_name, _ = download_artwork(
+                    str(result["artwork_url"]),
+                    artist_dir,
+                    f"artist-{artist_id}-{safe_ascii_name(name, short_hash(name))}",
+                    args.execute,
+                )
+                url = f"/media/artist/{quote(file_name)}"
+                statements.append(f"UPDATE artist SET avatar_url = {sql_string(url)} WHERE id = {artist_id};")
+                result["local_url"] = url
+                result["status"] = "ok"
+                updated_artists += 1
+            except Exception as exc:
+                result["status"] = "failed"
+                result["error"] = str(exc)
+                failed += 1
+        else:
+            result = result or {"status": "not-found"}
+            result.setdefault("status", "below-threshold")
+        state[key] = result
+        if args.execute:
+            save_state(state_path, state)
+        if args.real_art_sleep > 0:
+            time.sleep(args.real_art_sleep)
+
+    album_lookups = {
+        "itunes": lookup_itunes_album_art,
+        "deezer": lookup_deezer_album_art,
+        "musicbrainz": lookup_musicbrainz_album_art,
+    }
+    for album in albums:
+        album_id = int(album["id"])
+        title = str(album["title"] or "")
+        artist_name = str(album["artist_name"] or "")
+        key = f"album:{artist_name}\u241f{title}"
+        result = None
+        checked_albums += 1
+        for source in sources:
+            lookup = album_lookups.get(source)
+            if lookup is None:
+                continue
+            try:
+                result = lookup(album)
+            except Exception as exc:
+                state[f"{key}:{source}:error"] = str(exc)
+                result = None
+            if result and result["score"] >= args.real_art_min_score:
+                break
+            if args.real_art_sleep > 0:
+                time.sleep(args.real_art_sleep)
+        if result and result["score"] >= args.real_art_min_score:
+            try:
+                file_name, _ = download_artwork(
+                    str(result["artwork_url"]),
+                    cover_dir,
+                    f"album-{album_id}-{safe_ascii_name(title, short_hash(key))}",
+                    args.execute,
+                    prefetched=result.get("prefetched_bytes"),
+                    content_type=str(result.get("prefetched_content_type") or ""),
+                )
+                url = f"/media/cover/{quote(file_name)}"
+                statements.append(f"UPDATE album SET cover_url = {sql_string(url)} WHERE id = {album_id};")
+                album_ids.append(album_id)
+                result["local_url"] = url
+                result["status"] = "ok"
+                updated_albums += 1
+            except Exception as exc:
+                result["status"] = "failed"
+                result["error"] = str(exc)
+                failed += 1
+        else:
+            result = result or {"status": "not-found"}
+            result.setdefault("status", "below-threshold")
+        result.pop("prefetched_bytes", None)
+        state[key] = result
+        if args.execute:
+            save_state(state_path, state)
+        if args.real_art_sleep > 0:
+            time.sleep(args.real_art_sleep)
+
+    if album_ids:
+        ids = ",".join(str(item) for item in album_ids)
+        statements.append(
+            "UPDATE song s JOIN album a ON a.id = s.album_id "
+            f"SET s.cover_url = a.cover_url WHERE s.album_id IN ({ids});"
+        )
+    execute_statements(config, database, statements, args.execute)
+    if args.execute:
+        save_state(state_path, state)
+    else:
+        print(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True))
+    return {
+        "artists_checked": checked_artists,
+        "artists_updated": updated_artists,
+        "albums_checked": checked_albums,
+        "albums_updated": updated_albums,
+        "failed_downloads": failed,
+    }
 
 
 def lookup_itunes(album: dict[str, Any]) -> dict[str, Any] | None:
@@ -722,6 +1141,165 @@ def media_path_from_url(media_root: Path, url: str | None) -> Path | None:
     return path
 
 
+def artist_relation_ok(song_artist: str | None, album_artist: str | None) -> bool:
+    song_name = normalize(song_artist or "")
+    album_name = normalize(album_artist or "")
+    if not song_name or not album_name:
+        return False
+    return song_name == album_name or song_name in album_name or album_name in song_name
+
+
+def media_issue(media_root: Path, owner: str, item_id: Any, field: str, value: Any) -> dict[str, Any] | None:
+    if not value:
+        return {"owner": owner, "id": item_id, "field": field, "status": "empty"}
+    url = str(value)
+    path = media_path_from_url(media_root, url)
+    if path is None:
+        return None
+    if not path.is_file():
+        return {"owner": owner, "id": item_id, "field": field, "status": "missing-file", "url": url}
+    if path.stat().st_size <= 0:
+        return {"owner": owner, "id": item_id, "field": field, "status": "empty-file", "url": url}
+    return None
+
+
+def backfill_audit_catalog(args: argparse.Namespace, config: dict[str, str], database: str) -> dict[str, Any]:
+    artists = query_artists(config, database)
+    albums = query_all_albums(config, database)
+    songs = query_all_songs(config, database)
+    counts = query_catalog_counts(config, database)
+
+    missing_artist_images = [artist for artist in artists if not artist.get("avatar_url")]
+    generated_artist_images = [artist for artist in artists if is_generated_artist_art_url(artist.get("avatar_url"))]
+    missing_real_artist_images = [
+        artist for artist in artists if not has_real_url(artist.get("avatar_url"), is_generated_artist_art_url)
+    ]
+    missing_album_covers = [album for album in albums if not album.get("cover_url")]
+    generated_album_covers = [album for album in albums if is_generated_album_art_url(album.get("cover_url"))]
+    missing_real_album_covers = [
+        album for album in albums if not has_real_url(album.get("cover_url"), is_generated_album_art_url)
+    ]
+
+    relation_mismatches: list[dict[str, Any]] = []
+    relation_reviews: list[dict[str, Any]] = []
+    missing_media: list[dict[str, Any]] = []
+    song_cover_drift: list[dict[str, Any]] = []
+    duplicate_keys: dict[str, list[dict[str, Any]]] = {}
+
+    for artist in artists:
+        issue = media_issue(args.media_root, "artist", artist.get("id"), "avatar_url", artist.get("avatar_url"))
+        if issue:
+            missing_media.append(issue)
+    for album in albums:
+        issue = media_issue(args.media_root, "album", album.get("id"), "cover_url", album.get("cover_url"))
+        if issue:
+            missing_media.append(issue)
+    for song in songs:
+        song_id = song.get("id")
+        if song.get("artist_id") != song.get("album_artist_id"):
+            record = {
+                "song_id": song_id,
+                "title": song.get("title"),
+                "song_artist": song.get("artist_name"),
+                "album": song.get("album_title"),
+                "album_artist": song.get("album_artist_name"),
+                "accepted_as_credit_variant": artist_relation_ok(song.get("artist_name"), song.get("album_artist_name")),
+            }
+            relation_mismatches.append(record)
+            if not record["accepted_as_credit_variant"]:
+                relation_reviews.append(record)
+
+        song_cover = song.get("cover_url")
+        album_cover = song.get("album_cover_url")
+        if song_cover and album_cover and song_cover != album_cover:
+            song_cover_drift.append(
+                {
+                    "song_id": song_id,
+                    "title": song.get("title"),
+                    "album": song.get("album_title"),
+                    "song_cover_url": song_cover,
+                    "album_cover_url": album_cover,
+                }
+            )
+
+        key = f"{normalize(str(song.get('artist_name') or ''))}\u241f{normalize(str(song.get('title') or ''))}"
+        duplicate_keys.setdefault(key, []).append(
+            {
+                "id": song_id,
+                "title": song.get("title"),
+                "artist": song.get("artist_name"),
+                "album": song.get("album_title"),
+            }
+        )
+        for field in ("audio_url", "cover_url", "lyric_url"):
+            issue = media_issue(args.media_root, "song", song_id, field, song.get(field))
+            if issue:
+                missing_media.append(issue)
+
+    duplicate_songs = [items for key, items in duplicate_keys.items() if key.strip("\u241f") and len(items) > 1]
+    songs_without_lyrics = [song for song in songs if not song.get("lyric_url")]
+    songs_without_cover = [song for song in songs if not song.get("cover_url")]
+    songs_without_audio = [song for song in songs if not song.get("audio_url")]
+    songs_without_album = [song for song in songs if not song.get("album_id")]
+    songs_without_artist = [song for song in songs if not song.get("artist_id")]
+
+    report = {
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "database": database,
+        "media_root": str(args.media_root),
+        "counts": counts,
+        "summary": {
+            "missing_artist_images": len(missing_artist_images),
+            "generated_artist_images": len(generated_artist_images),
+            "missing_real_artist_images": len(missing_real_artist_images),
+            "missing_album_covers": len(missing_album_covers),
+            "generated_album_covers": len(generated_album_covers),
+            "missing_real_album_covers": len(missing_real_album_covers),
+            "songs_without_lyrics": len(songs_without_lyrics),
+            "songs_without_cover": len(songs_without_cover),
+            "songs_without_audio": len(songs_without_audio),
+            "songs_without_album": len(songs_without_album),
+            "songs_without_artist": len(songs_without_artist),
+            "song_album_artist_mismatches": len(relation_mismatches),
+            "song_album_artist_needs_review": len(relation_reviews),
+            "song_cover_differs_from_album": len(song_cover_drift),
+            "duplicate_song_title_artist_groups": len(duplicate_songs),
+            "local_media_issues": len(missing_media),
+        },
+        "issues": {
+            "song_album_artist_mismatches": relation_mismatches,
+            "song_album_artist_needs_review": relation_reviews,
+            "song_cover_differs_from_album": song_cover_drift,
+            "duplicate_song_title_artist_groups": duplicate_songs,
+            "local_media_issues": missing_media,
+        },
+        "samples": {
+            "missing_real_artist_images": [
+                {"id": item.get("id"), "name": item.get("name"), "avatar_url": item.get("avatar_url")}
+                for item in missing_real_artist_images[:40]
+            ],
+            "missing_real_album_covers": [
+                {
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "artist": item.get("artist_name"),
+                    "cover_url": item.get("cover_url"),
+                }
+                for item in missing_real_album_covers[:80]
+            ],
+            "songs_without_lyrics": [
+                {"id": item.get("id"), "title": item.get("title"), "artist": item.get("artist_name")}
+                for item in songs_without_lyrics[:80]
+            ],
+        },
+    }
+
+    output_path = args.audit_output or args.state_dir / "catalog_audit.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    return {**report["summary"], "report": str(output_path)}
+
+
 def extract_json_object(stdout: str) -> dict[str, Any]:
     start = stdout.find("{")
     end = stdout.rfind("}")
@@ -867,8 +1445,12 @@ def main() -> int:
     config = read_env_file(args.env_file)
     database = args.database or config.get("MYSQL_DATABASE") or "music_web"
     tasks = set(split_csv(args.tasks))
-    summaries: dict[str, dict[str, int]] = {}
+    summaries: dict[str, dict[str, Any]] = {}
 
+    if "audit-catalog" in tasks:
+        summaries["audit-catalog"] = backfill_audit_catalog(args, config, database)
+    if "real-art" in tasks:
+        summaries["real-art"] = backfill_real_art(args, config, database)
     if "identity-art" in tasks:
         summaries["identity-art"] = backfill_identity_art(args, config, database)
     if "release-dates" in tasks:
