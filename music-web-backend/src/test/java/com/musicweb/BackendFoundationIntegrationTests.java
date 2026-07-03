@@ -235,6 +235,17 @@ class BackendFoundationIntegrationTests {
         assertThat(song.getStatusCode()).isEqualTo(HttpStatus.OK);
         long songId = song.getBody().get("data").get("id").asLong();
 
+        ResponseEntity<JsonNode> coverSyncedAlbum = exchangeWithToken(
+                "/api/admin/albums/" + albumId,
+                HttpMethod.PUT,
+                adminToken,
+                Map.of("title", "Stage Three Album Cover Sync", "artistId", artistId, "coverUrl", "/media/cover/album3.jpg")
+        );
+        assertThat(coverSyncedAlbum.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<JsonNode> syncedSong = restTemplate.getForEntity(url("/api/songs/" + songId), JsonNode.class);
+        assertThat(syncedSong.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(syncedSong.getBody().get("data").get("coverUrl").asText()).isEqualTo("/media/cover/album3.jpg");
+
         ResponseEntity<JsonNode> adminList = exchangeWithToken(
                 "/api/admin/songs?keyword=阶段三歌曲&page=1&size=10",
                 HttpMethod.GET,

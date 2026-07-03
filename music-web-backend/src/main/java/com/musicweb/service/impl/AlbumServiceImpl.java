@@ -1,6 +1,7 @@
 package com.musicweb.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.musicweb.common.ErrorCode;
 import com.musicweb.dto.AlbumUpsertRequest;
@@ -15,8 +16,10 @@ import com.musicweb.service.ArtistService;
 import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.AlbumResponse;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AlbumServiceImpl extends ServiceImpl<AlbumMapper, Album> implements AlbumService {
@@ -39,14 +42,19 @@ public class AlbumServiceImpl extends ServiceImpl<AlbumMapper, Album> implements
     }
 
     @Override
+    @Transactional
     public AlbumResponse updateAlbum(Long id, AlbumUpsertRequest request) {
         Album album = getById(id);
         if (album == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "专辑不存在", HttpStatus.NOT_FOUND);
         }
         Artist artist = getExistingArtist(request.artistId());
+        String previousCoverUrl = album.getCoverUrl();
         applyAlbumRequest(album, request);
         updateById(album);
+        if (!Objects.equals(previousCoverUrl, album.getCoverUrl())) {
+            syncSongCovers(id, album.getCoverUrl());
+        }
         return MusicResponseAssembler.toAlbumResponse(getById(id), Map.of(artist.getId(), artist));
     }
 
@@ -76,5 +84,14 @@ public class AlbumServiceImpl extends ServiceImpl<AlbumMapper, Album> implements
         album.setArtistId(request.artistId());
         album.setCoverUrl(request.coverUrl());
         album.setReleaseDate(request.releaseDate());
+    }
+
+    private void syncSongCovers(Long albumId, String coverUrl) {
+        songMapper.update(
+                null,
+                new LambdaUpdateWrapper<Song>()
+                        .eq(Song::getAlbumId, albumId)
+                        .set(Song::getCoverUrl, coverUrl)
+        );
     }
 }
