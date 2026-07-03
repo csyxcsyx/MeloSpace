@@ -184,29 +184,82 @@ def is_cjk(char: str) -> bool:
     )
 
 
-def initials(value: str, fallback: str = "MS") -> str:
-    cjk = [char for char in value if is_cjk(char)]
-    if cjk:
-        return "".join(cjk[:2])
-    words = re.findall(r"[A-Za-z0-9]+", value)
-    if words:
-        if len(words) == 1:
-            return words[0][:3].upper()
-        return "".join(word[0] for word in words[:3]).upper()
-    visible = re.sub(r"\s+", "", value)
-    return visible[:2] or fallback
-
-
-PALETTES = [
-    ("#8dc7ee", "#f3a6ad", "#b9d9c6", "#f7fbff", "#fbf7f4"),
-    ("#9fc4f3", "#efb2c0", "#c9dfbb", "#f9fbff", "#fff7f8"),
-    ("#a9d9d2", "#f0b5aa", "#a9c8ec", "#f8fcfb", "#fff8f4"),
-    ("#c3d7a5", "#efb0b4", "#9fc8e7", "#fbfdf8", "#fff8f8"),
-    ("#bad5ee", "#f1c0a7", "#b8dccb", "#f8fbfe", "#fffaf6"),
+GBK_PINYIN_RANGES = [
+    (1601, 1636, "A"),
+    (1637, 1832, "B"),
+    (1833, 2077, "C"),
+    (2078, 2273, "D"),
+    (2274, 2301, "E"),
+    (2302, 2432, "F"),
+    (2433, 2593, "G"),
+    (2594, 2786, "H"),
+    (2787, 3105, "J"),
+    (3106, 3211, "K"),
+    (3212, 3471, "L"),
+    (3472, 3634, "M"),
+    (3635, 3721, "N"),
+    (3722, 3729, "O"),
+    (3730, 3857, "P"),
+    (3858, 4026, "Q"),
+    (4027, 4085, "R"),
+    (4086, 4390, "S"),
+    (4391, 4557, "T"),
+    (4558, 4683, "W"),
+    (4684, 4924, "X"),
+    (4925, 5248, "Y"),
+    (5249, 5589, "Z"),
 ]
 
 
-def palette_for(value: str) -> tuple[str, str, str, str, str]:
+def hash_letters(value: str, length: int = 2) -> str:
+    digest = hashlib.sha1(value.encode("utf-8")).digest()
+    return "".join(chr(ord("A") + byte % 26) for byte in digest[:length])
+
+
+def cjk_latin_initial(char: str) -> str:
+    try:
+        encoded = char.encode("gbk")
+    except UnicodeEncodeError:
+        return hash_letters(char, 1)
+    if len(encoded) != 2:
+        return hash_letters(char, 1)
+    section_position = (encoded[0] - 160) * 100 + encoded[1] - 160
+    for start, end, initial in GBK_PINYIN_RANGES:
+        if start <= section_position <= end:
+            return initial
+    return hash_letters(char, 1)
+
+
+def initials(value: str, fallback: str = "MS") -> str:
+    matches = re.findall(r"[A-Za-z]+|[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]", value)
+    if len(matches) == 1 and re.fullmatch(r"[A-Za-z]+", matches[0]):
+        return matches[0].upper()[:3]
+
+    letters: list[str] = []
+    for token in matches:
+        if re.fullmatch(r"[A-Za-z]+", token):
+            letters.append(token[0].upper())
+        elif is_cjk(token):
+            letters.append(cjk_latin_initial(token))
+
+    result = re.sub(r"[^A-Z]", "", "".join(letters).upper())[:3]
+    if result:
+        return result
+    fallback_result = re.sub(r"[^A-Z]", "", fallback.upper())[:3]
+    return fallback_result or hash_letters(value or fallback, 2)
+
+
+PALETTES = [
+    ("#F5F8FF", "#2D5D83"),
+    ("#FFF4F6", "#8E3E4C"),
+    ("#F4FBF7", "#3F7151"),
+    ("#FFFAEF", "#806034"),
+    ("#F7F5FF", "#5D4B8A"),
+    ("#F6F7F9", "#3B4657"),
+]
+
+
+def palette_for(value: str) -> tuple[str, str]:
     index = int(hashlib.sha1(value.encode("utf-8")).hexdigest()[:8], 16) % len(PALETTES)
     return PALETTES[index]
 
@@ -222,115 +275,33 @@ def is_generated_album_art_url(value: Any) -> bool:
     return path.startswith("/media/cover/album-") and path.endswith(".svg")
 
 
-def glass_font_size(mark: str, base: int) -> int:
+def solid_font_size(mark: str) -> int:
     length = max(len(mark), 1)
-    if any(is_cjk(char) for char in mark):
-        if length <= 1:
-            return base + 20
-        if length == 2:
-            return base - 40
-        return base - 72
     if length <= 1:
-        return base + 64
+        return 310
     if length == 2:
-        return base
-    return base - 44
+        return 262
+    return 220
 
 
 def album_svg(title: str, artist: str) -> str:
-    cool, warm, herb, paper, mist = palette_for(f"album:{artist}:{title}")
+    background, foreground = palette_for(f"album:{artist}:{title}")
     mark = svg_text(initials(title))
-    label = svg_text(title[:42])
-    font_size = glass_font_size(mark, 242)
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="{label}">
-  <defs>
-    <linearGradient id="paper" x1="64" y1="40" x2="596" y2="612" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.55" stop-color="{paper}"/>
-      <stop offset="1" stop-color="{mist}"/>
-    </linearGradient>
-    <linearGradient id="coolWash" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="{cool}" stop-opacity="0.42"/>
-      <stop offset="0.54" stop-color="{cool}" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="{cool}" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="warmWash" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="{warm}" stop-opacity="0.34"/>
-      <stop offset="0.58" stop-color="{warm}" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="{warm}" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="letterFill" x1="122" y1="120" x2="520" y2="506" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.76"/>
-      <stop offset="0.38" stop-color="{cool}" stop-opacity="0.34"/>
-      <stop offset="0.68" stop-color="{warm}" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="{herb}" stop-opacity="0.32"/>
-    </linearGradient>
-    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="30" stdDeviation="24" flood-color="#9aa8b5" flood-opacity="0.24"/>
-    </filter>
-    <filter id="glassBlur" x="-18%" y="-18%" width="136%" height="136%">
-      <feGaussianBlur stdDeviation="1.4"/>
-    </filter>
-  </defs>
-  <rect width="640" height="640" rx="58" fill="url(#paper)"/>
-  <rect x="22" y="22" width="596" height="596" rx="54" fill="#ffffff" opacity="0.48"/>
-  <rect x="22" y="22" width="596" height="596" rx="54" fill="url(#coolWash)"/>
-  <rect x="22" y="22" width="596" height="596" rx="54" fill="url(#warmWash)"/>
-  <rect x="62" y="64" width="516" height="512" rx="46" fill="#ffffff" opacity="0.28" stroke="#ffffff" stroke-opacity="0.82" stroke-width="2"/>
-  <text x="320" y="388" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="url(#letterFill)" stroke="#ffffff" stroke-opacity="0.72" stroke-width="18" paint-order="stroke fill" filter="url(#softShadow)">{mark}</text>
-  <text x="320" y="388" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="{cool}" stroke-opacity="0.45" stroke-width="7" filter="url(#glassBlur)">{mark}</text>
-  <text x="316" y="379" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5">{mark}</text>
-  <path d="M126 128C188 92 268 82 352 98" fill="none" stroke="#ffffff" stroke-opacity="0.64" stroke-width="5" stroke-linecap="round"/>
-  <path d="M130 510C214 548 354 556 486 508" fill="none" stroke="{warm}" stroke-opacity="0.18" stroke-width="10" stroke-linecap="round"/>
+    font_size = solid_font_size(mark)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="Album initials {mark}">
+  <rect width="640" height="640" rx="58" fill="{background}"/>
+  <text x="320" y="390" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="{foreground}">{mark}</text>
 </svg>
 """
 
 
 def artist_svg(name: str) -> str:
-    cool, warm, herb, paper, mist = palette_for(f"artist:{name}")
+    background, foreground = palette_for(f"artist:{name}")
     mark = svg_text(initials(name))
-    label = svg_text(name[:38])
-    font_size = glass_font_size(mark, 220)
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="{label}">
-  <defs>
-    <linearGradient id="paper" x1="82" y1="48" x2="560" y2="594" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.55" stop-color="{paper}"/>
-      <stop offset="1" stop-color="{mist}"/>
-    </linearGradient>
-    <linearGradient id="coolWash" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="{cool}" stop-opacity="0.4"/>
-      <stop offset="0.56" stop-color="{cool}" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="{cool}" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="herbWash" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="{herb}" stop-opacity="0.34"/>
-      <stop offset="0.58" stop-color="{herb}" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="{herb}" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="letterFill" x1="136" y1="122" x2="506" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.76"/>
-      <stop offset="0.42" stop-color="{cool}" stop-opacity="0.34"/>
-      <stop offset="0.72" stop-color="{warm}" stop-opacity="0.24"/>
-      <stop offset="1" stop-color="{herb}" stop-opacity="0.3"/>
-    </linearGradient>
-    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="30" stdDeviation="24" flood-color="#9aa8b5" flood-opacity="0.24"/>
-    </filter>
-    <filter id="glassBlur" x="-18%" y="-18%" width="136%" height="136%">
-      <feGaussianBlur stdDeviation="1.4"/>
-    </filter>
-  </defs>
-  <rect width="640" height="640" fill="url(#paper)"/>
-  <circle cx="320" cy="320" r="298" fill="#ffffff" opacity="0.5"/>
-  <circle cx="320" cy="320" r="298" fill="url(#coolWash)"/>
-  <circle cx="320" cy="320" r="298" fill="url(#herbWash)"/>
-  <circle cx="320" cy="320" r="240" fill="#ffffff" opacity="0.28" stroke="#ffffff" stroke-opacity="0.84" stroke-width="2"/>
-  <text x="320" y="386" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="url(#letterFill)" stroke="#ffffff" stroke-opacity="0.72" stroke-width="17" paint-order="stroke fill" filter="url(#softShadow)">{mark}</text>
-  <text x="320" y="386" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="{cool}" stroke-opacity="0.44" stroke-width="7" filter="url(#glassBlur)">{mark}</text>
-  <text x="316" y="377" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5">{mark}</text>
-  <path d="M142 168C196 118 286 96 378 112" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="5" stroke-linecap="round"/>
-  <path d="M158 494C238 540 386 550 494 486" fill="none" stroke="{warm}" stroke-opacity="0.18" stroke-width="10" stroke-linecap="round"/>
+    font_size = solid_font_size(mark)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="Artist initials {mark}">
+  <rect width="640" height="640" fill="{background}"/>
+  <text x="320" y="390" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Arial,sans-serif" font-size="{font_size}" font-weight="820" letter-spacing="0" fill="{foreground}">{mark}</text>
 </svg>
 """
 
