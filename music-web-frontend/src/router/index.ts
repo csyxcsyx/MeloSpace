@@ -19,6 +19,10 @@ interface StoredScrollPosition {
 const SCROLL_POSITIONS_KEY = "melospace-scroll-positions";
 const scrollPositions: Record<string, StoredScrollPosition> = readScrollPositions();
 
+if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
+
 function readScrollPositions() {
   if (typeof window === "undefined") return {};
   const raw = sessionStorage.getItem(SCROLL_POSITIONS_KEY);
@@ -51,6 +55,15 @@ function getScrollPosition(fullPath: string) {
   return { left: position.left, top: position.top };
 }
 
+function restoreAfterRender(position: { left?: number; top: number }) {
+  if (typeof window === "undefined") return position;
+  return new Promise<typeof position>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve(position));
+    });
+  });
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -68,7 +81,7 @@ const router = createRouter({
   ],
   scrollBehavior(to, _from, savedPosition) {
     if (to.meta.keepAlive) {
-      return getScrollPosition(to.fullPath) ?? savedPosition ?? { top: 0 };
+      return restoreAfterRender(getScrollPosition(to.fullPath) ?? savedPosition ?? { top: 0 });
     }
     if (savedPosition) return savedPosition;
     return { top: 0 };

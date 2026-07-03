@@ -84,31 +84,84 @@ const player = usePlayerStore();
 const keywordInput = ref(String(route.query.keyword || ""));
 const result = ref<SearchResponse | null>(null);
 const loading = ref(false);
+const SEARCH_CACHE_LIMIT = 30;
+const searchResultCache = new Map<string, SearchResponse>();
+const searchRequestCache = new Map<string, Promise<SearchResponse>>();
+let searchRunId = 0;
 
 watch(
-  () => route.query.keyword,
+  () => (route.name === "search" ? String(route.query.keyword || "") : null),
   (keyword) => {
-    keywordInput.value = String(keyword || "");
-    search();
+    if (keyword === null) return;
+    keywordInput.value = keyword;
+    void search();
   },
   { immediate: true }
 );
 
 function submit() {
-  router.push({ path: "/search", query: keywordInput.value ? { keyword: keywordInput.value } : undefined });
+  const keyword = keywordInput.value.trim();
+  router.push({ path: "/search", query: keyword ? { keyword } : undefined });
 }
 
 async function search() {
-  if (!keywordInput.value) {
+  const keyword = keywordInput.value.trim();
+  const runId = ++searchRunId;
+  if (!keyword) {
     result.value = null;
+    loading.value = false;
     return;
   }
+
+  const cached = readCachedSearch(keyword);
+  if (cached) {
+    result.value = cached;
+    loading.value = false;
+    return;
+  }
+
   loading.value = true;
   try {
-    result.value = await searchApi.all(keywordInput.value);
+    const data = await loadSearchResult(keyword);
+    if (runId === searchRunId && keywordInput.value.trim() === keyword) {
+      result.value = data;
+    }
   } finally {
-    loading.value = false;
+    if (runId === searchRunId) loading.value = false;
   }
+}
+
+function readCachedSearch(keyword: string) {
+  const cached = searchResultCache.get(keyword);
+  if (!cached) return null;
+  searchResultCache.delete(keyword);
+  searchResultCache.set(keyword, cached);
+  return cached;
+}
+
+function rememberSearch(keyword: string, data: SearchResponse) {
+  if (searchResultCache.has(keyword)) searchResultCache.delete(keyword);
+  searchResultCache.set(keyword, data);
+  while (searchResultCache.size > SEARCH_CACHE_LIMIT) {
+    const oldestKey = searchResultCache.keys().next().value;
+    if (!oldestKey) break;
+    searchResultCache.delete(oldestKey);
+  }
+}
+
+async function loadSearchResult(keyword: string) {
+  const pending = searchRequestCache.get(keyword);
+  if (pending) return pending;
+  const request = searchApi.all(keyword)
+    .then((data) => {
+      rememberSearch(keyword, data);
+      return data;
+    })
+    .finally(() => {
+      searchRequestCache.delete(keyword);
+    });
+  searchRequestCache.set(keyword, request);
+  return request;
 }
 
 function playSong(song: Song) {
