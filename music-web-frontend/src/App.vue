@@ -3,10 +3,10 @@
     <AppSidebar v-if="!isImmersive" />
     <main class="main" :class="{ 'immersive-main': isImmersive, 'discover-main': isDiscover }">
       <RouterView v-slot="{ Component, route }">
-        <KeepAlive v-if="route.meta.keepAlive">
-          <component :is="Component" :key="route.fullPath" />
+        <KeepAlive :max="18">
+          <component :is="Component" v-if="route.meta.keepAlive" :key="route.fullPath" />
         </KeepAlive>
-        <component :is="Component" v-else :key="route.fullPath" />
+        <component :is="Component" v-if="!route.meta.keepAlive" :key="route.fullPath" />
       </RouterView>
     </main>
     <GlobalPlayer :hidden="isImmersive" />

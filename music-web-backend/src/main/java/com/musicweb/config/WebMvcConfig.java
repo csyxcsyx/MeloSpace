@@ -1,9 +1,11 @@
 package com.musicweb.config;
 
+import java.time.Duration;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -18,7 +20,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/media/**").addResourceLocations(mediaLocations());
+        registry.addResourceHandler("/media/**")
+                .addResourceLocations(mediaLocations())
+                .setCacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                .resourceChain(true);
     }
 
     private String[] mediaLocations() {

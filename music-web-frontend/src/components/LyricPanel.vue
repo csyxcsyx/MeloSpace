@@ -65,6 +65,7 @@ import {
 } from "vue";
 import type { Song } from "@/api/types";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import { readCachedText } from "@/utils/resourceCache";
 
 interface LyricLine {
   time: number;
@@ -92,6 +93,7 @@ const AUTO_SCROLL_DURATION_MS = 860;
 const AUTO_SCROLL_MIN_DELTA = 2;
 const DEFAULT_ACTIVE_ANCHOR = 0.5;
 const FULLSCREEN_ACTIVE_ANCHOR = 0.36;
+const LYRIC_CACHE_LIMIT = 80;
 
 const props = defineProps<{
   song: Song | null;
@@ -103,6 +105,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   seek: [time: number];
 }>();
+
+const lyricLineCache = new Map<string, LyricLine[]>();
 
 const loading = ref(false);
 const errorMessage = ref("");
@@ -175,24 +179,48 @@ async function loadLyrics(url: string) {
     return;
   }
 
+  const resolvedUrl = resolveMediaUrl(url);
+  const cachedLines = lyricLineCache.get(resolvedUrl);
+  if (cachedLines) {
+    lines.value = cachedLines;
+    loading.value = false;
+    await nextTick();
+    syncAfterLyricLoad();
+    return;
+  }
+
   loading.value = true;
   try {
-    const response = await fetch(resolveMediaUrl(url));
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const text = await response.text();
-    lines.value = parseLrc(text);
+    const text = await readLyricText(resolvedUrl);
+    const parsed = parseLrc(text);
+    rememberCacheEntry(lyricLineCache, resolvedUrl, parsed);
+    lines.value = parsed;
   } catch {
     errorMessage.value = "歌词加载失败。";
   } finally {
     loading.value = false;
     await nextTick();
-    if (!errorMessage.value && lines.value.length && props.isCurrentSong && activeIndex.value >= 0) {
-      syncToActiveLine("auto");
-    } else {
-      scrollRef.value?.scrollTo({ top: 0 });
-    }
+    syncAfterLyricLoad();
+  }
+}
+
+async function readLyricText(resolvedUrl: string) {
+  return readCachedText(resolvedUrl, LYRIC_CACHE_LIMIT);
+}
+
+function rememberCacheEntry<T>(cache: Map<string, T>, key: string, value: T) {
+  if (!cache.has(key) && cache.size >= LYRIC_CACHE_LIMIT) {
+    const oldestKey = cache.keys().next().value as string | undefined;
+    if (oldestKey) cache.delete(oldestKey);
+  }
+  cache.set(key, value);
+}
+
+function syncAfterLyricLoad() {
+  if (!errorMessage.value && lines.value.length && props.isCurrentSong && activeIndex.value >= 0) {
+    syncToActiveLine("auto");
+  } else {
+    scrollRef.value?.scrollTo({ top: 0 });
   }
 }
 
