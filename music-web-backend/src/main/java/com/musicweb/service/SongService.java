@@ -10,7 +10,7 @@ import com.musicweb.vo.SongResponse;
 
 public interface SongService extends IService<Song> {
 
-    PageResult<SongResponse> listPublishedSongs(long page, long size, String keyword, Long artistId, Long albumId);
+    PageResult<SongResponse> listPublishedSongs(long page, long size, String keyword, Long artistId, Long albumId, String sort);
 
     SongResponse getPublishedSong(Long id);
 

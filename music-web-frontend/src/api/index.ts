@@ -39,7 +39,7 @@ export const userApi = {
 };
 
 export const songApi = {
-  list: (params: { page?: number; size?: number; keyword?: string; artistId?: number; albumId?: number } = {}) =>
+  list: (params: { page?: number; size?: number; keyword?: string; artistId?: number; albumId?: number; sort?: string } = {}) =>
     unwrap<PageResult<Song>>(http.get("/api/songs", { params })),
   detail: (id: number) => unwrap<Song>(http.get(`/api/songs/${id}`)),
   recordPlay: (id: number, progressSeconds = 0, sourceType = "FRONTEND") =>

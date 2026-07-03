@@ -15,6 +15,10 @@
         <Grid2X2 :size="18" />
         新发现
       </RouterLink>
+      <RouterLink class="nav-link" to="/songs">
+        <ListMusic :size="18" />
+        歌曲库
+      </RouterLink>
       <RouterLink class="nav-link" to="/me">
         <Library :size="18" />
         我的音乐
@@ -47,7 +51,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Grid2X2, Library, Search, Settings, UserRound } from "lucide-vue-next";
+import { Grid2X2, Library, ListMusic, Search, Settings, UserRound } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();

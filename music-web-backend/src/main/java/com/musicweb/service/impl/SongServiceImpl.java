@@ -83,14 +83,14 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
             long size,
             String keyword,
             Long artistId,
-            Long albumId
+            Long albumId,
+            String sort
     ) {
         LambdaQueryWrapper<Song> wrapper = basePublishedWrapper()
                 .eq(artistId != null, Song::getArtistId, artistId)
                 .eq(albumId != null, Song::getAlbumId, albumId)
-                .like(StringUtils.hasText(keyword), Song::getTitle, keyword)
-                .orderByDesc(Song::getUpdatedAt)
-                .orderByDesc(Song::getId);
+                .like(StringUtils.hasText(keyword), Song::getTitle, keyword);
+        applyPublishedSongSort(wrapper, sort);
         Page<Song> songPage = page(new Page<>(page, size), wrapper);
         return toSongPageResult(songPage);
     }
@@ -208,6 +208,17 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
 
     private LambdaQueryWrapper<Song> basePublishedWrapper() {
         return new LambdaQueryWrapper<Song>().eq(Song::getStatus, STATUS_PUBLISHED);
+    }
+
+    private void applyPublishedSongSort(LambdaQueryWrapper<Song> wrapper, String sort) {
+        switch (sort == null ? "" : sort) {
+            case "createdDesc" -> wrapper.orderByDesc(Song::getCreatedAt).orderByDesc(Song::getId);
+            case "titleAsc" -> wrapper.orderByAsc(Song::getTitle).orderByAsc(Song::getId);
+            case "playsDesc" -> wrapper.orderByDesc(Song::getPlayCount).orderByDesc(Song::getId);
+            case "durationDesc" -> wrapper.orderByDesc(Song::getDurationSeconds).orderByDesc(Song::getId);
+            case "durationAsc" -> wrapper.orderByAsc(Song::getDurationSeconds).orderByAsc(Song::getId);
+            default -> wrapper.orderByDesc(Song::getUpdatedAt).orderByDesc(Song::getId);
+        }
     }
 
     private Song getExistingSong(Long id) {

@@ -41,9 +41,10 @@ public class SongController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long artistId,
-            @RequestParam(required = false) Long albumId
+            @RequestParam(required = false) Long albumId,
+            @RequestParam(defaultValue = "updatedDesc") String sort
     ) {
-        return ApiResponse.ok(songService.listPublishedSongs(page, size, keyword, artistId, albumId));
+        return ApiResponse.ok(songService.listPublishedSongs(page, size, keyword, artistId, albumId, sort));
     }
 
     @GetMapping("/{id}")

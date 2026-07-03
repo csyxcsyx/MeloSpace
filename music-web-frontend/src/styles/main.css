@@ -1384,6 +1384,152 @@ button {
   cursor: default;
 }
 
+.song-library-page {
+  display: grid;
+  gap: 18px;
+}
+
+.song-library-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.song-library-head .page-title {
+  margin-bottom: 10px;
+}
+
+.song-library-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.song-library-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.song-library-summary span {
+  display: grid;
+  min-width: 116px;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--glass-bg);
+  color: var(--muted);
+  font-size: 12px;
+  box-shadow: 0 12px 28px rgba(15, 15, 18, 0.07);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.song-library-summary strong {
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.song-library-filter-panel {
+  margin-bottom: 0;
+}
+
+.song-library-controls {
+  align-items: end;
+  margin-bottom: 0;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(150px, 0.72fr) minmax(150px, 0.72fr) minmax(150px, 0.76fr) minmax(96px, 0.42fr) max-content;
+}
+
+.song-library-filter-actions,
+.song-library-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.song-library-filter-actions .primary-action,
+.song-library-filter-actions .secondary-action,
+.song-library-actions .primary-action,
+.song-library-actions .secondary-action {
+  min-height: 36px;
+  padding: 0 13px;
+  font-size: 13px;
+}
+
+.song-library-section {
+  display: grid;
+  gap: 10px;
+}
+
+.song-library-list-head {
+  justify-content: space-between;
+  margin-top: 0;
+}
+
+.song-library-list-head > div:first-child {
+  min-width: 0;
+}
+
+.song-library-list-head span {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-library-table {
+  display: grid;
+  overflow: visible;
+  border-top: 1px solid var(--line);
+}
+
+.song-library-table-head,
+.song-library-row {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  grid-template-columns: minmax(320px, 1.45fr) minmax(160px, 0.72fr) minmax(92px, 0.38fr) minmax(62px, 0.28fr) minmax(62px, 0.28fr);
+}
+
+.song-library-table-head {
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.song-library-row {
+  min-height: 64px;
+  border-bottom: 1px solid var(--line);
+  color: #3b3b3f;
+  font-size: 13px;
+}
+
+.song-library-row .song-row {
+  min-height: 58px;
+  border-bottom: 0;
+  padding-right: 6px;
+}
+
+.song-library-row-link,
+.song-library-row > span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-library-row-link:hover,
+.song-library-row-link:focus-visible {
+  color: var(--brand);
+  outline: 0;
+}
+
 .recent-play-list {
   display: grid;
   gap: 8px;
@@ -2643,6 +2789,15 @@ button {
     grid-template-columns: repeat(2, minmax(260px, 1fr));
   }
 
+  .song-library-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .song-library-table-head,
+  .song-library-row {
+    grid-template-columns: minmax(280px, 1.5fr) minmax(140px, 0.72fr) minmax(82px, 0.38fr) minmax(62px, 0.28fr) minmax(62px, 0.28fr);
+  }
+
   .album-grid {
     grid-template-columns: repeat(4, minmax(140px, 1fr));
   }
@@ -2786,6 +2941,36 @@ button {
 
   .player-tools {
     display: none;
+  }
+
+  .song-library-head,
+  .song-library-list-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .song-library-summary,
+  .song-library-actions,
+  .song-library-filter-actions {
+    justify-content: flex-start;
+  }
+
+  .song-library-table-head {
+    display: none;
+  }
+
+  .song-library-row {
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 0;
+    grid-template-columns: 1fr;
+  }
+
+  .song-library-row > span,
+  .song-library-row-link {
+    padding-left: 66px;
+    color: var(--muted);
+    font-size: 12px;
   }
 
   .player-stage {
