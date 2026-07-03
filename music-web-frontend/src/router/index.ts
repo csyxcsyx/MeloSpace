@@ -67,10 +67,10 @@ const router = createRouter({
     { path: "/player", name: "player", component: PlayerView, meta: { immersive: true } }
   ],
   scrollBehavior(to, _from, savedPosition) {
-    if (savedPosition) return savedPosition;
     if (to.meta.keepAlive) {
-      return getScrollPosition(to.fullPath) ?? { top: 0 };
+      return getScrollPosition(to.fullPath) ?? savedPosition ?? { top: 0 };
     }
+    if (savedPosition) return savedPosition;
     return { top: 0 };
   }
 });
