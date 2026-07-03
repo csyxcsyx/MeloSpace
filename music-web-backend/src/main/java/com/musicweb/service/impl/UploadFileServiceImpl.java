@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
@@ -26,6 +28,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadFile> implements UploadFileService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UploadFileServiceImpl.class);
 
     private final MediaProperties mediaProperties;
 
@@ -57,17 +61,27 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
         Path root = Path.of(mediaProperties.storageRoot()).toAbsolutePath().normalize();
         Path folder = root.resolve(uploadSpec.folder()).normalize();
         Path target = folder.resolve(storedName).normalize();
-        if (!target.startsWith(root)) {
+        if (!folder.startsWith(root) || !target.startsWith(folder)) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "文件路径非法", HttpStatus.BAD_REQUEST);
         }
 
         try {
             Files.createDirectories(folder);
+            if (!Files.isDirectory(folder) || !Files.isWritable(folder)) {
+                throw new IOException("Upload folder is not writable: " + folder);
+            }
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException exception) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件保存失败", HttpStatus.INTERNAL_SERVER_ERROR);
+            LOGGER.error(
+                    "Failed to save {} upload '{}' to {}",
+                    uploadSpec.fileType(),
+                    originalName,
+                    target,
+                    exception
+            );
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件保存失败，请检查媒体目录写入权限", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         String relativePath = uploadSpec.folder() + "/" + storedName;

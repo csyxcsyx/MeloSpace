@@ -61,6 +61,7 @@ apt install -y nodejs
   app/backend.jar        # 后端运行 jar
   frontend/dist/         # 前端构建产物
   media/                 # 音频、封面、歌词和后续上传文件
+    artist/              # 歌手照片上传目录，需确保 melospace 服务用户可写
   lddc-src/              # LDDC v0.9.2 源码
   venv-lddc/             # LDDC 专用 Python 虚拟环境
   logs/                  # 后端日志
@@ -149,6 +150,15 @@ melospace-update
 
 ```bash
 melospace-health
+```
+
+### 媒体目录权限
+
+歌手照片会保存到 `/opt/melospace/media/artist`。如果后台保存歌手时报“文件保存失败”，优先检查目录是否存在且归后端服务用户可写：
+
+```bash
+install -d -o melospace -g melospace /opt/melospace/media/audio /opt/melospace/media/cover /opt/melospace/media/lyrics /opt/melospace/media/artist
+chown -R melospace:melospace /opt/melospace/media
 ```
 
 ## 7. 验证清单
