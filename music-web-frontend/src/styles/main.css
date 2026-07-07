@@ -53,7 +53,7 @@
   --player-reserved-height: calc(96px + var(--player-bottom-offset));
   --font-ui: "Melo PuHuiTi", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
   --font-brand: "Melo Smiley Sans", "Melo PuHuiTi", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  --font-lyric: "Melo WenKai Screen", "Melo PuHuiTi", "PingFang SC", "Microsoft YaHei", serif;
+  --font-lyric: var(--font-brand);
   font-family: var(--font-ui);
 }
 
