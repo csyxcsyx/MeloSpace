@@ -4,13 +4,77 @@ import { songApi } from "@/api";
 import type { Song } from "@/api/types";
 
 const DISCOVER_RECOMMENDATION_KEY = "melospace-discover-recommendation";
+const DISCOVER_SCENE_KEY = "melospace-discover-scene";
 const RECOMMENDATION_SIZE = 12;
+const SCENE_RECOMMENDATION_SIZE = 8;
 const JAY_CHOU_MINIMUM = 3;
 
 interface RecommendationState {
   dateKey: string;
   refreshIndex: number;
 }
+
+export type SceneId = "study" | "night" | "workout" | "relax" | "heal" | "commute";
+
+export interface SceneDefinition {
+  id: SceneId;
+  label: string;
+  title: string;
+  subtitle: string;
+  accent: string;
+  keywords: string[];
+}
+
+export const SCENE_DEFINITIONS: SceneDefinition[] = [
+  {
+    id: "study",
+    label: "学习",
+    title: "低干扰专注流",
+    subtitle: "轻节奏、纯净声线，适合写代码和复习。",
+    accent: "#3080ff",
+    keywords: ["学习", "专注", "轻音乐", "纯音乐", "钢琴", "治愈", "流行", "安静", "慢歌", "study"]
+  },
+  {
+    id: "night",
+    label: "深夜",
+    title: "夜色里的慢拍",
+    subtitle: "把音量放低，留一点情绪和空间。",
+    accent: "#625fff",
+    keywords: ["深夜", "夜", "失眠", "安静", "孤独", "抒情", "慢歌", "情歌", "雨", "night"]
+  },
+  {
+    id: "workout",
+    label: "运动",
+    title: "加速心跳补给",
+    subtitle: "更高热度、更强律动，适合通勤快走或训练。",
+    accent: "#00bb7f",
+    keywords: ["运动", "跑步", "节奏", "摇滚", "电子", "快乐", "热血", "快歌", "舞曲", "workout"]
+  },
+  {
+    id: "relax",
+    label: "放松",
+    title: "松弛一点也很好",
+    subtitle: "温和旋律和熟悉声线，给大脑留白。",
+    accent: "#fe6e00",
+    keywords: ["放松", "休息", "治愈", "轻松", "民谣", "流行", "温柔", "慢歌", "relax"]
+  },
+  {
+    id: "heal",
+    label: "治愈",
+    title: "给今天一点亮色",
+    subtitle: "明亮、温暖、容易跟唱的疗愈片段。",
+    accent: "#ff2357",
+    keywords: ["治愈", "温暖", "快乐", "甜", "抒情", "流行", "晴天", "海", "heal"]
+  },
+  {
+    id: "commute",
+    label: "通勤",
+    title: "路上的轻快歌单",
+    subtitle: "开场快一点，路程也显得短一点。",
+    accent: "#00a5ef",
+    keywords: ["通勤", "城市", "旅行", "流行", "节奏", "轻快", "国语", "英文", "commute"]
+  }
+];
 
 function todayKey() {
   const now = new Date();
@@ -105,14 +169,79 @@ function pickRecommendedSongs(source: Song[], state: RecommendationState) {
   return selected;
 }
 
+function readSceneId(): SceneId {
+  const stored = localStorage.getItem(DISCOVER_SCENE_KEY);
+  return SCENE_DEFINITIONS.some((scene) => scene.id === stored) ? stored as SceneId : "study";
+}
+
+function normalize(value?: string | null) {
+  return (value ?? "").toLowerCase();
+}
+
+function sceneScore(song: Song, scene: SceneDefinition) {
+  const searchable = normalize([
+    song.title,
+    song.artistName,
+    song.albumTitle,
+    song.genre,
+    song.mood,
+    song.language
+  ].filter(Boolean).join(" "));
+
+  let score = 0;
+  for (const keyword of scene.keywords) {
+    if (searchable.includes(keyword.toLowerCase())) {
+      score += keyword.length > 2 ? 8 : 5;
+    }
+  }
+
+  if (song.mood && scene.keywords.some((keyword) => normalize(song.mood).includes(keyword.toLowerCase()))) {
+    score += 12;
+  }
+  if (song.genre && scene.keywords.some((keyword) => normalize(song.genre).includes(keyword.toLowerCase()))) {
+    score += 8;
+  }
+  if (scene.id === "workout" || scene.id === "commute") {
+    score += Math.min(10, Math.log10(Math.max(song.playCount, 1)) * 3);
+  }
+  if ((scene.id === "night" || scene.id === "study" || scene.id === "relax") && normalize(song.genre).includes("摇滚")) {
+    score -= 5;
+  }
+
+  return score;
+}
+
+function pickSceneSongs(source: Song[], scene: SceneDefinition, state: RecommendationState) {
+  const seed = hashString(`${state.dateKey}:${state.refreshIndex}:${scene.id}`);
+  const shuffled = seededShuffle(source, seed);
+  const ranked = shuffled
+    .map((song) => ({ song, score: sceneScore(song, scene) }))
+    .sort((a, b) => b.score - a.score);
+
+  const matched = ranked.filter((item) => item.score > 0).map((item) => item.song);
+  const selected: Song[] = [];
+  for (const song of matched) {
+    if (selected.length >= SCENE_RECOMMENDATION_SIZE) break;
+    addUniqueSong(selected, song);
+  }
+  for (const song of shuffled) {
+    if (selected.length >= SCENE_RECOMMENDATION_SIZE) break;
+    addUniqueSong(selected, song);
+  }
+  return selected;
+}
+
 export const useDiscoverStore = defineStore("discover", () => {
   const songs = ref<Song[]>([]);
   const loading = ref(false);
   const loaded = ref(false);
   const recommendationState = ref<RecommendationState>(readRecommendationState());
+  const selectedSceneId = ref<SceneId>(readSceneId());
   let loadPromise: Promise<void> | null = null;
 
   const recommendedSongs = computed(() => pickRecommendedSongs(songs.value, recommendationState.value));
+  const activeScene = computed(() => SCENE_DEFINITIONS.find((scene) => scene.id === selectedSceneId.value) ?? SCENE_DEFINITIONS[0]);
+  const sceneRadioSongs = computed(() => pickSceneSongs(songs.value, activeScene.value, recommendationState.value));
 
   async function load(force = false) {
     syncRecommendationDate();
@@ -152,6 +281,11 @@ export const useDiscoverStore = defineStore("discover", () => {
     persistRecommendationState(recommendationState.value);
   }
 
+  function setScene(sceneId: SceneId) {
+    selectedSceneId.value = sceneId;
+    localStorage.setItem(DISCOVER_SCENE_KEY, sceneId);
+  }
+
   function syncRecommendationDate() {
     const nextDateKey = todayKey();
     if (recommendationState.value.dateKey === nextDateKey) return;
@@ -163,8 +297,12 @@ export const useDiscoverStore = defineStore("discover", () => {
     songs,
     loading,
     loaded,
+    activeScene,
     recommendedSongs,
+    sceneRadioSongs,
+    sceneDefinitions: SCENE_DEFINITIONS,
     load,
-    refreshRecommendations
+    refreshRecommendations,
+    setScene
   };
 });
