@@ -1,3 +1,36 @@
+@font-face {
+  font-family: "Melo PuHuiTi";
+  src:
+    local("Alibaba PuHuiTi 3.0"),
+    local("AlibabaPuHuiTi-3-55-Regular"),
+    url("/fonts/AlibabaPuHuiTi-3-55-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Melo Smiley Sans";
+  src:
+    local("Smiley Sans Oblique"),
+    local("SmileySans-Oblique"),
+    url("/fonts/SmileySans-Oblique.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Melo WenKai Screen";
+  src:
+    local("LXGW WenKai Screen"),
+    local("LXGWWenKaiScreen"),
+    url("/fonts/LXGWWenKaiScreen.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --app-bg: #ffffff;
   --side-bg: #f7f7f8;
@@ -18,7 +51,10 @@
   --sidebar-width: 250px;
   --player-bottom-offset: env(safe-area-inset-bottom, 0px);
   --player-reserved-height: calc(96px + var(--player-bottom-offset));
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --font-ui: "Melo PuHuiTi", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --font-brand: "Melo Smiley Sans", "Melo PuHuiTi", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --font-lyric: "Melo WenKai Screen", "Melo PuHuiTi", "PingFang SC", "Microsoft YaHei", serif;
+  font-family: var(--font-ui);
 }
 
 * {
@@ -30,6 +66,7 @@ body {
   min-width: 320px;
   background: var(--app-bg);
   color: var(--text);
+  font-family: var(--font-ui);
 }
 
 a {
@@ -93,8 +130,9 @@ button {
   align-items: center;
   gap: 8px;
   padding: 20px 26px 14px;
+  font-family: var(--font-brand);
   font-size: 25px;
-  font-weight: 760;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -299,6 +337,8 @@ button {
 }
 
 .discover-page .page-title {
+  font-family: var(--font-brand);
+  font-weight: 700;
   margin-bottom: 10px;
 }
 
@@ -457,8 +497,9 @@ button {
 
 .recommendation-copy strong {
   overflow: hidden;
+  font-family: var(--font-brand);
   font-size: clamp(28px, 3.4vw, 48px);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.04;
   text-overflow: ellipsis;
 }
@@ -508,8 +549,9 @@ button {
 
 .feature-title {
   margin: 2px 0 0;
+  font-family: var(--font-brand);
   font-size: 18px;
-  font-weight: 560;
+  font-weight: 700;
   line-height: 1.22;
 }
 
@@ -593,8 +635,9 @@ button {
 
 .chart-title {
   margin: 0;
+  font-family: var(--font-brand);
   font-size: 24px;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .chart-region {
@@ -1295,6 +1338,7 @@ button {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
   background: var(--glass-bg);
+  font-family: var(--font-lyric);
   grid-template-rows: auto 1fr;
   backdrop-filter: blur(18px) saturate(150%);
 }
@@ -2683,8 +2727,9 @@ button {
 .player-song-copy h2 {
   overflow: hidden;
   margin: 0 0 6px;
+  font-family: var(--font-brand);
   font-size: 28px;
-  font-weight: 780;
+  font-weight: 700;
   line-height: 1.12;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2747,6 +2792,7 @@ button {
   --lyric-word-rest: rgba(255, 255, 255, 0.22);
   margin-bottom: 21px;
   color: var(--player-lyric-muted);
+  font-family: var(--font-lyric);
   font-size: 27px;
   font-weight: 680;
   line-height: 1.54;
