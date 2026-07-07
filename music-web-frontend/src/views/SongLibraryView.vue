@@ -80,9 +80,9 @@
             <RefreshCw :size="16" />
             刷新
           </button>
-          <button class="primary-action" type="button" :disabled="!songs.length" @click="playPage">
+          <button class="primary-action" type="button" :disabled="!songs.length || queueLoading" @click="playLibrary">
             <Play :size="16" fill="currentColor" />
-            播放本页
+            {{ queueLoading ? "正在准备" : "播放全部" }}
           </button>
         </div>
       </div>
@@ -99,8 +99,8 @@
           <SongRow
             class="song-library-row-song"
             :song="song"
-            :is-current="player.currentSong?.id === song.id"
-            :is-playing="player.isPlaying"
+            :is-current="false"
+            :is-playing="false"
             @toggle-play="toggleSongPlayback"
             @open-player="openPlayer"
           />
@@ -156,6 +156,7 @@ const songs = ref<Song[]>([]);
 const artists = ref<Artist[]>([]);
 const albums = ref<Album[]>([]);
 const loading = ref(false);
+const queueLoading = ref(false);
 const errorMessage = ref("");
 const pageCache = new Map<string, PageResult<Song>>();
 const requestCache = new Map<string, Promise<PageResult<Song>>>();
@@ -313,12 +314,14 @@ function setPage(nextPage: number) {
   page.value = Math.min(Math.max(nextPage, 1), totalPages.value);
 }
 
-function playPage() {
-  if (!songs.value.length) return;
-  player.playSong(songs.value[0], songs.value);
+async function playLibrary() {
+  if (!songs.value.length || queueLoading.value) return;
+  const queue = await loadLibraryQueue();
+  if (!queue.length) return;
+  player.playSong(queue[0], queue);
 }
 
-function toggleSongPlayback(song: Song) {
+async function toggleSongPlayback(song: Song) {
   if (player.currentSong?.id === song.id) {
     if (player.isPlaying) {
       player.setPlaying(false);
@@ -327,12 +330,40 @@ function toggleSongPlayback(song: Song) {
     }
     return;
   }
-  player.playSong(song, songs.value);
+  const queue = await loadLibraryQueue();
+  player.playSong(song, ensureSongInQueue(song, queue));
 }
 
 async function openPlayer(song: Song) {
-  const played = await player.playSong(song, songs.value);
+  const queue = await loadLibraryQueue();
+  const played = await player.playSong(song, ensureSongInQueue(song, queue));
   if (played) router.push("/player");
+}
+
+async function loadLibraryQueue() {
+  queueLoading.value = true;
+  try {
+    const params = {
+      keyword: filters.keyword || undefined,
+      artistId: filters.artistId || undefined,
+      albumId: filters.albumId || undefined,
+      sort: filters.sort
+    };
+    const firstPage = await songApi.list({ ...params, page: 1, size: 100 });
+    const items = [...firstPage.items];
+    const totalPages = Math.ceil(firstPage.total / firstPage.size);
+    for (let nextPage = 2; nextPage <= totalPages; nextPage += 1) {
+      const result = await songApi.list({ ...params, page: nextPage, size: 100 });
+      items.push(...result.items);
+    }
+    return items;
+  } finally {
+    queueLoading.value = false;
+  }
+}
+
+function ensureSongInQueue(song: Song, queue: Song[]) {
+  return queue.some((item) => item.id === song.id) ? queue : [song, ...queue];
 }
 
 function formatPlayCount(value?: number | null) {
