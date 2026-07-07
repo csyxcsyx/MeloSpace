@@ -1,12 +1,13 @@
 <template>
-  <section>
-    <h1 class="page-title">我的音乐</h1>
+  <section class="profile-page">
+    <header class="page-header">
+      <h1 class="page-title">我的音乐</h1>
+    </header>
 
     <section class="profile-grid">
       <div class="compact-panel">
         <div class="section-head">
           <h2>我的歌单</h2>
-          <span class="chevron">›</span>
         </div>
         <form class="inline-form" @submit.prevent="createPlaylist">
           <input v-model.trim="playlistTitle" placeholder="新歌单名称" />
@@ -27,9 +28,16 @@
           </label>
         </div>
         <div class="profile-list">
-          <RouterLink v-for="playlist in pagedPlaylists" :key="playlist.id" :to="`/playlists/${playlist.id}`">
-            {{ playlist.title }} <span>{{ playlist.songCount }} 首</span>
-          </RouterLink>
+          <div v-for="playlist in pagedPlaylists" :key="playlist.id" class="profile-list-row playlist-profile-row">
+            <RouterLink class="profile-list-main" :to="`/playlists/${playlist.id}`">
+              <strong>{{ playlist.title }}</strong>
+              <span>{{ playlist.songCount }} 首</span>
+            </RouterLink>
+            <button class="danger-icon-action playlist-delete-action" type="button" @click="deletePlaylist(playlist)">
+              <Trash2 :size="16" />
+              <span>删除</span>
+            </button>
+          </div>
           <p v-if="!filteredPlaylists.length" class="muted-line">还没有匹配的歌单。</p>
         </div>
         <div v-if="playlistPageCount > 1" class="list-pagination">
@@ -42,7 +50,6 @@
       <div class="compact-panel">
         <div class="section-head">
           <h2>收藏</h2>
-          <span class="chevron">›</span>
         </div>
         <div class="list-controls">
           <label>
@@ -82,7 +89,6 @@
       <div class="compact-panel">
         <div class="section-head">
           <h2>最近播放</h2>
-          <span class="chevron">›</span>
         </div>
         <div class="list-controls">
           <label>
@@ -115,7 +121,6 @@
       <div class="compact-panel">
         <div class="section-head">
           <h2>账号</h2>
-          <span class="chevron">›</span>
         </div>
         <div class="profile-list">
           <p class="muted-line">{{ auth.user?.username }}</p>
@@ -129,6 +134,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import { Trash2 } from "lucide-vue-next";
 import { playlistApi, songApi, userApi } from "@/api";
 import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
@@ -333,6 +339,14 @@ async function createPlaylist() {
   playlistTitle.value = "";
   ui.toast("歌单已创建");
   await loadProfile();
+}
+
+async function deletePlaylist(playlist: Playlist) {
+  if (!window.confirm(`确定删除歌单「${playlist.title}」吗？该操作不可恢复。`)) return;
+  await playlistApi.remove(playlist.id);
+  ui.toast("歌单已删除");
+  await loadProfile();
+  profilePages.playlists = Math.min(profilePages.playlists, playlistPageCount.value);
 }
 
 async function deleteMyAccount() {

@@ -1,10 +1,7 @@
 <template>
   <section class="song-library-page">
-    <PageToolbar />
-
-    <header class="song-library-head">
+    <header class="page-header song-library-head">
       <div>
-        <p class="feature-label">MeloSpace</p>
         <h1 class="page-title">歌曲库</h1>
         <p>浏览当前可播放的全部歌曲，按歌手、专辑和热度快速定位。</p>
       </div>
@@ -133,7 +130,6 @@ import { Play, RefreshCw, Search } from "lucide-vue-next";
 import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
-import PageToolbar from "@/components/PageToolbar.vue";
 import SongRow from "@/components/SongRow.vue";
 import { usePlayerStore } from "@/stores/player";
 import { displayName, formatDuration } from "@/utils/format";

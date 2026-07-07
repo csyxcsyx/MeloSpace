@@ -338,6 +338,39 @@ button {
   line-height: 1.02;
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.56)),
+    radial-gradient(circle at 18% 0%, rgba(255, 244, 247, 0.9), transparent 42%);
+  box-shadow: 0 18px 44px rgba(15, 15, 18, 0.08);
+  backdrop-filter: blur(24px) saturate(170%);
+  animation: melospace-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.page-header .page-title {
+  margin: 0;
+}
+
+.page-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.page-header .secondary-action {
+  flex: 0 0 auto;
+}
+
 .section-head {
   display: flex;
   align-items: center;
@@ -363,7 +396,7 @@ button {
 }
 
 .discover-page .page-title {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .discover-banner {
@@ -1575,17 +1608,32 @@ button {
 
 .comment-list p,
 .profile-list p,
-.profile-list a {
+.profile-list > a,
+.profile-list-row {
   margin: 0;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--soft-line);
 }
 
-.profile-list a {
+.profile-list > a,
+.profile-list-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+}
+
+.profile-list-row {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.profile-list-row .profile-list-main {
+  padding: 0;
+  border-bottom: 0;
 }
 
 .profile-list strong {
@@ -1596,9 +1644,33 @@ button {
   white-space: nowrap;
 }
 
-.profile-list span {
+.profile-list > a span,
+.profile-list-main span {
   flex: 0 0 auto;
   color: var(--muted);
+}
+
+.danger-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 780;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.danger-icon-action:hover,
+.danger-icon-action:focus-visible {
+  background: rgba(250, 35, 59, 0.14);
+  box-shadow: 0 10px 22px rgba(250, 35, 59, 0.14);
+  outline: 0;
+  transform: translateY(-1px);
 }
 
 .list-controls {
@@ -1697,7 +1769,7 @@ button {
 }
 
 .song-library-head .page-title {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .song-library-head p {
@@ -1894,13 +1966,13 @@ button {
 
 .admin-title-row {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
 .admin-title-row .page-title {
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .admin-form {
@@ -2189,13 +2261,13 @@ button {
 
 .player {
   position: fixed;
-  right: 50%;
+  left: 50vw;
   bottom: var(--player-bottom-offset);
   z-index: 24;
   display: grid;
   width: min(900px, calc(100vw - 24px));
   min-height: 78px;
-  transform: translateX(50%);
+  transform: translateX(-50%);
   align-items: center;
   grid-template-columns: auto minmax(260px, 1fr) auto;
   gap: 22px;
@@ -2212,7 +2284,7 @@ button {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateX(50%) translateY(calc(100% + 18px));
+  transform: translateX(-50%) translateY(calc(100% + 18px));
 }
 
 .player audio {
@@ -3192,6 +3264,14 @@ button {
   .main {
     margin-left: 0;
     padding: 20px 18px 36px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
   }
 
   .app-shell.discover-shell {

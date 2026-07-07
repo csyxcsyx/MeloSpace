@@ -1,6 +1,8 @@
 <template>
   <section class="discover-page">
-    <h1 class="page-title">新发现</h1>
+    <header class="page-header">
+      <h1 class="page-title">新发现</h1>
+    </header>
 
     <button class="discover-banner" type="button" @click="scrollToRecommendations">
       <img src="/discover-banner.png" alt="MeloSpace 发现属于你的音乐空间" />

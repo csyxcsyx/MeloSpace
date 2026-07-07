@@ -1,13 +1,12 @@
 <template>
   <section>
-    <PageToolbar />
-    <div class="admin-title-row">
+    <header class="page-header admin-title-row">
       <h1 class="page-title">后台管理</h1>
       <button class="secondary-action" type="button" @click="loadAdmin">
         <RefreshCw :size="16" />
         <span>刷新</span>
       </button>
-    </div>
+    </header>
 
     <section class="metrics">
       <div class="metric">
@@ -467,7 +466,6 @@ import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Users,
 import { adminApi, albumApi, artistApi } from "@/api";
 import type { AdminUser, Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
-import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { resolveMediaUrl } from "@/utils/format";
