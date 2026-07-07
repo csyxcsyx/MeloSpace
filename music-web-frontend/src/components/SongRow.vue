@@ -27,7 +27,17 @@
     </button>
     <div class="song-info">
       <div class="song-name">{{ song.title }}</div>
-      <div class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
+      <RouterLink
+        v-if="song.artistId"
+        class="song-artist song-artist-link"
+        :to="`/artists/${song.artistId}`"
+        :aria-label="`查看歌手 ${displayName(song.artistName, '未知歌手')}`"
+        @click.stop
+        @dblclick.stop
+      >
+        {{ displayName(song.artistName, "未知歌手") }}
+      </RouterLink>
+      <div v-else class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
     </div>
     <button
       class="more"
@@ -61,7 +71,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { MoreHorizontal, Music, Pause, Play } from "lucide-vue-next";
 import { favoriteApi, playlistApi, userApi } from "@/api";
 import type { Playlist, Song } from "@/api/types";

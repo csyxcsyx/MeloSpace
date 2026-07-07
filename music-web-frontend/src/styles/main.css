@@ -745,6 +745,20 @@ button {
   line-height: 1.2;
 }
 
+.song-artist-link {
+  width: max-content;
+  max-width: 100%;
+  transition: color 160ms ease;
+}
+
+.song-artist-link:hover,
+.song-artist-link:focus-visible {
+  color: var(--brand);
+  outline: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .song-cover-action {
   position: absolute;
   inset: 0;
