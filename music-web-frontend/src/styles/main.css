@@ -1528,7 +1528,7 @@ button {
   padding: 0;
   background: transparent;
   color: #a9a9b0;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 560;
   line-height: 1.65;
   text-align: left;
@@ -1558,7 +1558,7 @@ button {
   --lyric-word-fill-end: #fa233b;
   --lyric-word-rest: #303036;
   color: var(--text);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 780;
   transform: translateX(2px);
 }
@@ -2977,7 +2977,7 @@ button {
   margin-bottom: 21px;
   color: var(--player-lyric-muted);
   font-family: var(--font-lyric);
-  font-size: 27px;
+  font-size: 30px;
   font-weight: 680;
   line-height: 1.54;
   text-align: center;
@@ -2998,7 +2998,7 @@ button {
   --lyric-word-fill-end: var(--player-lyric-active);
   --lyric-word-rest: var(--player-lyric-rest);
   color: var(--player-lyric-active);
-  font-size: 35px;
+  font-size: 38px;
   opacity: 1;
   transform: translateY(-2px);
   text-shadow: 0 0 18px var(--player-lyric-shadow), 0 10px 28px rgba(0, 0, 0, 0.68);
@@ -3588,7 +3588,7 @@ button {
   }
 
   .lyric-line.active {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .player-page-head {
@@ -3609,10 +3609,10 @@ button {
   }
 
   .player-lyrics-panel .lyric-line {
-    font-size: 19px;
+    font-size: 21px;
   }
 
   .player-lyrics-panel .lyric-line.active {
-    font-size: 24px;
+    font-size: 27px;
   }
 }
