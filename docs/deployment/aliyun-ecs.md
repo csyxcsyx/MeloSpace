@@ -262,3 +262,39 @@ journalctl -u melospace-backend -f
 grep '^MUSIC_WEB_LDDC' /opt/melospace/env/backend.env
 sudo -u melospace /opt/melospace/venv-lddc/bin/python /opt/melospace/repo/scripts/import_lddc_lyrics.py --help
 ```
+
+## 11. 步骤七只读部署复测
+
+执行日期：2026-07-07。  
+执行口径：步骤七收尾复测仅做公网 HTTP 检查和 SSH 只读检查，不重启服务器、不重启服务、不修改线上文件。
+
+### 11.1 公网入口复测
+
+|检查项|地址|结果|
+|-|-|-|
+|公网 IP 首页|`http://47.89.235.138/`|HTTP 200，`text/html`|
+|域名首页|`http://melospace.asia/`|HTTP 200，`text/html`|
+|公网 IP 健康检查|`http://47.89.235.138/api/actuator/health`|HTTP 200，Actuator JSON|
+|域名健康检查|`http://melospace.asia/api/actuator/health`|HTTP 200，Actuator JSON|
+|歌曲分页接口|`http://47.89.235.138/api/songs?page=1&size=2`|HTTP 200，返回统一 JSON 和歌曲数据|
+|示例媒体资源|`http://47.89.235.138/media/audio/I%20Do%20-%20%E5%91%A8%E6%9D%B0%E4%BC%A6.flac`|HTTP 200，`audio/flac`|
+
+结论：Nginx 前端入口、`/api` 反向代理和 `/media` 静态资源访问均可用。
+
+### 11.2 SSH 只读检查
+
+使用本机 `REX.pem` 登录 `root@47.89.235.138` 后，只执行状态、容量和日志读取命令。
+
+|检查项|结果|
+|-|-|
+|远端主机名|`iZrj9apminsu2z4id9x1egZ`|
+|Nginx|`active` / `enabled`|
+|MySQL|`active` / `enabled`|
+|后端服务|`melospace-backend` 为 `active` / `enabled`|
+|系统盘|40G 总量，25G 已用，13G 可用，使用率 66%|
+|内存|1.6Gi 总量，约 583Mi 可用|
+|Swap|2.0Gi 总量，当前未使用|
+|媒体目录|`/opt/melospace/media` 约 18G，文件数 1424|
+|后端 warning 日志|`journalctl -u melospace-backend -p warning -n 10` 无记录|
+
+结论：核心服务运行状态正常且已启用开机自启，系统盘仍有余量，后端近期无 warning 级日志。由于本轮按只读口径执行，未做服务重启或整机重启演练；如答辩前允许短暂中断，可另行做一次重启持久化复测。
