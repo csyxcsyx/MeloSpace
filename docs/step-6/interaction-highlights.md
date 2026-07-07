@@ -10,15 +10,12 @@
 - 非歌单创建者仍显示原普通歌曲列表，不能拖拽修改他人歌单。
 - 发现页推荐区、歌曲行、按钮和歌单排序行补充轻量 hover、进入动画和保存态反馈。
 - 新增 `prefers-reduced-motion` 兜底，系统减少动态效果时会关闭位移动画和唱片旋转。
-
-## 2. 本轮调整目标
-
 - 歌曲栏中的歌手名可点击跳转到对应歌手主页。
 - 歌手主页展示该歌手全部专辑和歌曲，并支持分页、筛选和排序。
 - 歌曲库不再高亮当前播放歌曲。
-- 从歌曲库播放任意歌曲时，将当前歌曲库筛选结果中的歌曲加入播放列表。
+- 从歌曲库播放任意歌曲时，将当前歌曲库筛选结果中的全部歌曲加入播放列表。
 
-## 3. 已验证命令
+## 2. 已验证命令
 
 本机默认 Node.js 为 14.21.3，无法运行当前 `vue-tsc` 依赖中的新语法；验证时使用 Codex 工作区捆绑 Node.js 24.14.0 临时加入 PATH。
 
@@ -29,7 +26,11 @@ npm run type-check
 npm run build
 ```
 
-## 4. 相关提交
+## 3. 相关提交
 
 - `feat: add playlist drag sorting`
 - `style: polish step six interactions`
+- `revert: remove scene radio module`
+- `feat: link song artists to profiles`
+- `feat: enhance artist detail catalog`
+- `feat: improve song library playback queue`
