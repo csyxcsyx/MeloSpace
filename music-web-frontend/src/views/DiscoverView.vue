@@ -15,14 +15,17 @@
           刷新推荐
         </button>
       </div>
-      <SongColumnList
-        v-if="recommendedSongs.length"
-        :songs="recommendedSongs"
-        :column-count="3"
-        @toggle-play="toggleSongPlayback"
-        @open-player="openPlayer"
-      />
-      <EmptyState v-else>还没有可展示的歌曲。</EmptyState>
+      <Transition name="recommendation-swap" mode="out-in">
+        <SongColumnList
+          v-if="recommendedSongs.length"
+          :key="recommendationKey"
+          :songs="recommendedSongs"
+          :column-count="3"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        />
+        <EmptyState v-else key="empty">还没有可展示的歌曲。</EmptyState>
+      </Transition>
     </section>
   </section>
 </template>
@@ -45,6 +48,7 @@ const router = useRouter();
 const recommendationRef = ref<HTMLElement | null>(null);
 
 const recommendedSongs = computed(() => discover.recommendedSongs);
+const recommendationKey = computed(() => recommendedSongs.value.map((song) => song.id).join("-"));
 
 onMounted(() => {
   void discover.load();
