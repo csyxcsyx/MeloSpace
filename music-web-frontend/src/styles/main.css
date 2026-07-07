@@ -128,19 +128,20 @@ button {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 20px 26px 14px;
+  gap: 10px;
+  padding: 22px 26px 16px;
   font-family: var(--font-brand);
-  font-size: 25px;
+  font-size: 31px;
   font-weight: 700;
   letter-spacing: 0;
+  line-height: 1;
 }
 
 .brand-icon {
   display: block;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   border-radius: 8px;
   object-fit: contain;
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), filter 180ms ease;
@@ -156,11 +157,19 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 38px;
   margin: 0 16px 10px;
   padding: 0 10px;
   border-radius: 8px;
   color: #5c5c62;
+}
+
+.sidebar-search svg,
+.nav-link svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  stroke-width: 2.2;
 }
 
 .sidebar-search input {
@@ -181,13 +190,13 @@ button {
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 38px;
+  gap: 13px;
+  min-height: 42px;
   padding: 0 14px;
   border-radius: 8px;
   color: #4b4b50;
-  font-size: 15px;
-  font-weight: 560;
+  font-size: 16px;
+  font-weight: 620;
 }
 
 .nav-link.router-link-active,
@@ -308,12 +317,25 @@ button {
   outline: 0;
 }
 
+.page-toolbar-action svg,
+.primary-action svg,
+.secondary-action svg,
+.round-icon-button svg,
+.player-controls svg,
+.player-tools svg,
+.more svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
 .page-title {
   margin: 0 0 28px;
-  font-size: 36px;
-  font-weight: 780;
+  font-family: var(--font-brand);
+  font-size: clamp(40px, 3.2vw, 50px);
+  font-weight: 700;
   letter-spacing: 0;
-  line-height: 1.08;
+  line-height: 1.02;
 }
 
 .section-head {
@@ -325,8 +347,8 @@ button {
 
 .section-head h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 760;
+  font-size: 23px;
+  font-weight: 820;
   line-height: 1.2;
 }
 
@@ -341,9 +363,7 @@ button {
 }
 
 .discover-page .page-title {
-  font-family: var(--font-brand);
-  font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .discover-banner {
@@ -351,15 +371,13 @@ button {
   display: block;
   overflow: hidden;
   width: 100%;
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   min-height: 0;
-  padding: clamp(6px, 1dvh, 10px);
+  padding: 0;
   border: 1px solid rgba(236, 236, 240, 0.72);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.96) 70%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 249, 251, 0.84));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.76), 0 16px 42px rgba(15, 15, 18, 0.06);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgba(15, 15, 18, 0.07);
   line-height: 0;
   text-align: left;
   animation: melospace-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -368,10 +386,10 @@ button {
 
 .discover-banner::after {
   position: absolute;
-  inset: 9px;
-  border-radius: 16px;
+  inset: 0;
+  border-radius: inherit;
   content: "";
-  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), inset 0 0 30px rgba(255, 255, 255, 0.36);
   pointer-events: none;
 }
 
@@ -379,9 +397,9 @@ button {
   display: block;
   width: 100%;
   aspect-ratio: 2048 / 640;
-  height: clamp(120px, 26dvh, 250px);
-  border-radius: 16px;
-  object-fit: contain;
+  height: clamp(260px, 36dvh, 350px);
+  border-radius: inherit;
+  object-fit: cover;
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -394,7 +412,7 @@ button {
 
 .discover-banner:hover img,
 .discover-banner:focus-visible img {
-  transform: scale(1.008);
+  transform: scale(1.014);
 }
 
 .recommendation-head {
@@ -430,7 +448,41 @@ button {
 }
 
 .discover-recommendations .song-row {
-  min-height: clamp(46px, 5.1dvh, 58px);
+  min-height: clamp(76px, calc((100dvh - 525px) / 4), 88px);
+  grid-template-columns: max-content minmax(0, 1fr) 34px;
+  gap: 14px;
+  padding: 9px 10px 9px 8px;
+  border-radius: 10px;
+}
+
+.discover-recommendations .song-cover {
+  --discover-cover-size: clamp(56px, 6.7dvh, 66px);
+  width: var(--discover-cover-size);
+  height: var(--discover-cover-size);
+  inline-size: var(--discover-cover-size);
+  block-size: var(--discover-cover-size);
+  min-width: var(--discover-cover-size);
+  max-width: var(--discover-cover-size);
+  min-height: var(--discover-cover-size);
+  max-height: var(--discover-cover-size);
+  flex-basis: var(--discover-cover-size);
+  border-radius: 10px;
+}
+
+.discover-recommendations .song-name {
+  font-size: clamp(14px, 1.38dvh, 16px);
+  font-weight: 760;
+  line-height: 1.24;
+}
+
+.discover-recommendations .song-artist {
+  margin-top: 4px;
+  font-size: clamp(13px, 1.24dvh, 15px);
+}
+
+.discover-recommendations .song-cover-action svg {
+  width: 22px;
+  height: 22px;
 }
 
 .recommendation-swap-enter-active,
@@ -2381,6 +2433,11 @@ button {
   box-shadow: 0 12px 24px rgba(29, 29, 31, 0.18);
 }
 
+.play-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
 .player-tool-button {
   display: grid;
   width: 26px;
@@ -3111,7 +3168,14 @@ button {
   }
 
   .brand {
+    font-size: 29px;
     padding-bottom: 10px;
+  }
+
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
   }
 
   .side-nav {
@@ -3152,6 +3216,18 @@ button {
 
   .discover-banner {
     border-radius: 16px;
+  }
+
+  .discover-banner img {
+    height: clamp(180px, 44vw, 260px);
+  }
+
+  .discover-recommendations .song-row {
+    min-height: 74px;
+  }
+
+  .discover-recommendations .song-cover {
+    --discover-cover-size: 58px;
   }
 
   .recommendation-head {
@@ -3335,11 +3411,12 @@ button {
 
 @media (max-width: 520px) {
   .page-title {
-    font-size: 32px;
+    font-size: 36px;
   }
 
   .discover-banner img {
     aspect-ratio: 2048 / 640;
+    height: clamp(150px, 52vw, 220px);
   }
 
   .recommendation-head {
