@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar">
     <RouterLink class="brand" to="/discover" aria-label="MeloSpace 首页">
-      <span class="brand-dot">♪</span>
+      <img class="brand-icon" src="/melospace-icon.png" alt="" />
       <span>MeloSpace</span>
     </RouterLink>
 
