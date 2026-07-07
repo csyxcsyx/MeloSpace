@@ -1209,6 +1209,21 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.artist-album-paged {
+  margin-bottom: 0;
+}
+
+.artist-section-head {
+  justify-content: space-between;
+}
+
+.artist-section-head span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .artist-album-link {
   display: grid;
   align-items: center;
@@ -1460,6 +1475,14 @@ button {
 
 .compact-list-controls {
   grid-template-columns: minmax(0, 1fr) minmax(130px, 0.45fr);
+}
+
+.artist-album-controls {
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.56fr) minmax(130px, 0.42fr) max-content;
+}
+
+.artist-song-controls {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.7fr) minmax(160px, 0.56fr) minmax(130px, 0.42fr) max-content;
 }
 
 .admin-list-controls {
@@ -3062,7 +3085,9 @@ button {
 
   .list-controls,
   .admin-list-controls,
-  .compact-list-controls {
+  .compact-list-controls,
+  .artist-album-controls,
+  .artist-song-controls {
     grid-template-columns: 1fr;
   }
 
