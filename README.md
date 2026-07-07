@@ -27,11 +27,13 @@ src/main/resources/static/media/
 
 ## 本地运行
 
+建议使用 Java 17+ 和 Node.js 20+。本项目当前前端依赖不支持 Node.js 14；若本机存在多个 Node 版本，请先切换到 Node 20 或更高版本。
+
 后端：
 
 ```bash
 cd music-web-backend
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
 前端：
@@ -43,6 +45,24 @@ npm run dev
 ```
 
 默认前端开发地址为 `http://127.0.0.1:5173/`。后端默认使用 `dev` 配置，需要本地 MySQL 可用，并按 `music-web-backend/src/main/resources/db/` 中的脚本初始化数据库。
+
+## 本地验证
+
+后端集成测试：
+
+```bash
+cd music-web-backend
+./mvnw test
+```
+
+前端生产构建：
+
+```bash
+cd music-web-frontend
+npm run build
+```
+
+Windows PowerShell 下可使用 `.\mvnw.cmd test` 和 `.\mvnw.cmd spring-boot:run`。
 
 ## 服务器运维
 
@@ -61,6 +81,14 @@ systemctl restart melospace-backend
 ```
 
 详细部署记录见 `docs/deployment/aliyun-ecs.md`。
+
+## 答辩与验收
+
+- 步骤七测试、部署复测和答辩脚本：`docs/step-7/testing-deployment-defense.md`
+- 项目宪章：`music_web_project_charter.md`
+- 项目计划：`music_web_feasibility_stable_plan.md`
+
+截至 2026-07-07，后端集成测试、前端生产构建、公网访问、健康检查、歌曲接口、媒体访问和 ECS 只读服务检查均已通过。
 
 ## 说明
 
