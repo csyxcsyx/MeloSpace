@@ -1,6 +1,6 @@
 # 步骤六交互亮点增强说明
 
-> 状态：进行中。步骤六聚焦在已有页面与已有业务基础上的交互优化，不新增场景电台等独立新模块。
+> 状态：已完成。步骤六聚焦在已有页面与已有业务基础上的交互优化，未新增场景电台等独立新模块。
 
 ## 1. 当前完成内容
 
@@ -20,6 +20,8 @@
 - 字体体系调整为“阿里巴巴普惠体 3.0 + 得意黑 + 霞鹜文楷屏幕阅读版”：普惠体用于 UI，得意黑用于品牌与发现页展示标题，霞鹜文楷用于歌词区域。
 - 使用用户提供的 MeloSpace 图标生成透明站内图标、favicon 和 Apple touch icon，侧栏品牌图标不再使用旧音乐符号。
 - 推荐刷新、品牌图标、发现页 banner 和播放器按钮补充轻量 `opacity` / `transform` 动效，并继续受 `prefers-reduced-motion` 降级控制。
+- 新发现、我的音乐、歌曲库和后台管理四个主页面统一玻璃标题框架；除新发现外，主页面标题栏在滚动时 sticky 停靠在页面上方。
+- 我的音乐支持删除歌单、取消收藏歌曲/歌单、清空最近播放列表，并保留各模块分页能力。
 
 ## 2. 已验证命令
 
@@ -52,3 +54,14 @@ npm run build
 - `fix: anchor global player to viewport bottom`
 - `style: add MeloSpace font system`
 - `style: update app icon and favicon`
+- `style: refine visual scale and typography`
+- `fix: unify main page frames`
+- `feat: manage profile favorites and history`
+- `style: keep main page headers sticky`
+
+## 5. 步骤六完成结论
+
+- [x] 创新点控制在已有页面和已有业务基础上，未引入场景电台等独立新模块。
+- [x] 歌单拖拽排序、歌曲栏歌手跳转、歌曲库完整队列播放、发现页展示优化、全局播放器固定、字体图标体系和现代微动效均已落地。
+- [x] 主页面标题框架、个人中心收藏/最近播放操作和滚动停靠体验已完成补强。
+- [x] 前端类型检查、前端构建、后端测试和线上部署验证均已通过；步骤六可作为答辩演示亮点阶段归档。
