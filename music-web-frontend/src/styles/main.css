@@ -313,6 +313,7 @@ button {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.76), 0 16px 42px rgba(15, 15, 18, 0.06);
   line-height: 0;
   text-align: left;
+  animation: melospace-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .discover-banner::after {
@@ -353,6 +354,7 @@ button {
     rgba(255, 255, 255, 0.72);
   box-shadow: 0 18px 46px rgba(15, 15, 18, 0.08);
   backdrop-filter: blur(20px) saturate(150%);
+  animation: melospace-rise 420ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .scene-radio-panel::before {
@@ -414,6 +416,7 @@ button {
 .scene-tabs button:focus-visible {
   color: var(--scene-accent, var(--brand));
   outline: 0;
+  transform: translateY(-1px);
 }
 
 .scene-tabs button.active {
@@ -441,6 +444,19 @@ button {
   text-align: left;
   box-shadow: 0 10px 24px rgba(15, 15, 18, 0.05);
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  animation: melospace-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scene-song-card:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.scene-song-card:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.scene-song-card:nth-child(4) {
+  animation-delay: 120ms;
 }
 
 .scene-song-card:hover,
@@ -520,6 +536,7 @@ button {
   flex: 0 0 auto;
   flex-direction: column;
   overflow: visible;
+  animation: melospace-rise 420ms 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .discover-recommendations .recommendation-head {
@@ -793,6 +810,20 @@ button {
   background: #dbbd22;
 }
 
+@keyframes melospace-rise {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
 .song-columns {
   display: grid;
   grid-template-columns: repeat(var(--song-column-count, 4), minmax(250px, 1fr));
@@ -824,6 +855,7 @@ button {
   background: rgba(255, 255, 255, 0.68);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.52);
   outline: 0;
+  transform: translateX(2px);
 }
 
 .song-row-active {
@@ -1042,6 +1074,7 @@ button {
   color: #ffffff;
   font-weight: 760;
   white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
 
 .search-page-form button,
@@ -1054,6 +1087,15 @@ button {
 .secondary-action {
   background: var(--side-active);
   color: #fa233b;
+}
+
+.primary-action:not(:disabled):hover,
+.primary-action:not(:disabled):focus-visible,
+.secondary-action:not(:disabled):hover,
+.secondary-action:not(:disabled):focus-visible {
+  box-shadow: 0 12px 28px rgba(250, 35, 59, 0.16);
+  outline: 0;
+  transform: translateY(-1px);
 }
 
 .primary-action:disabled,
@@ -1224,6 +1266,7 @@ button {
 .playlist-sort-row .song-row:hover,
 .playlist-sort-row .song-row:focus-visible {
   box-shadow: none;
+  transform: none;
 }
 
 .playlist-drag-grip {
@@ -3043,6 +3086,33 @@ button {
   margin: 12vh auto 0;
   border-color: rgba(255, 255, 255, 0.26);
   color: rgba(255, 255, 255, 0.72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .record-disc-playing {
+    animation: none !important;
+  }
+
+  .song-row:hover,
+  .song-row:focus-visible,
+  .scene-song-card:hover,
+  .scene-song-card:focus-visible,
+  .playlist-sort-row:hover,
+  .primary-action:not(:disabled):hover,
+  .primary-action:not(:disabled):focus-visible,
+  .secondary-action:not(:disabled):hover,
+  .secondary-action:not(:disabled):focus-visible {
+    transform: none;
+  }
 }
 
 @media (max-width: 1180px) {
