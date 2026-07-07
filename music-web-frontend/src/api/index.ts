@@ -35,7 +35,8 @@ export const userApi = {
   favorites: (page = 1, size = 20) =>
     unwrap<PageResult<FavoriteItem>>(http.get("/api/users/me/favorites", { params: { page, size } })),
   recentPlays: (page = 1, size = 20) =>
-    unwrap<PageResult<PlayHistoryItem>>(http.get("/api/users/me/recent-plays", { params: { page, size } }))
+    unwrap<PageResult<PlayHistoryItem>>(http.get("/api/users/me/recent-plays", { params: { page, size } })),
+  clearRecentPlays: () => unwrap<void>(http.delete("/api/users/me/recent-plays"))
 };
 
 export const songApi = {

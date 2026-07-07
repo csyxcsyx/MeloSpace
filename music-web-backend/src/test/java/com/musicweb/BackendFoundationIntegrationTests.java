@@ -707,6 +707,23 @@ class BackendFoundationIntegrationTests {
         assertThat(recentPlay.get("song").get("title").asText()).isEqualTo("I Do");
         assertThat(recentPlay.get("song").get("artistName").asText()).isEqualTo("周杰伦");
 
+        ResponseEntity<JsonNode> clearedRecentPlays = exchangeWithToken(
+                "/api/users/me/recent-plays",
+                HttpMethod.DELETE,
+                demoToken,
+                null
+        );
+        assertThat(clearedRecentPlays.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> recentPlaysAfterClear = exchangeWithToken(
+                "/api/users/me/recent-plays?page=1&size=10",
+                HttpMethod.GET,
+                demoToken,
+                null
+        );
+        assertThat(recentPlaysAfterClear.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(recentPlaysAfterClear.getBody().get("data").get("total").asLong()).isZero();
+
         long playCountAfter = restTemplate
                 .getForEntity(url("/api/songs/1"), JsonNode.class)
                 .getBody()

@@ -81,6 +81,12 @@ public class PlayHistoryServiceImpl extends ServiceImpl<PlayHistoryMapper, PlayH
         );
     }
 
+    @Override
+    @Transactional
+    public void clearRecentPlays(Long userId) {
+        remove(new LambdaQueryWrapper<PlayHistory>().eq(PlayHistory::getUserId, userId));
+    }
+
     private PlayHistoryResponse toResponse(PlayHistory playHistory) {
         return new PlayHistoryResponse(
                 playHistory.getId(),

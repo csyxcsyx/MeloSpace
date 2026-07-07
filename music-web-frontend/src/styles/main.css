@@ -385,6 +385,10 @@ button {
   line-height: 1.2;
 }
 
+.profile-section-head {
+  justify-content: space-between;
+}
+
 .discover-page {
   display: grid;
   height: 100%;
@@ -1671,6 +1675,12 @@ button {
   box-shadow: 0 10px 22px rgba(250, 35, 59, 0.14);
   outline: 0;
   transform: translateY(-1px);
+}
+
+.danger-icon-action:disabled {
+  opacity: 0.46;
+  cursor: default;
+  transform: none;
 }
 
 .list-controls {

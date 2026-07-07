@@ -11,4 +11,6 @@ public interface PlayHistoryService extends IService<PlayHistory> {
     PlayHistoryResponse recordSongPlay(Long songId, PlayRecordRequest request, Long userId);
 
     PageResult<PlayHistoryResponse> listRecentPlays(Long userId, long page, long size);
+
+    void clearRecentPlays(Long userId);
 }

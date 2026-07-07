@@ -73,10 +73,16 @@
           </label>
         </div>
         <div class="profile-list">
-          <RouterLink v-for="favorite in pagedFavorites" :key="favorite.id" :to="favoritePath(favorite)">
-            <strong>{{ favoriteTitle(favorite) }}</strong>
-            <span>{{ favoriteSubtitle(favorite) }}</span>
-          </RouterLink>
+          <div v-for="favorite in pagedFavorites" :key="favorite.id" class="profile-list-row favorite-profile-row">
+            <RouterLink class="profile-list-main" :to="favoritePath(favorite)">
+              <strong>{{ favoriteTitle(favorite) }}</strong>
+              <span>{{ favoriteSubtitle(favorite) }}</span>
+            </RouterLink>
+            <button class="danger-icon-action favorite-delete-action" type="button" @click="removeFavorite(favorite)">
+              <Trash2 :size="16" />
+              <span>取消</span>
+            </button>
+          </div>
           <p v-if="!filteredFavorites.length" class="muted-line">还没有匹配的收藏内容。</p>
         </div>
         <div v-if="favoritePageCount > 1" class="list-pagination">
@@ -87,8 +93,12 @@
       </div>
 
       <div class="compact-panel">
-        <div class="section-head">
+        <div class="section-head profile-section-head">
           <h2>最近播放</h2>
+          <button class="danger-icon-action" type="button" :disabled="!recent.length || clearingRecent" @click="clearRecentPlays">
+            <Trash2 :size="16" />
+            <span>{{ clearingRecent ? "清空中" : "清空" }}</span>
+          </button>
         </div>
         <div class="list-controls">
           <label>
@@ -135,7 +145,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Trash2 } from "lucide-vue-next";
-import { playlistApi, songApi, userApi } from "@/api";
+import { favoriteApi, playlistApi, songApi, userApi } from "@/api";
 import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
@@ -163,6 +173,7 @@ const playlistSort = ref("updatedDesc");
 const favoriteSort = ref("newest");
 const recentSort = ref("latest");
 const favoriteTypeFilter = ref<"ALL" | "SONG" | "PLAYLIST">("ALL");
+const clearingRecent = ref(false);
 const profilePages = reactive({
   playlists: 1,
   favorites: 1,
@@ -347,6 +358,27 @@ async function deletePlaylist(playlist: Playlist) {
   ui.toast("歌单已删除");
   await loadProfile();
   profilePages.playlists = Math.min(profilePages.playlists, playlistPageCount.value);
+}
+
+async function removeFavorite(favorite: FavoriteDisplayItem) {
+  await favoriteApi.remove(favorite.targetType, favorite.targetId);
+  favorites.value = favorites.value.filter((item) => item.id !== favorite.id);
+  profilePages.favorites = Math.min(profilePages.favorites, favoritePageCount.value);
+  ui.toast(favorite.targetType === "SONG" ? "已删除收藏歌曲" : "已取消收藏歌单");
+}
+
+async function clearRecentPlays() {
+  if (!recent.value.length || clearingRecent.value) return;
+  if (!window.confirm("确定清空最近播放列表吗？")) return;
+  clearingRecent.value = true;
+  try {
+    await userApi.clearRecentPlays();
+    recent.value = [];
+    profilePages.recent = 1;
+    ui.toast("最近播放已清空");
+  } finally {
+    clearingRecent.value = false;
+  }
 }
 
 async function deleteMyAccount() {

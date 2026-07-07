@@ -81,6 +81,12 @@ public class UserController {
         return ApiResponse.ok(playHistoryService.listRecentPlays(principal.getId(), page, size));
     }
 
+    @DeleteMapping("/me/recent-plays")
+    public ApiResponse<Void> clearRecentPlays(@AuthenticationPrincipal UserPrincipal principal) {
+        playHistoryService.clearRecentPlays(principal.getId());
+        return ApiResponse.ok();
+    }
+
     @DeleteMapping("/me")
     public ApiResponse<Void> deleteMe(@AuthenticationPrincipal UserPrincipal principal) {
         userAccountService.deleteUser(principal.getId());
