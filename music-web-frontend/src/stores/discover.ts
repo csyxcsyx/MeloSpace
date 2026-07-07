@@ -2,15 +2,22 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { songApi } from "@/api";
 import type { Song } from "@/api/types";
+import { resolveMediaUrl } from "@/utils/format";
 
 const DISCOVER_RECOMMENDATION_KEY = "melospace-discover-recommendation";
 const RECOMMENDATION_SIZE = 12;
 const JAY_CHOU_MINIMUM = 3;
+const ARTWORK_PRELOAD_LOOKAHEAD = [0, 1, 2];
+const preloadedArtworkUrls = new Set<string>();
 
 interface RecommendationState {
   dateKey: string;
   refreshIndex: number;
 }
+
+type WindowWithIdleCallback = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+};
 
 function todayKey() {
   const now = new Date();
@@ -105,6 +112,45 @@ function pickRecommendedSongs(source: Song[], state: RecommendationState) {
   return selected;
 }
 
+function recommendationStateAtOffset(state: RecommendationState, offset: number) {
+  return {
+    dateKey: state.dateKey,
+    refreshIndex: state.refreshIndex + offset
+  };
+}
+
+function scheduleIdlePreload(callback: () => void) {
+  if (typeof window === "undefined") return;
+  const idleWindow = window as WindowWithIdleCallback;
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    idleWindow.requestIdleCallback(callback, { timeout: 900 });
+    return;
+  }
+  window.setTimeout(callback, 80);
+}
+
+function preloadSongArtwork(source: Song[], state: RecommendationState) {
+  if (!source.length) return;
+  const artworkUrls = ARTWORK_PRELOAD_LOOKAHEAD.flatMap((offset) => (
+    pickRecommendedSongs(source, recommendationStateAtOffset(state, offset))
+  ))
+    .map((song) => resolveMediaUrl(song.coverUrl))
+    .filter((url): url is string => Boolean(url && !preloadedArtworkUrls.has(url)));
+
+  const uniqueArtworkUrls = [...new Set(artworkUrls)];
+  if (!uniqueArtworkUrls.length) return;
+
+  scheduleIdlePreload(() => {
+    for (const url of uniqueArtworkUrls) {
+      if (preloadedArtworkUrls.has(url)) continue;
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+      preloadedArtworkUrls.add(url);
+    }
+  });
+}
+
 export const useDiscoverStore = defineStore("discover", () => {
   const songs = ref<Song[]>([]);
   const loading = ref(false);
@@ -124,6 +170,7 @@ export const useDiscoverStore = defineStore("discover", () => {
       .then((items) => {
         songs.value = items;
         loaded.value = true;
+        preloadSongArtwork(items, recommendationState.value);
       })
       .finally(() => {
         loading.value = false;
@@ -150,6 +197,7 @@ export const useDiscoverStore = defineStore("discover", () => {
       refreshIndex: recommendationState.value.refreshIndex + 1
     };
     persistRecommendationState(recommendationState.value);
+    preloadSongArtwork(songs.value, recommendationState.value);
   }
 
   function syncRecommendationDate() {
