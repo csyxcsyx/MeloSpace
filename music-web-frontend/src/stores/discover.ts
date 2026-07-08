@@ -88,21 +88,12 @@ function hasAlbumArtwork(song: Song) {
   return Boolean(song.coverUrl?.trim());
 }
 
-function prioritizeSongsWithArtwork(songs: Song[]) {
-  return songs
-    .map((song, index) => ({ song, index }))
-    .sort((first, second) => {
-      const artworkDelta = Number(hasAlbumArtwork(second.song)) - Number(hasAlbumArtwork(first.song));
-      return artworkDelta || first.index - second.index;
-    })
-    .map((item) => item.song);
-}
-
 function pickRecommendedSongs(source: Song[], state: RecommendationState) {
+  const artworkSongs = source.filter(hasAlbumArtwork);
   const seed = hashString(`${state.dateKey}:${state.refreshIndex}`);
   const selected: Song[] = [];
-  const shuffledSongs = prioritizeSongsWithArtwork(seededShuffle(source, seed));
-  const jaySongs = prioritizeSongsWithArtwork(seededShuffle(source.filter(isJayChouSong), seed ^ 0x9e3779b9));
+  const shuffledSongs = seededShuffle(artworkSongs, seed);
+  const jaySongs = seededShuffle(artworkSongs.filter(isJayChouSong), seed ^ 0x9e3779b9);
 
   for (const song of jaySongs) {
     if (selected.length >= Math.min(JAY_CHOU_MINIMUM, jaySongs.length)) break;
