@@ -26,7 +26,7 @@
 |后端|服务器构建 Spring Boot jar，systemd 管理后台服务|
 |数据库|本机 MySQL，执行 `schema.sql` 和 `data.sql` 初始化|
 |媒体资源|`/opt/melospace/media` 持久化，Nginx 通过后端 `/media/**` 访问|
-|公网入口|Nginx 监听 80，`/api/` 与 `/media/` 反向代理到 `127.0.0.1:8080`|
+|公网入口|Nginx 监听 80/443，HTTP 自动跳转 HTTPS，`/api/` 与 `/media/` 反向代理到 `127.0.0.1:8080`|
 |开机自启|启用 `mysql`、`nginx`、`melospace-backend` systemd 服务|
 
 正式答辩前可继续补 Docker Compose 版本，但这次提前部署先保证公网可访问与运维命令完整。
@@ -72,11 +72,11 @@ apt install -y nodejs
 
 |项目|内容|
 |-|-|
-|前端访问地址|`http://47.89.235.138/`|
-|域名访问地址|`http://melospace.asia/`，DNS A 记录生效后可用|
-|www 访问地址|`http://www.melospace.asia/`，DNS A 记录生效后可用|
+|前端访问地址|`https://melospace.asia/`|
+|域名访问地址|`https://melospace.asia/`|
+|www 访问地址|`https://www.melospace.asia/`|
 |后端健康检查|`http://47.89.235.138/api/actuator/health`|
-|域名健康检查|`http://melospace.asia/api/actuator/health`|
+|域名健康检查|`https://melospace.asia/api/actuator/health`|
 |后端本机端口|`127.0.0.1:8080`|
 |systemd 服务名|`melospace-backend`|
 |Nginx 配置|`/etc/nginx/sites-available/melospace`|
@@ -96,7 +96,7 @@ server_name melospace.asia www.melospace.asia 47.89.235.138 _;
 |A|`@`|`47.89.235.138`|默认|600 秒或默认值|
 |A|`www`|`47.89.235.138`|默认|600 秒或默认值|
 
-当前外部 DNS 查询仅看到 `melospace.asia` 的 SOA 记录，尚未看到 A 记录；DNS 添加并生效后，浏览器即可直接访问 `http://melospace.asia/`。
+两条 A 记录均已生效并解析到 `47.89.235.138`，浏览器通过 HTTPS 访问主域名或 www 域名。
 
 ## 6. 运维命令
 
@@ -298,3 +298,72 @@ sudo -u melospace /opt/melospace/venv-lddc/bin/python /opt/melospace/repo/script
 |后端 warning 日志|`journalctl -u melospace-backend -p warning -n 10` 无记录|
 
 结论：核心服务运行状态正常且已启用开机自启，系统盘仍有余量，后端近期无 warning 级日志。由于本轮按只读口径执行，未做服务重启或整机重启演练；如答辩前允许短暂中断，可另行做一次重启持久化复测。
+
+## 12. 手机端、锁屏媒体与 HTTPS 上线记录
+
+执行日期：2026-07-27。
+
+### 12.1 前端上线内容
+
+本轮按独立阶段提交、推送并通过 `melospace-update` 同步线上：
+
+|提交|内容|
+|-|-|
+|`b42c011`|重构手机端应用框架、底部导航、安全区和迷你播放器|
+|`ece8796`|优化发现页、歌曲库、后台管理与沉浸式全屏播放器|
+|`f17adaf`|接入 Media Session，提供锁屏歌曲、歌手、专辑、封面、进度与播放控制|
+
+手机端使用 `viewport-fit=cover`、`env(safe-area-inset-*)` 和 `100dvh` 适配刘海、Home Indicator 及 Safari 动态工具栏。桌面端继续保留原侧栏布局。
+
+Media Session 的封面使用当前歌曲真实封面的绝对 HTTPS 地址，无封面时回退 `/apple-touch-icon.png`；已注册播放、暂停、上一首、下一首、前后跳转和指定位置跳转。浏览器标准没有歌词元数据字段，因此逐字歌词仍只在站内全屏播放器展示，不拼接进锁屏歌曲标题。
+
+### 12.2 HTTPS 配置
+
+安装的软件包：
+
+```bash
+apt-get install -y certbot python3-certbot-nginx
+```
+
+申请并部署证书：
+
+```bash
+certbot --nginx --non-interactive --agree-tos \
+  --email 1977817316@qq.com \
+  --redirect \
+  -d melospace.asia \
+  -d www.melospace.asia
+```
+
+配置与证书位置：
+
+|项目|内容|
+|-|-|
+|Nginx 配置|`/etc/nginx/sites-available/melospace`|
+|上线前备份|`/etc/nginx/sites-available/melospace.pre-https-20260727`|
+|证书链|`/etc/letsencrypt/live/melospace.asia/fullchain.pem`|
+|私钥|`/etc/letsencrypt/live/melospace.asia/privkey.pem`|
+|证书域名|`melospace.asia`、`www.melospace.asia`|
+|本期有效期|2026-07-27 至 2026-10-25|
+|自动续期|`certbot.timer` 已启用且为 active|
+
+日常检查命令：
+
+```bash
+nginx -t
+systemctl status certbot.timer --no-pager
+certbot certificates
+certbot renew --dry-run
+```
+
+### 12.3 上线验收
+
+* `https://melospace.asia/` 与 `https://www.melospace.asia/` 均返回 HTTP 200。
+* 两个域名的 HTTP 请求均返回 301 并跳转到对应 HTTPS 地址。
+* `https://melospace.asia/api/actuator/health` 返回 `UP`。
+* 歌曲接口、封面和歌词资源通过 HTTPS 正常访问。
+* 音频 Range 请求返回 HTTP 206、`Accept-Ranges: bytes` 和正确的 `Content-Range`。
+* `nginx -t` 通过，Nginx 在公网 IPv4/IPv6 的 443 端口监听。
+* `certbot renew --dry-run` 成功，当前无需补充阿里云安全组规则。
+
+真机锁屏呈现仍需在 iPhone Safari 中播放一首歌曲后完成最终人工验收；代码侧已按 Safari 能力检测处理不支持的 Media Session 动作。
