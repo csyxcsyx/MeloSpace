@@ -5,7 +5,10 @@
       :volume="player.volume"
       preload="metadata"
       @loadedmetadata="onLoadedMetadata"
+      @durationchange="syncMediaPosition"
       @timeupdate="onTimeUpdate"
+      @play="onAudioPlay"
+      @pause="onAudioPause"
       @ended="handleEnded"
       @waiting="player.setLoading(true)"
       @canplay="player.setLoading(false)"
@@ -202,12 +205,24 @@ watch(
 );
 
 watch(
+  () => player.currentSong,
+  (song) => {
+    updateMediaMetadata(auth.isAuthenticated ? song : null);
+  },
+  { immediate: true }
+);
+
+watch(
   () => auth.isAuthenticated,
   (isAuthenticated) => {
-    if (isAuthenticated) return;
+    if (isAuthenticated) {
+      updateMediaMetadata(player.currentSong);
+      return;
+    }
     audioRef.value?.pause();
     player.setPlaying(false);
     player.setLoading(false);
+    clearMediaSession();
   }
 );
 
@@ -220,6 +235,7 @@ watch(
     const nextTime = Math.min(player.seekTarget, Number.isFinite(audio.duration) ? audio.duration : player.seekTarget);
     audio.currentTime = nextTime;
     player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : player.duration);
+    syncMediaPosition();
     if (player.seekShouldPlay) {
       player.setPlaying(true);
       playAudio();
@@ -229,11 +245,15 @@ watch(
 
 onMounted(() => {
   window.addEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+  registerMediaSessionHandlers();
+  updateMediaMetadata(auth.isAuthenticated ? player.currentSong : null);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
   stopProgressLoop();
+  unregisterMediaSessionHandlers();
+  clearMediaSession();
 });
 
 function playAudio() {
@@ -249,6 +269,8 @@ function playAudio() {
   if (activePlayRequest) return activePlayRequest;
   if (!audio.paused) {
     player.setPlaying(true);
+    setMediaPlaybackState("playing");
+    syncMediaPosition();
     return Promise.resolve(true);
   }
 
@@ -296,12 +318,29 @@ function onLoadedMetadata() {
   const audio = audioRef.value;
   if (!audio) return;
   player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : 0);
+  syncMediaPosition();
 }
 
 function onTimeUpdate() {
   const audio = audioRef.value;
   if (!audio) return;
   player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : 0);
+  syncMediaPosition();
+}
+
+function onAudioPlay() {
+  player.setPlaying(true);
+  setMediaPlaybackState("playing");
+  syncMediaPosition();
+  startProgressLoop();
+}
+
+function onAudioPause() {
+  stopProgressLoop();
+  if (!audioRef.value?.ended) {
+    setMediaPlaybackState(player.currentSong ? "paused" : "none");
+    syncMediaPosition();
+  }
 }
 
 function startProgressLoop() {
@@ -332,6 +371,7 @@ function syncProgressFrame() {
 
 function onAudioError() {
   stopProgressLoop();
+  setMediaPlaybackState("paused");
   player.setError("音频加载失败，请检查媒体文件或代理配置");
 }
 
@@ -343,6 +383,8 @@ async function handleEnded() {
     player.setTime(player.duration, player.duration);
     player.setPlaying(false);
     player.setLoading(false);
+    setMediaPlaybackState("paused");
+    syncMediaPosition();
     return;
   }
 
@@ -385,6 +427,7 @@ function seek(event: MouseEvent) {
   const percent = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
   audio.currentTime = player.duration * percent;
   player.setTime(audio.currentTime, player.duration);
+  syncMediaPosition();
 }
 
 function setVolume(event: Event) {
@@ -492,6 +535,142 @@ function setAudioSource(audio: HTMLAudioElement, src: string) {
   audio.pause();
   audio.src = src;
   audio.setAttribute("src", src);
+}
+
+function hasMediaSession() {
+  return typeof navigator !== "undefined" && "mediaSession" in navigator;
+}
+
+function updateMediaMetadata(song: Song | null) {
+  if (!song) {
+    clearMediaSession();
+    return;
+  }
+
+  const artist = song.artistName || "未知歌手";
+  const album = song.albumTitle || "MeloSpace";
+  document.title = `${song.title} — ${artist} | MeloSpace`;
+  if (!hasMediaSession() || typeof MediaMetadata === "undefined") return;
+
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song.title,
+      artist,
+      album,
+      artwork: [{ src: absoluteArtworkUrl(song.coverUrl) }]
+    });
+  } catch {
+    // Older Safari versions can expose Media Session without full metadata support.
+  }
+}
+
+function clearMediaSession() {
+  if (hasMediaSession()) {
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+    } catch {
+      // Ignore partial Media Session implementations.
+    }
+  }
+  document.title = "MeloSpace";
+}
+
+function absoluteArtworkUrl(coverUrl: string | null) {
+  const artwork = resolveMediaUrl(coverUrl) || "/apple-touch-icon.png";
+  try {
+    return new URL(artwork, window.location.origin).href;
+  } catch {
+    return `${window.location.origin}/apple-touch-icon.png`;
+  }
+}
+
+function registerMediaSessionHandlers() {
+  if (!hasMediaSession()) return;
+  setMediaActionHandler("play", () => {
+    void playAudio();
+  });
+  setMediaActionHandler("pause", () => {
+    player.setPlaying(false);
+  });
+  setMediaActionHandler("previoustrack", () => {
+    void player.previous();
+  });
+  setMediaActionHandler("nexttrack", () => {
+    void player.next();
+  });
+  setMediaActionHandler("seekbackward", (details) => {
+    seekFromMediaSession((audioRef.value?.currentTime || 0) - (details.seekOffset || 10));
+  });
+  setMediaActionHandler("seekforward", (details) => {
+    seekFromMediaSession((audioRef.value?.currentTime || 0) + (details.seekOffset || 10));
+  });
+  setMediaActionHandler("seekto", (details) => {
+    if (typeof details.seekTime !== "number") return;
+    seekFromMediaSession(details.seekTime, details.fastSeek === true);
+  });
+}
+
+function unregisterMediaSessionHandlers() {
+  if (!hasMediaSession()) return;
+  const actions: MediaSessionAction[] = [
+    "play",
+    "pause",
+    "previoustrack",
+    "nexttrack",
+    "seekbackward",
+    "seekforward",
+    "seekto"
+  ];
+  actions.forEach((action) => setMediaActionHandler(action, null));
+}
+
+function setMediaActionHandler(action: MediaSessionAction, handler: MediaSessionActionHandler | null) {
+  try {
+    navigator.mediaSession.setActionHandler(action, handler);
+  } catch {
+    // Safari support differs by release and by action.
+  }
+}
+
+function seekFromMediaSession(requestedTime: number, fastSeek = false) {
+  const audio = audioRef.value;
+  if (!audio || !ensureAuthenticatedPlayback()) return;
+  const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : player.duration;
+  const nextTime = Math.max(0, duration > 0 ? Math.min(requestedTime, duration) : requestedTime);
+  if (fastSeek && typeof audio.fastSeek === "function") {
+    audio.fastSeek(nextTime);
+  } else {
+    audio.currentTime = nextTime;
+  }
+  player.setTime(nextTime, duration);
+  syncMediaPosition();
+}
+
+function setMediaPlaybackState(state: MediaSessionPlaybackState) {
+  if (!hasMediaSession()) return;
+  try {
+    navigator.mediaSession.playbackState = state;
+  } catch {
+    // Ignore browsers that expose a read-only or incomplete implementation.
+  }
+}
+
+function syncMediaPosition() {
+  if (!hasMediaSession() || typeof navigator.mediaSession.setPositionState !== "function") return;
+  const audio = audioRef.value;
+  if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  const duration = audio.duration;
+  const position = Math.min(duration, Math.max(0, Number.isFinite(audio.currentTime) ? audio.currentTime : 0));
+  try {
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: Number.isFinite(audio.playbackRate) && audio.playbackRate > 0 ? audio.playbackRate : 1,
+      position
+    });
+  } catch {
+    // Metadata can change while Safari is applying a previous position update.
+  }
 }
 
 function openPlayer() {
