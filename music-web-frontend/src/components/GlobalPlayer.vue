@@ -599,12 +599,6 @@ function registerMediaSessionHandlers() {
   setMediaActionHandler("nexttrack", () => {
     void player.next();
   });
-  setMediaActionHandler("seekbackward", (details) => {
-    seekFromMediaSession((audioRef.value?.currentTime || 0) - (details.seekOffset || 10));
-  });
-  setMediaActionHandler("seekforward", (details) => {
-    seekFromMediaSession((audioRef.value?.currentTime || 0) + (details.seekOffset || 10));
-  });
   setMediaActionHandler("seekto", (details) => {
     if (typeof details.seekTime !== "number") return;
     seekFromMediaSession(details.seekTime, details.fastSeek === true);
@@ -618,8 +612,6 @@ function unregisterMediaSessionHandlers() {
     "pause",
     "previoustrack",
     "nexttrack",
-    "seekbackward",
-    "seekforward",
     "seekto"
   ];
   actions.forEach((action) => setMediaActionHandler(action, null));
