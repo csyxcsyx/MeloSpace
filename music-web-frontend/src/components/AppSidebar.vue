@@ -1,9 +1,14 @@
 <template>
   <aside class="sidebar">
-    <RouterLink class="brand" to="/discover" aria-label="MeloSpace 首页">
-      <img class="brand-icon" src="/melospace-icon.png" alt="" />
-      <span>MeloSpace</span>
-    </RouterLink>
+    <div class="sidebar-top-row">
+      <RouterLink class="brand" to="/discover" aria-label="MeloSpace 首页">
+        <img class="brand-icon" src="/melospace-icon.png" alt="" />
+        <span>MeloSpace</span>
+      </RouterLink>
+      <RouterLink class="mobile-search-link" to="/search" aria-label="搜索">
+        <Search :size="21" />
+      </RouterLink>
+    </div>
 
     <form class="sidebar-search" @submit.prevent="submitSearch">
       <Search :size="18" />

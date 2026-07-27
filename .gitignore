@@ -34,6 +34,9 @@ bin/
 # Keep large demo audio files local unless explicit authorization and storage policy are confirmed.
 src/main/resources/static/media/audio/*.flac
 
+### Local deployment credentials ###
+REX.pem
+
 ### Frontend ###
 music-web-frontend/node_modules/
 music-web-frontend/dist/
