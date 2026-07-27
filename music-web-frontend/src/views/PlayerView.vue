@@ -15,6 +15,7 @@
           <span>首页</span>
         </RouterLink>
       </div>
+      <SongActionsMenu v-if="player.currentSong" :song="player.currentSong" variant="player" />
     </header>
 
     <EmptyState v-if="!player.currentSong" class="player-empty">
@@ -175,6 +176,7 @@ import { RouterLink, useRouter } from "vue-router";
 import { ArrowLeft, Home, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Trash2, Volume2, X } from "lucide-vue-next";
 import EmptyState from "@/components/EmptyState.vue";
 import LyricPanel from "@/components/LyricPanel.vue";
+import SongActionsMenu from "@/components/SongActionsMenu.vue";
 import { usePlayerStore } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
 import type { Song } from "@/api/types";
