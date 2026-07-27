@@ -17,7 +17,24 @@
       </div>
     </header>
 
-    <form class="compact-panel song-library-filter-panel" @submit.prevent="applyFiltersNow">
+    <button
+      class="mobile-filter-toggle"
+      type="button"
+      :aria-expanded="filtersOpen"
+      aria-controls="song-library-filters"
+      @click="filtersOpen = !filtersOpen"
+    >
+      <Search :size="17" />
+      <span>筛选与排序</span>
+      <span class="mobile-filter-state">{{ filtersOpen ? "收起" : "展开" }}</span>
+    </button>
+
+    <form
+      id="song-library-filters"
+      class="compact-panel song-library-filter-panel"
+      :class="{ 'mobile-open': filtersOpen }"
+      @submit.prevent="applyFiltersNow"
+    >
       <div class="list-controls song-library-controls">
         <label>
           <span>搜索</span>
@@ -101,13 +118,22 @@
             @toggle-play="toggleSongPlayback"
             @open-player="openPlayer"
           />
-          <RouterLink v-if="song.albumId" class="song-library-row-link" :to="`/albums/${song.albumId}`">
+          <div class="song-library-mobile-meta">
+            <RouterLink v-if="song.albumId" :to="`/albums/${song.albumId}`">
+              {{ displayName(song.albumTitle, "未绑定专辑") }}
+            </RouterLink>
+            <span v-else>未绑定专辑</span>
+            <span>{{ song.genre || song.language || song.mood || "未标注" }}</span>
+            <span>{{ formatDuration(song.durationSeconds) }}</span>
+            <span>{{ formatPlayCount(song.playCount) }} 次播放</span>
+          </div>
+          <RouterLink v-if="song.albumId" class="song-library-row-link song-library-desktop-meta" :to="`/albums/${song.albumId}`">
             {{ displayName(song.albumTitle, "未绑定专辑") }}
           </RouterLink>
-          <span v-else class="muted-line">未绑定专辑</span>
-          <span>{{ song.genre || song.language || song.mood || "未标注" }}</span>
-          <span>{{ formatDuration(song.durationSeconds) }}</span>
-          <span>{{ formatPlayCount(song.playCount) }}</span>
+          <span v-else class="muted-line song-library-desktop-meta">未绑定专辑</span>
+          <span class="song-library-desktop-meta">{{ song.genre || song.language || song.mood || "未标注" }}</span>
+          <span class="song-library-desktop-meta">{{ formatDuration(song.durationSeconds) }}</span>
+          <span class="song-library-desktop-meta">{{ formatPlayCount(song.playCount) }}</span>
         </div>
       </div>
 
@@ -154,6 +180,7 @@ const albums = ref<Album[]>([]);
 const loading = ref(false);
 const queueLoading = ref(false);
 const errorMessage = ref("");
+const filtersOpen = ref(false);
 const pageCache = new Map<string, PageResult<Song>>();
 const requestCache = new Map<string, Promise<PageResult<Song>>>();
 let filterDebounceId: number | undefined;
