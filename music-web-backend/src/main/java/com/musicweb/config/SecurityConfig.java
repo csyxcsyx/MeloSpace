@@ -45,7 +45,8 @@ public class SecurityConfig {
             "/api/search/*",
             "/api/playlists",
             "/api/playlists/*",
-            "/api/comments"
+            "/api/comments",
+            "/api/comments/**"
     };
 
     private static final String[] PUBLIC_RESOURCE_PATHS = {

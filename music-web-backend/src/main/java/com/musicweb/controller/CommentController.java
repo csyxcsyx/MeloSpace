@@ -2,6 +2,7 @@ package com.musicweb.controller;
 
 import com.musicweb.common.ApiResponse;
 import com.musicweb.common.PageResult;
+import com.musicweb.dto.CommentReportRequest;
 import com.musicweb.dto.CommentRequest;
 import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.CommentService;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,10 +40,34 @@ public class CommentController {
     public ApiResponse<PageResult<CommentResponse>> listComments(
             @RequestParam @NotBlank @Size(max = 20) String targetType,
             @RequestParam @Positive Long targetId,
+            @RequestParam(defaultValue = "LATEST") @Size(max = 10) String sort,
             @RequestParam(defaultValue = "1") @Min(1) long page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.ok(commentService.listComments(targetType, targetId, page, size));
+        return ApiResponse.ok(commentService.listComments(
+                targetType,
+                targetId,
+                sort,
+                page,
+                size,
+                principal == null ? null : principal.getId()
+        ));
+    }
+
+    @GetMapping("/{id}/replies")
+    public ApiResponse<PageResult<CommentResponse>> listReplies(
+            @PathVariable @Positive Long id,
+            @RequestParam(defaultValue = "1") @Min(1) long page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(commentService.listReplies(
+                id,
+                page,
+                size,
+                principal == null ? null : principal.getId()
+        ));
     }
 
     @PostMapping
@@ -58,6 +84,32 @@ public class CommentController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         commentService.deleteComment(id, principal.getId());
+        return ApiResponse.ok();
+    }
+
+    @PutMapping("/{id}/like")
+    public ApiResponse<CommentResponse> likeComment(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(commentService.likeComment(id, principal.getId()));
+    }
+
+    @DeleteMapping("/{id}/like")
+    public ApiResponse<CommentResponse> unlikeComment(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(commentService.unlikeComment(id, principal.getId()));
+    }
+
+    @PostMapping("/{id}/reports")
+    public ApiResponse<Void> reportComment(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody CommentReportRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        commentService.reportComment(id, request, principal.getId());
         return ApiResponse.ok();
     }
 }

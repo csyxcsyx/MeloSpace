@@ -39,21 +39,7 @@
         </form>
       </section>
 
-      <section class="compact-panel">
-        <div class="section-head">
-          <h2>评论</h2>
-          <span class="chevron">›</span>
-        </div>
-        <form v-if="auth.isAuthenticated" class="comment-form" @submit.prevent="submitComment">
-          <label class="sr-only" for="song-comment-content">评论内容</label>
-          <textarea id="song-comment-content" v-model.trim="commentText" maxlength="500" placeholder="写一条评论" />
-          <button type="submit">发布</button>
-        </form>
-        <div class="comment-list">
-          <p v-for="comment in comments" :key="comment.id">{{ comment.content }}</p>
-          <p v-if="!comments.length" class="muted-line">暂无评论。</p>
-        </div>
-      </section>
+      <CommentThread :target-id="song.id" target-type="SONG" />
     </template>
     <EmptyState v-else>歌曲不存在或已下架。</EmptyState>
   </section>
@@ -62,8 +48,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
-import { commentApi, favoriteApi, playlistApi, songApi, userApi } from "@/api";
-import type { CommentItem, Playlist, Song } from "@/api/types";
+import { favoriteApi, playlistApi, songApi, userApi } from "@/api";
+import type { Playlist, Song } from "@/api/types";
+import CommentThread from "@/components/CommentThread.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import LyricPanel from "@/components/LyricPanel.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
@@ -78,10 +65,8 @@ const player = usePlayerStore();
 const ui = useUiStore();
 const loading = ref(true);
 const song = ref<Song | null>(null);
-const comments = ref<CommentItem[]>([]);
 const myPlaylists = ref<Playlist[]>([]);
 const selectedPlaylistId = ref(0);
-const commentText = ref("");
 const isCurrentSong = computed(() => Boolean(song.value && player.currentSong?.id === song.value.id));
 
 onMounted(loadSong);
@@ -91,8 +76,6 @@ async function loadSong() {
   try {
     const id = Number(route.params.id);
     song.value = await songApi.detail(id);
-    const commentPage = await commentApi.list("SONG", id, 1, 20);
-    comments.value = commentPage.items;
     if (auth.isAuthenticated) {
       const playlistPage = await userApi.playlists(1, 50);
       myPlaylists.value = playlistPage.items;
@@ -128,10 +111,4 @@ async function addToPlaylist() {
   ui.toast("已加入歌单");
 }
 
-async function submitComment() {
-  if (!song.value || !commentText.value) return;
-  const created = await commentApi.create("SONG", song.value.id, commentText.value);
-  comments.value.unshift(created);
-  commentText.value = "";
-}
 </script>

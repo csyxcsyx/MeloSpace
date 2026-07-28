@@ -7,23 +7,17 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-@TableName("comment")
-public class Comment {
+@TableName("comment_report")
+public class CommentReport {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long commentId;
     private Long userId;
-    private String targetType;
-    private Long targetId;
-    private String content;
-    private Integer status;
-    private Long parentId;
-    private Long replyToUserId;
-    private Integer likeCount;
-    private Integer replyCount;
-    private Boolean isPinned;
-    private LocalDateTime deletedAt;
+    private String reason;
+    private String detail;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

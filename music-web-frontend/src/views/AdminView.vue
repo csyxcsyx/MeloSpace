@@ -457,14 +457,77 @@
         <button type="button" :disabled="adminPages.users >= userPageCount" @click="setAdminPage('users', adminPages.users + 1)">下一页</button>
       </div>
     </section>
+
+    <section class="compact-panel admin-list-section">
+      <div class="section-head">
+        <ShieldCheck :size="18" />
+        <div>
+          <h2>评论举报</h2>
+          <span>{{ commentReports.total }} 条</span>
+        </div>
+      </div>
+      <div class="list-controls admin-list-controls">
+        <label>
+          <span>处理状态</span>
+          <select v-model="reportStatus">
+            <option value="OPEN">待处理</option>
+            <option value="RESOLVED">已处理</option>
+            <option value="ALL">全部</option>
+          </select>
+        </label>
+      </div>
+      <p v-if="reportsLoading" class="muted-line">正在加载举报…</p>
+      <div v-else class="admin-report-list">
+        <article v-for="report in commentReports.items" :key="report.id" class="admin-report-row">
+          <div>
+            <strong>{{ report.reason }} · {{ report.reporterNickname }}</strong>
+            <p>{{ report.commentContent || "评论已不存在" }}</p>
+            <small>{{ report.detail || "未填写补充说明" }} · {{ formatAdminTime(report.createdAt) }}</small>
+          </div>
+          <div class="admin-row-actions">
+            <button
+              v-if="report.commentStatus === 1"
+              class="danger-action"
+              type="button"
+              @click="moderateReportedComment(report.commentId, 'HIDE')"
+            >
+              隐藏
+            </button>
+            <button
+              v-else-if="report.commentStatus != null"
+              class="secondary-action mini-action"
+              type="button"
+              @click="moderateReportedComment(report.commentId, 'RESTORE')"
+            >
+              恢复
+            </button>
+            <button
+              v-if="report.commentStatus === 1"
+              class="secondary-action mini-action"
+              type="button"
+              @click="moderateReportedComment(report.commentId, 'PIN')"
+            >
+              <Pin :size="15" />
+              置顶
+            </button>
+          </div>
+        </article>
+        <EmptyState v-if="!commentReports.items.length">暂无匹配的评论举报。</EmptyState>
+      </div>
+      <div v-if="reportPageCount > 1" class="list-pagination">
+        <button type="button" :disabled="reportPage <= 1" @click="setReportPage(reportPage - 1)">上一页</button>
+        <span>{{ reportPage }} / {{ reportPageCount }}</span>
+        <button type="button" :disabled="reportPage >= reportPageCount" @click="setReportPage(reportPage + 1)">下一页</button>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { Disc3, ListMusic, Mic2, Music2, Pencil, Plus, RefreshCw, Trash2, Users, Wand2 } from "lucide-vue-next";
+import { Disc3, ListMusic, Mic2, Music2, Pencil, Pin, Plus, RefreshCw, ShieldCheck, Trash2, Users, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
-import type { AdminUser, Album, Artist, PageResult, Song } from "@/api/types";
+import type { AdminUser, Album, Artist, CommentReportItem, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
@@ -477,6 +540,11 @@ const songs = ref<Song[]>([]);
 const artists = ref<Artist[]>([]);
 const albums = ref<Album[]>([]);
 const users = ref<AdminUser[]>([]);
+const commentReports = ref<PageResult<CommentReportItem>>({ items: [], page: 1, size: 10, total: 0 });
+const reportStatus = ref("OPEN");
+const reportPage = ref(1);
+const reportsLoading = ref(false);
+const REPORT_PAGE_SIZE = 10;
 const lyricMatching = ref(false);
 const savingSong = ref(false);
 const savingArtist = ref(false);
@@ -613,6 +681,7 @@ const songPageCount = computed(() => pageCount(filteredSongs.value.length));
 const albumPageCount = computed(() => pageCount(filteredAlbums.value.length));
 const artistPageCount = computed(() => pageCount(filteredArtists.value.length));
 const userPageCount = computed(() => pageCount(filteredUsers.value.length));
+const reportPageCount = computed(() => Math.max(1, Math.ceil(commentReports.value.total / REPORT_PAGE_SIZE)));
 
 watch(
   () => songForm.artistId,
@@ -666,6 +735,11 @@ watch(userPageCount, (count) => {
   adminPages.users = Math.min(adminPages.users, count);
 });
 
+watch(reportStatus, () => {
+  reportPage.value = 1;
+  void loadCommentReports();
+});
+
 onMounted(loadAdmin);
 
 async function loadAdmin() {
@@ -681,6 +755,44 @@ async function loadAdmin() {
   songs.value = songPage;
   artists.value = artistPage;
   albums.value = albumPage;
+  await loadCommentReports();
+}
+
+async function loadCommentReports() {
+  reportsLoading.value = true;
+  try {
+    commentReports.value = await adminApi.commentReports({
+      status: reportStatus.value,
+      page: reportPage.value,
+      size: REPORT_PAGE_SIZE
+    });
+  } finally {
+    reportsLoading.value = false;
+  }
+}
+
+function setReportPage(page: number) {
+  reportPage.value = Math.min(Math.max(page, 1), reportPageCount.value);
+  void loadCommentReports();
+}
+
+async function moderateReportedComment(
+  commentId: number,
+  action: "HIDE" | "RESTORE" | "PIN" | "UNPIN"
+) {
+  await adminApi.moderateComment(commentId, action);
+  ui.toast(action === "HIDE" ? "评论已隐藏" : action === "RESTORE" ? "评论已恢复" : "评论已置顶");
+  await loadCommentReports();
+}
+
+function formatAdminTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 async function fetchAllPageItems<T>(loader: (page: number, size: number) => Promise<PageResult<T>>) {

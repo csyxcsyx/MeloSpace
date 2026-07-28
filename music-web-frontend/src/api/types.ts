@@ -160,6 +160,31 @@ export interface CommentItem {
   status: number;
   createdAt: string;
   updatedAt: string;
+  parentId: number | null;
+  replyToUserId: number | null;
+  replyToNickname: string | null;
+  userNickname: string;
+  userAvatarUrl: string | null;
+  likeCount: number;
+  replyCount: number;
+  liked: boolean;
+  pinned: boolean;
+  deleted: boolean;
+  mine: boolean;
+}
+
+export interface CommentReportItem {
+  id: number;
+  commentId: number;
+  reporterUserId: number;
+  reporterNickname: string;
+  reason: string;
+  detail: string | null;
+  status: "OPEN" | "RESOLVED" | "DISMISSED";
+  commentContent: string | null;
+  commentStatus: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FavoriteItem {

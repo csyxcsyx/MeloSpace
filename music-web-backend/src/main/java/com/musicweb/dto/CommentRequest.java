@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Size;
 public record CommentRequest(
         @NotBlank @Size(max = 20) String targetType,
         @NotNull @Positive Long targetId,
-        @NotBlank @Size(max = 1000) String content
+        @NotBlank @Size(max = 500) String content,
+        @Positive Long parentId,
+        @Positive Long replyToUserId
 ) {
 }

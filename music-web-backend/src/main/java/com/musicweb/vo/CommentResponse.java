@@ -10,6 +10,17 @@ public record CommentResponse(
         String content,
         Integer status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Long parentId,
+        Long replyToUserId,
+        String replyToNickname,
+        String userNickname,
+        String userAvatarUrl,
+        int likeCount,
+        int replyCount,
+        boolean liked,
+        boolean pinned,
+        boolean deleted,
+        boolean mine
 ) {
 }

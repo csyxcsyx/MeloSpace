@@ -5,6 +5,7 @@ import type {
   Artist,
   AuthResponse,
   CommentItem,
+  CommentReportItem,
   FavoriteItem,
   LddcLyricResult,
   PageResult,
@@ -88,11 +89,28 @@ export const favoriteApi = {
 };
 
 export const commentApi = {
-  list: (targetType: "SONG" | "PLAYLIST", targetId: number, page = 1, size = 20) =>
-    unwrap<PageResult<CommentItem>>(http.get("/api/comments", { params: { targetType, targetId, page, size } })),
-  create: (targetType: "SONG" | "PLAYLIST", targetId: number, content: string) =>
-    unwrap<CommentItem>(http.post("/api/comments", { targetType, targetId, content })),
-  remove: (id: number) => unwrap<void>(http.delete(`/api/comments/${id}`))
+  list: (targetType: "SONG" | "PLAYLIST", targetId: number, sort: "LATEST" | "HOT" = "LATEST", page = 1, size = 20) =>
+    unwrap<PageResult<CommentItem>>(http.get("/api/comments", { params: { targetType, targetId, sort, page, size } })),
+  replies: (id: number, page = 1, size = 50) =>
+    unwrap<PageResult<CommentItem>>(http.get(`/api/comments/${id}/replies`, { params: { page, size } })),
+  create: (
+    targetType: "SONG" | "PLAYLIST",
+    targetId: number,
+    content: string,
+    parentId?: number,
+    replyToUserId?: number
+  ) => unwrap<CommentItem>(http.post("/api/comments", {
+    targetType,
+    targetId,
+    content,
+    parentId,
+    replyToUserId
+  })),
+  remove: (id: number) => unwrap<void>(http.delete(`/api/comments/${id}`)),
+  like: (id: number) => unwrap<CommentItem>(http.put(`/api/comments/${id}/like`)),
+  unlike: (id: number) => unwrap<CommentItem>(http.delete(`/api/comments/${id}/like`)),
+  report: (id: number, reason: string, detail?: string) =>
+    unwrap<void>(http.post(`/api/comments/${id}/reports`, { reason, detail }))
 };
 
 export const searchApi = {
@@ -126,6 +144,10 @@ export const adminApi = {
   deleteUser: (id: number) => unwrap<void>(http.delete(`/api/admin/users/${id}`)),
   songs: (params: { page?: number; size?: number; keyword?: string; status?: number } = {}) =>
     unwrap<PageResult<Song>>(http.get("/api/admin/songs", { params })),
+  commentReports: (params: { page?: number; size?: number; status?: string } = {}) =>
+    unwrap<PageResult<CommentReportItem>>(http.get("/api/admin/comment-reports", { params })),
+  moderateComment: (id: number, action: "HIDE" | "RESTORE" | "PIN" | "UNPIN") =>
+    unwrap<CommentItem>(http.patch(`/api/admin/comments/${id}`, { action })),
   createSong: (payload: Partial<Song> & { title: string; artistId: number; albumId: number; audioUrl: string }) =>
     unwrap<Song>(http.post("/api/admin/songs", payload)),
   updateSong: (id: number, payload: Partial<Song> & { title: string; artistId: number; albumId: number; audioUrl: string }) =>

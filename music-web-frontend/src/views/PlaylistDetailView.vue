@@ -83,6 +83,12 @@
         />
         <EmptyState v-else>歌单还没有歌曲。</EmptyState>
       </section>
+
+      <CommentThread
+        v-if="playlist.visibility === 'PUBLIC'"
+        :target-id="playlist.id"
+        target-type="PLAYLIST"
+      />
     </template>
     <EmptyState v-else>歌单不存在或没有访问权限。</EmptyState>
   </section>
@@ -94,6 +100,7 @@ import { useRoute, useRouter } from "vue-router";
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-vue-next";
 import { favoriteApi, playlistApi } from "@/api";
 import type { PlaylistDetail, PlaylistSong, Song } from "@/api/types";
+import CommentThread from "@/components/CommentThread.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
