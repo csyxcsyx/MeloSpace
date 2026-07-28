@@ -7,7 +7,6 @@ import com.musicweb.dto.RegisterRequest;
 import com.musicweb.entity.User;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.security.JwtService;
-import com.musicweb.service.AdminAccountService;
 import com.musicweb.service.AuthService;
 import com.musicweb.service.UserService;
 import com.musicweb.vo.AuthResponse;
@@ -27,18 +26,15 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final AdminAccountService adminAccountService;
 
     public AuthServiceImpl(
             UserService userService,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService,
-            AdminAccountService adminAccountService
+            JwtService jwtService
     ) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.adminAccountService = adminAccountService;
     }
 
     @Override
@@ -67,9 +63,6 @@ public class AuthServiceImpl implements AuthService {
         String username = request.username().trim();
         User user = findExactUser(username);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            if (adminAccountService.isBootstrapAdminCredentials(username, request.password())) {
-                return toAuthResponse(adminAccountService.ensureAdminAccount());
-            }
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
         }
         if (user.getStatus() == null || user.getStatus() != STATUS_ENABLED) {

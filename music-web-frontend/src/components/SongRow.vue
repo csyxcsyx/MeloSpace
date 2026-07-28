@@ -2,10 +2,7 @@
   <div
     class="song-row"
     :class="{ 'song-row-active': isCurrent }"
-    tabindex="0"
-    :aria-label="`双击播放 ${song.title} 并打开歌词`"
     @dblclick="$emit('openPlayer', song)"
-    @keydown.enter="$emit('openPlayer', song)"
   >
     <button
       class="song-cover"
@@ -24,7 +21,15 @@
       </span>
     </button>
     <div class="song-info">
-      <div class="song-name">{{ song.title }}</div>
+      <RouterLink
+        class="song-name song-name-link"
+        :to="{ name: 'song-detail', params: { id: song.id } }"
+        :aria-label="`查看歌曲 ${song.title} 的详情与评论`"
+        @click.stop
+        @dblclick.stop
+      >
+        {{ song.title }}
+      </RouterLink>
       <RouterLink
         v-if="song.artistId"
         class="song-artist song-artist-link"
@@ -66,3 +71,25 @@ const coverLabel = computed(() => {
   return props.isPlaying ? `暂停 ${props.song.title}` : `继续播放 ${props.song.title}`;
 });
 </script>
+
+<style scoped>
+.song-row.song-row {
+  grid-template-columns: max-content minmax(0, 1fr) 44px;
+}
+
+.song-name-link {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  color: #303035;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.song-name-link:hover,
+.song-name-link:focus-visible {
+  color: var(--brand);
+  outline: 0;
+  text-decoration: underline;
+}
+</style>

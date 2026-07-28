@@ -45,6 +45,54 @@ class BackendFoundationIntegrationTests {
     }
 
     @Test
+    void securityPolicyAllowsPublicReadsAndProtectsEveryOtherApiRequest() {
+        ResponseEntity<JsonNode> publicSearch = restTemplate.getForEntity(
+                url("/api/search?keyword=I"),
+                JsonNode.class
+        );
+        assertThat(publicSearch.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> publicSongDetail = restTemplate.getForEntity(
+                url("/api/songs/1"),
+                JsonNode.class
+        );
+        assertThat(publicSongDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> missingMedia = restTemplate.getForEntity(
+                url("/media/does-not-exist.mp3"),
+                String.class
+        );
+        assertThat(missingMedia.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<JsonNode> publicLogout = restTemplate.postForEntity(
+                url("/api/auth/logout"),
+                null,
+                JsonNode.class
+        );
+        assertThat(publicLogout.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<JsonNode> protectedUnknownApi = restTemplate.getForEntity(
+                url("/api/favorites"),
+                JsonNode.class
+        );
+        assertThat(protectedUnknownApi.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(protectedUnknownApi.getBody().get("code").asInt()).isEqualTo(401);
+
+        ResponseEntity<JsonNode> protectedNestedMusicApi = restTemplate.getForEntity(
+                url("/api/songs/1/play-record"),
+                JsonNode.class
+        );
+        assertThat(protectedNestedMusicApi.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<JsonNode> protectedPublicPathWrite = restTemplate.postForEntity(
+                url("/api/search"),
+                Map.of(),
+                JsonNode.class
+        );
+        assertThat(protectedPublicPathWrite.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void authFlowUsesUnifiedResponsesAndRoleChecks() {
         ResponseEntity<JsonNode> noToken = restTemplate.getForEntity(url("/api/users/me"), JsonNode.class);
         assertThat(noToken.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
@@ -97,22 +145,6 @@ class BackendFoundationIntegrationTests {
     void seededYuxiandeAdminCanLogin() {
         JsonNode adminLogin = login("YUXIANde", "rex1234567");
         assertThat(adminLogin.get("data").get("user").get("role").asText()).isEqualTo("ADMIN");
-    }
-
-    @Test
-    void yuxiandeAdminLoginRepairsMissingSeedAccount() {
-        jdbcTemplate.update("DELETE FROM `user` WHERE username = ?", "YUXIANde");
-
-        JsonNode adminLogin = login("YUXIANde", "rex1234567");
-
-        assertThat(adminLogin.get("data").get("user").get("username").asText()).isEqualTo("YUXIANde");
-        assertThat(adminLogin.get("data").get("user").get("role").asText()).isEqualTo("ADMIN");
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM `user` WHERE username = ? AND role = 'ADMIN' AND status = 1",
-                Integer.class,
-                "YUXIANde"
-        );
-        assertThat(count).isEqualTo(1);
     }
 
     @Test

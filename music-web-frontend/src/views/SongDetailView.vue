@@ -30,7 +30,8 @@
           <span class="chevron">›</span>
         </div>
         <form class="inline-form" @submit.prevent="addToPlaylist">
-          <select v-model.number="selectedPlaylistId">
+          <label class="sr-only" for="song-playlist-select">选择要加入的歌单</label>
+          <select id="song-playlist-select" v-model.number="selectedPlaylistId">
             <option :value="0">选择我的歌单</option>
             <option v-for="playlist in myPlaylists" :key="playlist.id" :value="playlist.id">{{ playlist.title }}</option>
           </select>
@@ -44,7 +45,8 @@
           <span class="chevron">›</span>
         </div>
         <form v-if="auth.isAuthenticated" class="comment-form" @submit.prevent="submitComment">
-          <textarea v-model.trim="commentText" placeholder="写一条评论" />
+          <label class="sr-only" for="song-comment-content">评论内容</label>
+          <textarea id="song-comment-content" v-model.trim="commentText" maxlength="500" placeholder="写一条评论" />
           <button type="submit">发布</button>
         </form>
         <div class="comment-list">

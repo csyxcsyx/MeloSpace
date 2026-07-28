@@ -10,7 +10,8 @@
       aria-haspopup="menu"
       @click.stop="toggleMenu"
       @dblclick.stop
-      @keydown.esc.stop="closeMenu"
+      @keydown.down.prevent.stop="openMenu"
+      @keydown.esc.stop="closeMenu(true)"
     >
       <MoreHorizontal :size="variant === 'player' ? 21 : 18" />
     </button>
@@ -27,13 +28,22 @@
           :aria-label="`${song.title} 的歌曲操作`"
           @click.stop
           @dblclick.stop
-          @keydown.esc.stop="closeMenu"
+          @keydown.down.prevent.stop="focusMenuItem(1)"
+          @keydown.up.prevent.stop="focusMenuItem(-1)"
+          @keydown.home.prevent.stop="focusMenuBoundary('first')"
+          @keydown.end.prevent.stop="focusMenuBoundary('last')"
+          @keydown.tab="closeMenu()"
+          @keydown.esc.stop="closeMenu(true)"
         >
           <header class="song-actions-menu-head">
             <strong>{{ song.title }}</strong>
             <span>{{ song.artistName || "未知歌手" }}</span>
           </header>
 
+          <button type="button" role="menuitem" @click="goToSongDetail">
+            <MessageCircle :size="17" />
+            <span>歌曲详情 / 查看评论</span>
+          </button>
           <button type="button" role="menuitem" @click="favoriteSong">
             <Heart :size="17" />
             <span>收藏</span>
@@ -77,7 +87,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ChevronDown, Download, FolderPlus, Heart, ListMusic, ListPlus, MoreHorizontal } from "lucide-vue-next";
+import { ChevronDown, Download, FolderPlus, Heart, ListMusic, ListPlus, MessageCircle, MoreHorizontal } from "lucide-vue-next";
 import { favoriteApi, playlistApi, userApi } from "@/api";
 import type { Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
@@ -125,19 +135,51 @@ onBeforeUnmount(() => {
 
 async function toggleMenu() {
   if (menuOpen.value) {
-    closeMenu();
+    closeMenu(true);
+    return;
+  }
+  await openMenu();
+}
+
+async function openMenu() {
+  if (menuOpen.value) {
+    focusMenuBoundary("first");
     return;
   }
   menuOpen.value = true;
   window.dispatchEvent(new CustomEvent(MENU_OPEN_EVENT, { detail: menuInstanceId }));
   await nextTick();
   positionMenu();
+  focusMenuBoundary("first");
 }
 
-function closeMenu() {
+function closeMenu(restoreTriggerFocus = false) {
   menuOpen.value = false;
   playlistPickerOpen.value = false;
   menuStyle.value = {};
+  if (restoreTriggerFocus) {
+    nextTick(() => triggerRef.value?.focus());
+  }
+}
+
+function menuItems() {
+  return Array.from(menuRef.value?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+}
+
+function focusMenuBoundary(boundary: "first" | "last") {
+  const items = menuItems();
+  const target = boundary === "first" ? items[0] : items.at(-1);
+  target?.focus();
+}
+
+function focusMenuItem(offset: 1 | -1) {
+  const items = menuItems();
+  if (!items.length) return;
+  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+  const nextIndex = currentIndex < 0
+    ? (offset === 1 ? 0 : items.length - 1)
+    : (currentIndex + offset + items.length) % items.length;
+  items[nextIndex]?.focus();
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
@@ -192,6 +234,11 @@ function requireLogin() {
   router.push({ name: "login", query: { redirect: route.fullPath } });
   closeMenu();
   return false;
+}
+
+function goToSongDetail() {
+  router.push({ name: "song-detail", params: { id: props.song.id } });
+  closeMenu();
 }
 
 async function favoriteSong() {
@@ -260,3 +307,12 @@ function downloadSong() {
   closeMenu();
 }
 </script>
+
+<style scoped>
+.song-actions-trigger-row,
+.song-actions-menu > button,
+.song-actions-submenu button {
+  min-width: 44px;
+  min-height: 44px;
+}
+</style>

@@ -31,6 +31,26 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Configuration
 public class SecurityConfig {
 
+    private static final String[] PUBLIC_GET_API_PATHS = {
+            "/api/songs",
+            "/api/songs/*",
+            "/api/artists",
+            "/api/albums",
+            "/api/search",
+            "/api/playlists",
+            "/api/playlists/*",
+            "/api/comments"
+    };
+
+    private static final String[] PUBLIC_RESOURCE_PATHS = {
+            "/",
+            "/index.html",
+            "/favicon.ico",
+            "/assets/**",
+            "/media/**",
+            "/error"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -46,14 +66,12 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .headers(headers -> headers.cacheControl(cache -> cache.disable()))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health", "/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(PUBLIC_RESOURCE_PATHS).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/me/**", "/api/users/me").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/playlists", "/api/playlists/*/songs").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/favorites", "/api/comments", "/api/songs/*/play-record").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/playlists/*", "/api/playlists/*/songs/order").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/playlists/*", "/api/playlists/*/songs/*").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/favorites", "/api/comments/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_API_PATHS).permitAll()
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

@@ -13,6 +13,8 @@ spring:
     enabled: false
 
 music-web:
+  admin-bootstrap:
+    enabled: false
   jwt:
     secret: test-secret-for-music-web-backend-foundation
     issuer: music-web-test

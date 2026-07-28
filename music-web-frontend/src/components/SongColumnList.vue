@@ -1,17 +1,16 @@
 <template>
-  <div class="song-columns" :style="gridStyle">
-    <div v-for="(column, index) in columns" :key="index" class="song-list">
-      <SongRow
-        v-for="song in column"
-        :key="song.id"
-        :song="song"
-        :is-current="player.currentSong?.id === song.id"
-        :is-playing="player.isPlaying"
-        @toggle-play="$emit('togglePlay', $event)"
-        @open-player="$emit('openPlayer', $event)"
-        @more="$emit('more', $event)"
-      />
-    </div>
+  <div class="song-columns" :style="gridStyle" role="list">
+    <SongRow
+      v-for="song in songs"
+      :key="song.id"
+      :song="song"
+      :is-current="player.currentSong?.id === song.id"
+      :is-playing="player.isPlaying"
+      role="listitem"
+      @toggle-play="$emit('togglePlay', $event)"
+      @open-player="$emit('openPlayer', $event)"
+      @more="$emit('more', $event)"
+    />
   </div>
 </template>
 
@@ -34,12 +33,10 @@ defineEmits<{
 
 const player = usePlayerStore();
 
-const columns = computed(() => {
-  const count = props.columnCount ?? 4;
-  return Array.from({ length: count }, (_, columnIndex) => props.songs.filter((_, index) => index % count === columnIndex));
-});
+const columnCount = computed(() => Math.max(1, Math.floor(props.columnCount ?? 4)));
 
 const gridStyle = computed<Record<string, string>>(() => ({
-  "--song-column-count": String(columns.value.length)
+  "--song-column-count": String(columnCount.value),
+  "row-gap": "6px"
 }));
 </script>
