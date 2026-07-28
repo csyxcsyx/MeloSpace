@@ -9,6 +9,8 @@ spring:
       mode: always
       schema-locations: classpath:db/schema-test.sql
       data-locations: classpath:db/data-test.sql
+  flyway:
+    enabled: false
 
 music-web:
   jwt:
