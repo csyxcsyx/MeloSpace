@@ -12,23 +12,19 @@ import com.musicweb.entity.Artist;
 import com.musicweb.entity.Comment;
 import com.musicweb.entity.Favorite;
 import com.musicweb.entity.PlayHistory;
-import com.musicweb.entity.Playlist;
 import com.musicweb.entity.PlaylistSong;
 import com.musicweb.entity.Song;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.mapper.CommentMapper;
 import com.musicweb.mapper.FavoriteMapper;
 import com.musicweb.mapper.PlayHistoryMapper;
-import com.musicweb.mapper.PlaylistMapper;
 import com.musicweb.mapper.SongMapper;
 import com.musicweb.service.AlbumService;
 import com.musicweb.service.ArtistService;
 import com.musicweb.service.PlaylistSongService;
+import com.musicweb.service.SearchService;
 import com.musicweb.service.SongService;
 import com.musicweb.support.MusicResponseAssembler;
-import com.musicweb.vo.AlbumResponse;
-import com.musicweb.vo.ArtistResponse;
-import com.musicweb.vo.PlaylistResponse;
 import com.musicweb.vo.SearchResponse;
 import com.musicweb.vo.SongResponse;
 import java.util.Collections;
@@ -47,14 +43,12 @@ import org.springframework.util.StringUtils;
 public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements SongService {
 
     private static final int STATUS_PUBLISHED = 1;
-    private static final String VISIBILITY_PUBLIC = "PUBLIC";
     private static final String TARGET_TYPE_SONG = "SONG";
-    private static final int SEARCH_LIMIT = 10;
 
     private final ArtistService artistService;
     private final AlbumService albumService;
-    private final PlaylistMapper playlistMapper;
     private final PlaylistSongService playlistSongService;
+    private final SearchService searchService;
     private final FavoriteMapper favoriteMapper;
     private final CommentMapper commentMapper;
     private final PlayHistoryMapper playHistoryMapper;
@@ -62,16 +56,16 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     public SongServiceImpl(
             ArtistService artistService,
             AlbumService albumService,
-            PlaylistMapper playlistMapper,
             PlaylistSongService playlistSongService,
+            SearchService searchService,
             FavoriteMapper favoriteMapper,
             CommentMapper commentMapper,
             PlayHistoryMapper playHistoryMapper
     ) {
         this.artistService = artistService;
         this.albumService = albumService;
-        this.playlistMapper = playlistMapper;
         this.playlistSongService = playlistSongService;
+        this.searchService = searchService;
         this.favoriteMapper = favoriteMapper;
         this.commentMapper = commentMapper;
         this.playHistoryMapper = playHistoryMapper;
@@ -106,49 +100,7 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
 
     @Override
     public SearchResponse search(String keyword) {
-        if (!StringUtils.hasText(keyword)) {
-            return new SearchResponse(List.of(), List.of(), List.of(), List.of());
-        }
-
-        Page<Song> songPage = page(
-                new Page<>(1, SEARCH_LIMIT),
-                basePublishedWrapper()
-                        .like(Song::getTitle, keyword)
-                        .orderByDesc(Song::getPlayCount)
-                        .orderByDesc(Song::getId)
-        );
-        List<Artist> artists = artistService.page(
-                new Page<>(1, SEARCH_LIMIT),
-                new LambdaQueryWrapper<Artist>()
-                        .like(Artist::getName, keyword)
-                        .orderByDesc(Artist::getUpdatedAt)
-                        .orderByDesc(Artist::getId)
-        ).getRecords();
-        List<Album> albums = albumService.page(
-                new Page<>(1, SEARCH_LIMIT),
-                new LambdaQueryWrapper<Album>()
-                        .like(Album::getTitle, keyword)
-                        .orderByDesc(Album::getUpdatedAt)
-                        .orderByDesc(Album::getId)
-                ).getRecords();
-        List<Playlist> playlists = playlistMapper.selectPage(
-                new Page<>(1, SEARCH_LIMIT),
-                new LambdaQueryWrapper<Playlist>()
-                        .eq(Playlist::getVisibility, VISIBILITY_PUBLIC)
-                        .like(Playlist::getTitle, keyword)
-                        .orderByDesc(Playlist::getUpdatedAt)
-                        .orderByDesc(Playlist::getId)
-        ).getRecords();
-
-        Map<Long, Artist> albumArtists = loadArtistsByIds(
-                albums.stream().map(Album::getArtistId).collect(Collectors.toSet())
-        );
-        return new SearchResponse(
-                toSongResponses(songPage.getRecords()),
-                artists.stream().map(MusicResponseAssembler::toArtistResponse).toList(),
-                albums.stream().map(album -> MusicResponseAssembler.toAlbumResponse(album, albumArtists)).toList(),
-                playlists.stream().map(this::toPlaylistResponse).toList()
-        );
+        return searchService.search(keyword);
     }
 
     @Override
@@ -296,20 +248,4 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
                 .collect(Collectors.toMap(Album::getId, Function.identity()));
     }
 
-    private PlaylistResponse toPlaylistResponse(Playlist playlist) {
-        return new PlaylistResponse(
-                playlist.getId(),
-                playlist.getUserId(),
-                playlist.getTitle(),
-                playlist.getDescription(),
-                playlist.getCoverUrl(),
-                playlist.getVisibility(),
-                playlist.getPlayCount(),
-                playlist.getFavoriteCount(),
-                playlistSongService.count(new LambdaQueryWrapper<PlaylistSong>()
-                        .eq(PlaylistSong::getPlaylistId, playlist.getId())),
-                playlist.getCreatedAt(),
-                playlist.getUpdatedAt()
-        );
-    }
 }

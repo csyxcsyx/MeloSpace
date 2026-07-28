@@ -39,10 +39,23 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
 
     @Override
     public UploadFileResponse upload(MultipartFile file, String fileType, Long ownerId) {
+        return upload(file, getUploadSpec(fileType), ownerId, false);
+    }
+
+    @Override
+    public UploadFileResponse uploadImage(MultipartFile file, String purpose, Long ownerId) {
+        return upload(file, getImageUploadSpec(purpose), ownerId, true);
+    }
+
+    private UploadFileResponse upload(
+            MultipartFile file,
+            UploadSpec uploadSpec,
+            Long ownerId,
+            boolean verifyImageContent
+    ) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "上传文件不能为空", HttpStatus.BAD_REQUEST);
         }
-        UploadSpec uploadSpec = getUploadSpec(fileType);
         validateSize(file, uploadSpec);
 
         String originalName = StringUtils.getFilename(file.getOriginalFilename());
@@ -56,6 +69,9 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
         extension = extension.toLowerCase(Locale.ROOT);
         validateExtension(extension, uploadSpec);
         validateMimeType(file.getContentType(), uploadSpec);
+        if (verifyImageContent) {
+            validateImageContent(file, extension);
+        }
 
         String storedName = UUID.randomUUID() + "." + extension;
         Path root = Path.of(mediaProperties.storageRoot()).toAbsolutePath().normalize();
@@ -95,6 +111,34 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
         uploadFile.setSizeBytes(file.getSize());
         save(uploadFile);
         return UploadFileResponseAssembler.toUploadFileResponse(getById(uploadFile.getId()));
+    }
+
+    private UploadSpec getImageUploadSpec(String purpose) {
+        if (!StringUtils.hasText(purpose)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "图片用途不能为空", HttpStatus.BAD_REQUEST);
+        }
+        String normalized = purpose.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "AVATAR" -> new UploadSpec(
+                    "AVATAR",
+                    "avatar",
+                    Set.of("jpg", "jpeg", "png", "webp"),
+                    DataSize.ofMegabytes(5),
+                    Set.of("image/jpeg", "image/png", "image/webp")
+            );
+            case "PLAYLIST_COVER" -> new UploadSpec(
+                    "PLAYLIST_COVER",
+                    "playlist-cover",
+                    Set.of("jpg", "jpeg", "png", "webp"),
+                    DataSize.ofMegabytes(5),
+                    Set.of("image/jpeg", "image/png", "image/webp")
+            );
+            default -> throw new BusinessException(
+                    ErrorCode.PARAM_ERROR,
+                    "图片用途仅支持 AVATAR 或 PLAYLIST_COVER",
+                    HttpStatus.BAD_REQUEST
+            );
+        };
     }
 
     private UploadSpec getUploadSpec(String fileType) {
@@ -155,11 +199,81 @@ public class UploadFileServiceImpl extends ServiceImpl<UploadFileMapper, UploadF
         if (!StringUtils.hasText(contentType)) {
             return;
         }
-        String normalized = contentType.toLowerCase(Locale.ROOT);
+        String normalized = contentType.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
         boolean supported = uploadSpec.mimePrefixes().stream().anyMatch(normalized::startsWith);
         if (!supported) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "不支持的 MIME 类型", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private void validateImageContent(MultipartFile file, String extension) {
+        byte[] header;
+        try (InputStream inputStream = file.getInputStream()) {
+            header = inputStream.readNBytes(12);
+        } catch (IOException exception) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "无法读取图片内容", HttpStatus.BAD_REQUEST);
+        }
+
+        String detectedType = detectImageType(header, header.length);
+        String expectedType = switch (extension) {
+            case "jpg", "jpeg" -> "JPEG";
+            case "png" -> "PNG";
+            case "webp" -> "WEBP";
+            default -> "";
+        };
+        String contentType = file.getContentType();
+        String normalizedMime = StringUtils.hasText(contentType)
+                ? contentType.toLowerCase(Locale.ROOT).split(";", 2)[0].trim()
+                : "";
+        String expectedMime = switch (expectedType) {
+            case "JPEG" -> "image/jpeg";
+            case "PNG" -> "image/png";
+            case "WEBP" -> "image/webp";
+            default -> "";
+        };
+        if (!expectedType.equals(detectedType) || !expectedMime.equals(normalizedMime)) {
+            throw new BusinessException(
+                    ErrorCode.PARAM_ERROR,
+                    "图片内容、扩展名与 MIME 类型必须一致",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    private String detectImageType(byte[] header, int bytesRead) {
+        if (bytesRead >= 3
+                && unsigned(header[0]) == 0xff
+                && unsigned(header[1]) == 0xd8
+                && unsigned(header[2]) == 0xff) {
+            return "JPEG";
+        }
+        if (bytesRead >= 8
+                && unsigned(header[0]) == 0x89
+                && header[1] == 'P'
+                && header[2] == 'N'
+                && header[3] == 'G'
+                && unsigned(header[4]) == 0x0d
+                && unsigned(header[5]) == 0x0a
+                && unsigned(header[6]) == 0x1a
+                && unsigned(header[7]) == 0x0a) {
+            return "PNG";
+        }
+        if (bytesRead >= 12
+                && header[0] == 'R'
+                && header[1] == 'I'
+                && header[2] == 'F'
+                && header[3] == 'F'
+                && header[8] == 'W'
+                && header[9] == 'E'
+                && header[10] == 'B'
+                && header[11] == 'P') {
+            return "WEBP";
+        }
+        return "UNKNOWN";
+    }
+
+    private int unsigned(byte value) {
+        return value & 0xff;
     }
 
     private String buildUrl(String relativePath) {

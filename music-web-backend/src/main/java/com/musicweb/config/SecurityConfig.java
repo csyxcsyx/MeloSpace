@@ -26,10 +26,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 public class SecurityConfig {
+
+    private static final RequestMatcher PUBLIC_USER_PROFILE_GET = request ->
+            HttpMethod.GET.matches(request.getMethod())
+                    && request.getRequestURI().matches("^/api/users/[0-9]+(?:/playlists)?$");
 
     private static final String[] PUBLIC_GET_API_PATHS = {
             "/api/songs",
@@ -37,6 +42,7 @@ public class SecurityConfig {
             "/api/artists",
             "/api/albums",
             "/api/search",
+            "/api/search/*",
             "/api/playlists",
             "/api/playlists/*",
             "/api/comments"
@@ -70,6 +76,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(PUBLIC_RESOURCE_PATHS).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(PUBLIC_USER_PROFILE_GET).permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_API_PATHS).permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

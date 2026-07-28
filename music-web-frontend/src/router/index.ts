@@ -7,6 +7,7 @@ import ArtistDetailView from "@/views/ArtistDetailView.vue";
 import SongDetailView from "@/views/SongDetailView.vue";
 import PlaylistDetailView from "@/views/PlaylistDetailView.vue";
 import ProfileView from "@/views/ProfileView.vue";
+import PublicProfileView from "@/views/PublicProfileView.vue";
 import AdminView from "@/views/AdminView.vue";
 import LoginView from "@/views/LoginView.vue";
 import PlayerView from "@/views/PlayerView.vue";
@@ -76,6 +77,7 @@ const router = createRouter({
     { path: "/artists/:id", name: "artist-detail", component: ArtistDetailView, props: true, meta: { keepAlive: true } },
     { path: "/songs/:id", name: "song-detail", component: SongDetailView, props: true, meta: { keepAlive: true } },
     { path: "/playlists/:id", name: "playlist-detail", component: PlaylistDetailView, props: true, meta: { keepAlive: true } },
+    { path: "/users/:id", name: "public-profile", component: PublicProfileView, props: true, meta: { keepAlive: true } },
     { path: "/me", name: "profile", component: ProfileView, meta: { requiresAuth: true } },
     { path: "/admin", name: "admin", component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: "/login", name: "login", component: LoginView },

@@ -7,7 +7,8 @@ public record UserSummaryResponse(
         String username,
         String nickname,
         String avatarUrl,
-        String role
+        String role,
+        String bio
 ) {
 
     public static UserSummaryResponse from(User user) {
@@ -16,7 +17,8 @@ public record UserSummaryResponse(
                 user.getUsername(),
                 user.getNickname(),
                 user.getAvatarUrl(),
-                user.getRole()
+                user.getRole(),
+                user.getBio()
         );
     }
 }

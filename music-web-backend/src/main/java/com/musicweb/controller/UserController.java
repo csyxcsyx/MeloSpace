@@ -2,6 +2,7 @@ package com.musicweb.controller;
 
 import com.musicweb.common.ApiResponse;
 import com.musicweb.common.PageResult;
+import com.musicweb.dto.UpdateUserProfileRequest;
 import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.FavoriteService;
 import com.musicweb.service.PlayHistoryService;
@@ -10,13 +11,19 @@ import com.musicweb.service.UserAccountService;
 import com.musicweb.vo.FavoriteResponse;
 import com.musicweb.vo.PlayHistoryResponse;
 import com.musicweb.vo.PlaylistResponse;
+import com.musicweb.vo.PublicUserResponse;
 import com.musicweb.vo.UserSummaryResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,13 +52,15 @@ public class UserController {
 
     @GetMapping("/me")
     public ApiResponse<UserSummaryResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
-        return ApiResponse.ok(new UserSummaryResponse(
-                principal.getId(),
-                principal.getUsername(),
-                principal.getNickname(),
-                principal.getAvatarUrl(),
-                principal.getRole()
-        ));
+        return ApiResponse.ok(userAccountService.getCurrentUser(principal.getId()));
+    }
+
+    @PutMapping("/me")
+    public ApiResponse<UserSummaryResponse> updateMe(
+            @Valid @RequestBody UpdateUserProfileRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(userAccountService.updateProfile(principal.getId(), request));
     }
 
     @GetMapping("/me/playlists")
@@ -91,5 +100,19 @@ public class UserController {
     public ApiResponse<Void> deleteMe(@AuthenticationPrincipal UserPrincipal principal) {
         userAccountService.deleteUser(principal.getId());
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<PublicUserResponse> getPublicUser(@PathVariable @Positive Long id) {
+        return ApiResponse.ok(userAccountService.getPublicUser(id));
+    }
+
+    @GetMapping("/{id}/playlists")
+    public ApiResponse<PageResult<PlaylistResponse>> getPublicUserPlaylists(
+            @PathVariable @Positive Long id,
+            @RequestParam(defaultValue = "1") @Min(1) long page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size
+    ) {
+        return ApiResponse.ok(userAccountService.listPublicUserPlaylists(id, page, size));
     }
 }

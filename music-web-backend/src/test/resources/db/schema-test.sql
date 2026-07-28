@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50) NOT NULL,
   avatar_url VARCHAR(500),
+  bio VARCHAR(500),
   role VARCHAR(20) NOT NULL DEFAULT 'USER',
   status TINYINT NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -109,3 +110,9 @@ CREATE TABLE IF NOT EXISTS upload_file (
   size_bytes BIGINT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_playlist_user_visibility_updated_at
+  ON playlist (user_id, visibility, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_user_status_nickname
+  ON `user` (status, nickname);

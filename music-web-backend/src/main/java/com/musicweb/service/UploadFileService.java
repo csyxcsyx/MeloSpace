@@ -8,4 +8,6 @@ import org.springframework.web.multipart.MultipartFile;
 public interface UploadFileService extends IService<UploadFile> {
 
     UploadFileResponse upload(MultipartFile file, String fileType, Long ownerId);
+
+    UploadFileResponse uploadImage(MultipartFile file, String purpose, Long ownerId);
 }

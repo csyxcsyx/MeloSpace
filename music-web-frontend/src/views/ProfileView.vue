@@ -4,6 +4,62 @@
       <h1 class="page-title">我的音乐</h1>
     </header>
 
+    <section class="profile-editor-card" data-glass="regular" aria-labelledby="profile-editor-title">
+      <div class="profile-editor-avatar">
+        <span>
+          <img v-if="profileAvatarUrl" :src="resolveMediaUrl(profileAvatarUrl)" alt="" />
+          <strong v-else>{{ profileInitial }}</strong>
+        </span>
+        <div>
+          <h2 id="profile-editor-title">编辑资料</h2>
+          <p>昵称、头像和简介会展示在你的公开主页。</p>
+        </div>
+      </div>
+      <form class="profile-editor-form" @submit.prevent="saveProfile">
+        <label>
+          <span>昵称</span>
+          <input
+            v-model.trim="profileNickname"
+            maxlength="50"
+            autocomplete="nickname"
+            required
+            placeholder="怎么称呼你"
+          />
+        </label>
+        <label class="profile-editor-bio">
+          <span>简介 <small>{{ profileBio.length }}/500</small></span>
+          <textarea
+            v-model="profileBio"
+            maxlength="500"
+            rows="3"
+            placeholder="分享你的音乐偏好或歌单故事"
+          />
+        </label>
+        <div class="profile-editor-actions">
+          <input
+            ref="avatarFileInput"
+            class="sr-only"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            @change="uploadAvatar"
+          />
+          <button
+            class="secondary-action"
+            type="button"
+            :disabled="uploadingAvatar || savingProfile"
+            @click="avatarFileInput?.click()"
+          >
+            <Upload :size="17" aria-hidden="true" />
+            {{ uploadingAvatar ? "上传中…" : "更换头像" }}
+          </button>
+          <span class="profile-upload-status" aria-live="polite">{{ avatarUploadStatus }}</span>
+          <button class="primary-action" type="submit" :disabled="savingProfile || uploadingAvatar || !profileNickname">
+            {{ savingProfile ? "保存中…" : "保存资料" }}
+          </button>
+        </div>
+      </form>
+    </section>
+
     <section class="profile-grid">
       <div class="compact-panel">
         <div class="section-head">
@@ -144,11 +200,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { Trash2 } from "lucide-vue-next";
-import { favoriteApi, playlistApi, songApi, userApi } from "@/api";
+import { Trash2, Upload } from "lucide-vue-next";
+import { favoriteApi, playlistApi, songApi, uploadApi, userApi } from "@/api";
 import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
+import { resolveMediaUrl } from "@/utils/format";
 
 interface FavoriteDisplayItem extends FavoriteItem {
   song?: Song | null;
@@ -174,12 +231,20 @@ const favoriteSort = ref("newest");
 const recentSort = ref("latest");
 const favoriteTypeFilter = ref<"ALL" | "SONG" | "PLAYLIST">("ALL");
 const clearingRecent = ref(false);
+const profileNickname = ref("");
+const profileBio = ref("");
+const profileAvatarUrl = ref("");
+const avatarFileInput = ref<HTMLInputElement | null>(null);
+const uploadingAvatar = ref(false);
+const savingProfile = ref(false);
+const avatarUploadStatus = ref("");
 const profilePages = reactive({
   playlists: 1,
   favorites: 1,
   recent: 1
 });
 const PROFILE_PAGE_SIZE = 6;
+const profileInitial = computed(() => (profileNickname.value || auth.user?.username || "M").slice(0, 1).toLocaleUpperCase());
 
 const filteredPlaylists = computed(() => {
   const query = normalizeSearch(playlistQuery.value);
@@ -230,7 +295,60 @@ watch([recentQuery, recentSort], () => {
   profilePages.recent = 1;
 });
 
-onMounted(loadProfile);
+onMounted(() => {
+  syncProfileEditor();
+  void loadProfile();
+});
+
+function syncProfileEditor() {
+  profileNickname.value = auth.user?.nickname || auth.user?.username || "";
+  profileBio.value = auth.user?.bio || "";
+  profileAvatarUrl.value = auth.user?.avatarUrl || "";
+}
+
+async function uploadAvatar(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file || uploadingAvatar.value || savingProfile.value) return;
+  if (!file.type.startsWith("image/")) {
+    ui.toast("请选择图片文件");
+    return;
+  }
+
+  uploadingAvatar.value = true;
+  avatarUploadStatus.value = "正在上传头像";
+  try {
+    const upload = await uploadApi.image(file, "AVATAR");
+    profileAvatarUrl.value = upload.url;
+    avatarUploadStatus.value = "头像已上传，保存资料后生效";
+  } catch {
+    avatarUploadStatus.value = "上传失败，请重试";
+  } finally {
+    uploadingAvatar.value = false;
+  }
+}
+
+async function saveProfile() {
+  const nickname = profileNickname.value.trim();
+  const bio = profileBio.value.trim();
+  if (!nickname || nickname.length > 50 || bio.length > 500 || savingProfile.value || uploadingAvatar.value) return;
+
+  savingProfile.value = true;
+  try {
+    await userApi.updateMe({
+      nickname,
+      bio: bio || null,
+      avatarUrl: profileAvatarUrl.value || null
+    });
+    await auth.refreshMe();
+    syncProfileEditor();
+    avatarUploadStatus.value = "";
+    ui.toast("个人资料已更新");
+  } finally {
+    savingProfile.value = false;
+  }
+}
 
 async function loadProfile() {
   const [playlistPage, favoritePage, recentPage] = await Promise.all([

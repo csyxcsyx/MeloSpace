@@ -17,6 +17,7 @@ export interface UserSummary {
   username: string;
   nickname: string | null;
   avatarUrl: string | null;
+  bio?: string | null;
   role: "USER" | "ADMIN";
 }
 
@@ -108,6 +109,46 @@ export interface SearchResponse {
   artists: Artist[];
   albums: Album[];
   playlists: Playlist[];
+  users: PublicUserProfile[];
+  totals: SearchTotals;
+}
+
+export type SearchResultType = "songs" | "artists" | "albums" | "playlists" | "users";
+export type SearchTab = "all" | SearchResultType;
+export type SearchSuggestionType = "SONG" | "ARTIST" | "ALBUM" | "PLAYLIST" | "USER";
+
+export interface SearchTotals {
+  songs: number;
+  artists: number;
+  albums: number;
+  playlists: number;
+  users: number;
+}
+
+export interface SearchSuggestion {
+  type: SearchSuggestionType;
+  id: number;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+}
+
+export interface PublicUserProfile {
+  id: number;
+  nickname: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  publicPlaylistCount: number;
+  receivedFavoriteCount: number;
+  commentCount: number;
+}
+
+export interface SearchResultItemMap {
+  songs: Song;
+  artists: Artist;
+  albums: Album;
+  playlists: Playlist;
+  users: PublicUserProfile;
 }
 
 export interface CommentItem {

@@ -33,6 +33,10 @@ http.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiResponse<null>>) => {
+    if (axios.isCancel(error) || error.code === "ERR_CANCELED") {
+      return Promise.reject(error);
+    }
+
     const config = error.config as RetryableConfig | undefined;
     const method = config?.method?.toUpperCase();
     const status = error.response?.status;

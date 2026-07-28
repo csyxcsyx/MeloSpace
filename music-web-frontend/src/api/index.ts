@@ -11,7 +11,11 @@ import type {
   PlayHistoryItem,
   Playlist,
   PlaylistDetail,
+  PublicUserProfile,
   SearchResponse,
+  SearchResultItemMap,
+  SearchResultType,
+  SearchSuggestion,
   Song,
   UploadFile,
   UserSummary
@@ -29,6 +33,11 @@ export const authApi = {
 
 export const userApi = {
   me: () => unwrap<UserSummary>(http.get("/api/users/me")),
+  publicProfile: (id: number) => unwrap<PublicUserProfile>(http.get(`/api/users/${id}`)),
+  publicPlaylists: (id: number, page = 1, size = 20) =>
+    unwrap<PageResult<Playlist>>(http.get(`/api/users/${id}/playlists`, { params: { page, size } })),
+  updateMe: (payload: { nickname: string; avatarUrl?: string | null; bio?: string | null }) =>
+    unwrap<UserSummary>(http.put("/api/users/me", payload)),
   deleteMe: () => unwrap<void>(http.delete("/api/users/me")),
   playlists: (page = 1, size = 20) =>
     unwrap<PageResult<Playlist>>(http.get("/api/users/me/playlists", { params: { page, size } })),
@@ -87,7 +96,27 @@ export const commentApi = {
 };
 
 export const searchApi = {
-  all: (keyword: string) => unwrap<SearchResponse>(http.get("/api/search", { params: { keyword } }))
+  all: (keyword: string, signal?: AbortSignal) =>
+    unwrap<SearchResponse>(http.get("/api/search", { params: { keyword }, signal })),
+  suggestions: (keyword: string, limit = 8, signal?: AbortSignal) =>
+    unwrap<SearchSuggestion[]>(http.get("/api/search/suggestions", { params: { keyword, limit }, signal })),
+  byType: <T extends SearchResultType>(
+    type: T,
+    keyword: string,
+    page = 1,
+    size = 20,
+    signal?: AbortSignal
+  ) => unwrap<PageResult<SearchResultItemMap[T]>>(
+    http.get(`/api/search/${type}`, { params: { keyword, page, size }, signal })
+  )
+};
+
+export const uploadApi = {
+  image: (file: File, purpose: "AVATAR" | "PLAYLIST_COVER") => {
+    const form = new FormData();
+    form.append("file", file);
+    return unwrap<UploadFile>(http.post("/api/uploads/images", form, { params: { purpose } }));
+  }
 };
 
 export const adminApi = {

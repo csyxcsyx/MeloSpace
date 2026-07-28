@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50) NOT NULL,
   avatar_url VARCHAR(500) NULL,
+  bio VARCHAR(500) NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'USER',
   status TINYINT NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -17,7 +18,8 @@ CREATE TABLE IF NOT EXISTS `user` (
   PRIMARY KEY (id),
   UNIQUE KEY uk_user_username (username),
   KEY idx_user_role (role),
-  KEY idx_user_status (status)
+  KEY idx_user_status (status),
+  KEY idx_user_status_nickname (status, nickname)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 ALTER TABLE `user`
@@ -87,6 +89,7 @@ CREATE TABLE IF NOT EXISTS playlist (
   KEY idx_playlist_user_id (user_id),
   KEY idx_playlist_visibility (visibility),
   KEY idx_playlist_play_count (play_count),
+  KEY idx_playlist_user_visibility_updated_at (user_id, visibility, updated_at),
   CONSTRAINT fk_playlist_user FOREIGN KEY (user_id) REFERENCES `user` (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

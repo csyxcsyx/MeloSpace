@@ -17,6 +17,7 @@ public class User {
     private String passwordHash;
     private String nickname;
     private String avatarUrl;
+    private String bio;
     private String role;
     private Integer status;
     private LocalDateTime createdAt;
