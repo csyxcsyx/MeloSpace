@@ -7,6 +7,8 @@ public record FavoriteResponse(
         Long userId,
         String targetType,
         Long targetId,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        SongResponse song,
+        PlaylistResponse playlist
 ) {
 }

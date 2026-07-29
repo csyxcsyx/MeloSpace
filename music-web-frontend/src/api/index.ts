@@ -71,21 +71,30 @@ export const playlistApi = {
   list: (params: { page?: number; size?: number; keyword?: string } = {}) =>
     unwrap<PageResult<Playlist>>(http.get("/api/playlists", { params })),
   detail: (id: number) => unwrap<PlaylistDetail>(http.get(`/api/playlists/${id}`)),
-  create: (payload: { title: string; description?: string; coverUrl?: string; visibility?: string }) =>
+  create: (payload: { title: string; description?: string; coverUrl?: string; visibility?: string; tags?: string[] }) =>
     unwrap<PlaylistDetail>(http.post("/api/playlists", payload)),
-  update: (id: number, payload: { title: string; description?: string; coverUrl?: string; visibility?: string }) =>
+  update: (id: number, payload: { title: string; description?: string; coverUrl?: string; visibility?: string; tags?: string[] }) =>
     unwrap<PlaylistDetail>(http.put(`/api/playlists/${id}`, payload)),
   remove: (id: number) => unwrap<void>(http.delete(`/api/playlists/${id}`)),
   addSong: (id: number, songId: number) => unwrap<PlaylistDetail>(http.post(`/api/playlists/${id}/songs`, { songId })),
   removeSong: (id: number, songId: number) => unwrap<PlaylistDetail>(http.delete(`/api/playlists/${id}/songs/${songId}`)),
-  reorder: (id: number, songIds: number[]) => unwrap<PlaylistDetail>(http.put(`/api/playlists/${id}/songs/order`, { songIds }))
+  reorder: (id: number, songIds: number[]) => unwrap<PlaylistDetail>(http.put(`/api/playlists/${id}/songs/order`, { songIds })),
+  addSongs: (id: number, songIds: number[]) =>
+    unwrap<PlaylistDetail>(http.post(`/api/playlists/${id}/songs/batch`, { songIds })),
+  removeSongs: (id: number, songIds: number[]) =>
+    unwrap<PlaylistDetail>(http.delete(`/api/playlists/${id}/songs/batch`, { data: { songIds } })),
+  recordPlay: (id: number) => unwrap<PlaylistDetail>(http.post(`/api/playlists/${id}/play`))
 };
 
 export const favoriteApi = {
   add: (targetType: "SONG" | "PLAYLIST", targetId: number) =>
     unwrap<FavoriteItem>(http.post("/api/favorites", { targetType, targetId })),
   remove: (targetType: "SONG" | "PLAYLIST", targetId: number) =>
-    unwrap<void>(http.delete("/api/favorites", { params: { targetType, targetId } }))
+    unwrap<void>(http.delete("/api/favorites", { params: { targetType, targetId } })),
+  statuses: (targetType: "SONG" | "PLAYLIST", targetIds: number[]) =>
+    unwrap<Record<string, boolean>>(http.get("/api/favorites/status", {
+      params: { targetType, targetIds: targetIds.join(",") }
+    }))
 };
 
 export const commentApi = {

@@ -12,11 +12,14 @@ import jakarta.validation.constraints.Size;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
@@ -45,5 +48,14 @@ public class FavoriteController {
     ) {
         favoriteService.unfavorite(targetType, targetId, principal.getId());
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/status")
+    public ApiResponse<Map<Long, Boolean>> favoriteStatuses(
+            @RequestParam @NotBlank @Size(max = 20) String targetType,
+            @RequestParam @Size(min = 1, max = 100) List<@Positive Long> targetIds,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(favoriteService.favoriteStatuses(targetType, targetIds, principal.getId()));
     }
 }

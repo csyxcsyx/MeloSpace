@@ -36,6 +36,10 @@ public class SecurityConfig {
             HttpMethod.GET.matches(request.getMethod())
                     && request.getRequestURI().matches("^/api/users/[0-9]+(?:/playlists)?$");
 
+    private static final RequestMatcher PUBLIC_PLAYLIST_PLAY = request ->
+            HttpMethod.POST.matches(request.getMethod())
+                    && request.getRequestURI().matches("^/api/playlists/[0-9]+/play$");
+
     private static final String[] PUBLIC_GET_API_PATHS = {
             "/api/songs",
             "/api/songs/*",
@@ -78,6 +82,7 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_RESOURCE_PATHS).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(PUBLIC_USER_PROFILE_GET).permitAll()
+                        .requestMatchers(PUBLIC_PLAYLIST_PLAY).permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_API_PATHS).permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS playlist (
   KEY idx_playlist_user_id (user_id),
   KEY idx_playlist_visibility (visibility),
   KEY idx_playlist_play_count (play_count),
+  KEY idx_playlist_visibility_popularity (visibility, favorite_count, play_count, updated_at),
   KEY idx_playlist_user_visibility_updated_at (user_id, visibility, updated_at),
   CONSTRAINT fk_playlist_user FOREIGN KEY (user_id) REFERENCES `user` (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -107,6 +108,17 @@ CREATE TABLE IF NOT EXISTS playlist_song (
   CONSTRAINT fk_playlist_song_song FOREIGN KEY (song_id) REFERENCES song (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS playlist_tag (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  playlist_id BIGINT NOT NULL,
+  tag VARCHAR(12) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_playlist_tag (playlist_id, tag),
+  KEY idx_playlist_tag_lookup (tag, playlist_id),
+  CONSTRAINT fk_playlist_tag_playlist FOREIGN KEY (playlist_id) REFERENCES playlist (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS favorite (
   id BIGINT NOT NULL AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
@@ -116,6 +128,7 @@ CREATE TABLE IF NOT EXISTS favorite (
   PRIMARY KEY (id),
   UNIQUE KEY uk_favorite_target (user_id, target_type, target_id),
   KEY idx_favorite_user_id (user_id),
+  KEY idx_favorite_target_lookup (target_type, target_id, user_id),
   CONSTRAINT fk_favorite_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

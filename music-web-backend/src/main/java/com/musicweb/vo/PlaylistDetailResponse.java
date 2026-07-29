@@ -12,8 +12,15 @@ public record PlaylistDetailResponse(
         String visibility,
         Long playCount,
         Long favoriteCount,
+        Long songCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        String creatorNickname,
+        String creatorAvatarUrl,
+        List<String> tags,
+        Long commentCount,
+        boolean favorited,
+        boolean canManage,
         List<PlaylistSongResponse> songs
 ) {
 }

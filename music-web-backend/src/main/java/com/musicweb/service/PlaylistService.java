@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.musicweb.common.PageResult;
 import com.musicweb.dto.PlaylistOrderRequest;
 import com.musicweb.dto.PlaylistSongRequest;
+import com.musicweb.dto.PlaylistSongBatchRequest;
 import com.musicweb.dto.PlaylistUpsertRequest;
 import com.musicweb.entity.Playlist;
 import com.musicweb.vo.PlaylistDetailResponse;
@@ -11,7 +12,7 @@ import com.musicweb.vo.PlaylistResponse;
 
 public interface PlaylistService extends IService<Playlist> {
 
-    PageResult<PlaylistResponse> listPublicPlaylists(long page, long size, String keyword);
+    PageResult<PlaylistResponse> listPublicPlaylists(long page, long size, String keyword, Long currentUserId);
 
     PageResult<PlaylistResponse> listUserPlaylists(Long userId, long page, long size);
 
@@ -28,4 +29,10 @@ public interface PlaylistService extends IService<Playlist> {
     PlaylistDetailResponse removeSong(Long playlistId, Long songId, Long userId);
 
     PlaylistDetailResponse reorderSongs(Long playlistId, PlaylistOrderRequest request, Long userId);
+
+    PlaylistDetailResponse addSongs(Long playlistId, PlaylistSongBatchRequest request, Long userId);
+
+    PlaylistDetailResponse removeSongs(Long playlistId, PlaylistSongBatchRequest request, Long userId);
+
+    PlaylistDetailResponse recordPlay(Long playlistId, Long currentUserId);
 }

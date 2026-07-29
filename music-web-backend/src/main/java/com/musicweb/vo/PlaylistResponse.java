@@ -1,6 +1,7 @@
 package com.musicweb.vo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record PlaylistResponse(
         Long id,
@@ -13,6 +14,12 @@ public record PlaylistResponse(
         Long favoriteCount,
         Long songCount,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        String creatorNickname,
+        String creatorAvatarUrl,
+        List<String> tags,
+        Long commentCount,
+        boolean favorited,
+        boolean canManage
 ) {
 }

@@ -268,7 +268,13 @@ public class UserAccountServiceImpl implements UserAccountService {
                 playlist.getFavoriteCount(),
                 songCount,
                 playlist.getCreatedAt(),
-                playlist.getUpdatedAt()
+                playlist.getUpdatedAt(),
+                null,
+                null,
+                List.of(),
+                0L,
+                false,
+                false
         );
     }
 

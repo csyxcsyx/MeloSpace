@@ -90,6 +90,12 @@ export interface Playlist {
   songCount: number;
   createdAt: string;
   updatedAt: string;
+  creatorNickname: string | null;
+  creatorAvatarUrl: string | null;
+  tags: string[];
+  commentCount: number;
+  favorited: boolean;
+  canManage: boolean;
 }
 
 export interface PlaylistSong {

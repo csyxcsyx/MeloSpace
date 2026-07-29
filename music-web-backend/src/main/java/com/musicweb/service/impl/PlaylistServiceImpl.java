@@ -7,6 +7,7 @@ import com.musicweb.common.ErrorCode;
 import com.musicweb.common.PageResult;
 import com.musicweb.dto.PlaylistOrderRequest;
 import com.musicweb.dto.PlaylistSongRequest;
+import com.musicweb.dto.PlaylistSongBatchRequest;
 import com.musicweb.dto.PlaylistUpsertRequest;
 import com.musicweb.entity.Album;
 import com.musicweb.entity.Artist;
@@ -14,9 +15,13 @@ import com.musicweb.entity.Comment;
 import com.musicweb.entity.Favorite;
 import com.musicweb.entity.Playlist;
 import com.musicweb.entity.PlaylistSong;
+import com.musicweb.entity.PlaylistTag;
 import com.musicweb.entity.Song;
+import com.musicweb.entity.User;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.mapper.PlaylistMapper;
+import com.musicweb.mapper.PlaylistTagMapper;
+import com.musicweb.mapper.UserMapper;
 import com.musicweb.service.AlbumService;
 import com.musicweb.service.ArtistService;
 import com.musicweb.service.CommentService;
@@ -57,6 +62,8 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     private final AlbumService albumService;
     private final FavoriteService favoriteService;
     private final CommentService commentService;
+    private final PlaylistTagMapper playlistTagMapper;
+    private final UserMapper userMapper;
 
     public PlaylistServiceImpl(
             PlaylistSongService playlistSongService,
@@ -64,7 +71,9 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
             ArtistService artistService,
             AlbumService albumService,
             FavoriteService favoriteService,
-            CommentService commentService
+            CommentService commentService,
+            PlaylistTagMapper playlistTagMapper,
+            UserMapper userMapper
     ) {
         this.playlistSongService = playlistSongService;
         this.songService = songService;
@@ -72,17 +81,19 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         this.albumService = albumService;
         this.favoriteService = favoriteService;
         this.commentService = commentService;
+        this.playlistTagMapper = playlistTagMapper;
+        this.userMapper = userMapper;
     }
 
     @Override
-    public PageResult<PlaylistResponse> listPublicPlaylists(long page, long size, String keyword) {
+    public PageResult<PlaylistResponse> listPublicPlaylists(long page, long size, String keyword, Long currentUserId) {
         LambdaQueryWrapper<Playlist> wrapper = new LambdaQueryWrapper<Playlist>()
                 .eq(Playlist::getVisibility, VISIBILITY_PUBLIC)
                 .like(StringUtils.hasText(keyword), Playlist::getTitle, keyword)
                 .orderByDesc(Playlist::getUpdatedAt)
                 .orderByDesc(Playlist::getId);
         Page<Playlist> playlistPage = page(new Page<>(page, size), wrapper);
-        return toPlaylistPageResult(playlistPage);
+        return toPlaylistPageResult(playlistPage, currentUserId);
     }
 
     @Override
@@ -92,13 +103,13 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
                 .orderByDesc(Playlist::getUpdatedAt)
                 .orderByDesc(Playlist::getId);
         Page<Playlist> playlistPage = page(new Page<>(page, size), wrapper);
-        return toPlaylistPageResult(playlistPage);
+        return toPlaylistPageResult(playlistPage, userId);
     }
 
     @Override
     public PlaylistDetailResponse getPlaylist(Long id, Long currentUserId) {
         Playlist playlist = getVisiblePlaylist(id, currentUserId);
-        return toPlaylistDetail(playlist);
+        return toPlaylistDetail(playlist, currentUserId);
     }
 
     @Override
@@ -110,16 +121,26 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         playlist.setPlayCount(0L);
         playlist.setFavoriteCount(0L);
         save(playlist);
-        return toPlaylistDetail(getById(playlist.getId()));
+        replaceTags(playlist.getId(), request.tags());
+        return toPlaylistDetail(getById(playlist.getId()), userId);
     }
 
     @Override
     @Transactional
     public PlaylistDetailResponse updatePlaylist(Long id, PlaylistUpsertRequest request, Long userId) {
         Playlist playlist = getOwnedPlaylist(id, userId);
+        boolean becomesPrivate = VISIBILITY_PUBLIC.equals(playlist.getVisibility())
+                && VISIBILITY_PRIVATE.equals(normalizeVisibility(request.visibility()));
         applyPlaylistRequest(playlist, request);
         updateById(playlist);
-        return toPlaylistDetail(getById(id));
+        replaceTags(id, request.tags());
+        if (becomesPrivate) {
+            favoriteService.remove(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getTargetType, TARGET_TYPE_PLAYLIST)
+                    .eq(Favorite::getTargetId, id));
+            baseMapper.setFavoriteCount(id, 0);
+        }
+        return toPlaylistDetail(getById(id), userId);
     }
 
     @Override
@@ -133,6 +154,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         commentService.remove(new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getTargetType, TARGET_TYPE_PLAYLIST)
                 .eq(Comment::getTargetId, id));
+        playlistTagMapper.delete(new LambdaQueryWrapper<PlaylistTag>().eq(PlaylistTag::getPlaylistId, id));
         removeById(playlist.getId());
     }
 
@@ -155,7 +177,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
             playlistSong.setSortOrder(nextSortOrder(playlistId));
             playlistSongService.save(playlistSong);
         }
-        return toPlaylistDetail(playlist);
+        return toPlaylistDetail(playlist, userId);
     }
 
     @Override
@@ -166,7 +188,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
                 .eq(PlaylistSong::getPlaylistId, playlistId)
                 .eq(PlaylistSong::getSongId, songId));
         normalizeSortOrder(playlistId);
-        return toPlaylistDetail(playlist);
+        return toPlaylistDetail(playlist, userId);
     }
 
     @Override
@@ -188,14 +210,104 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
             relation.setSortOrder(index + 1);
             playlistSongService.updateById(relation);
         }
-        return toPlaylistDetail(playlist);
+        return toPlaylistDetail(playlist, userId);
+    }
+
+    @Override
+    @Transactional
+    public PlaylistDetailResponse addSongs(Long playlistId, PlaylistSongBatchRequest request, Long userId) {
+        Playlist playlist = getOwnedPlaylist(playlistId, userId);
+        List<Long> songIds = distinctSongIds(request.songIds());
+        Map<Long, Song> publishedSongs = songService.listByIds(songIds).stream()
+                .filter(song -> Objects.equals(song.getStatus(), STATUS_PUBLISHED))
+                .collect(Collectors.toMap(Song::getId, Function.identity()));
+        if (publishedSongs.size() != songIds.size()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "批量歌曲中包含不存在或已下架内容", HttpStatus.NOT_FOUND);
+        }
+        Set<Long> existingIds = playlistSongService.list(new LambdaQueryWrapper<PlaylistSong>()
+                        .eq(PlaylistSong::getPlaylistId, playlistId)
+                        .in(PlaylistSong::getSongId, songIds))
+                .stream()
+                .map(PlaylistSong::getSongId)
+                .collect(Collectors.toSet());
+        int sortOrder = nextSortOrder(playlistId);
+        for (Long songId : songIds) {
+            if (existingIds.contains(songId)) {
+                continue;
+            }
+            PlaylistSong relation = new PlaylistSong();
+            relation.setPlaylistId(playlistId);
+            relation.setSongId(songId);
+            relation.setSortOrder(sortOrder++);
+            playlistSongService.save(relation);
+        }
+        return toPlaylistDetail(playlist, userId);
+    }
+
+    @Override
+    @Transactional
+    public PlaylistDetailResponse removeSongs(Long playlistId, PlaylistSongBatchRequest request, Long userId) {
+        Playlist playlist = getOwnedPlaylist(playlistId, userId);
+        List<Long> songIds = distinctSongIds(request.songIds());
+        playlistSongService.remove(new LambdaQueryWrapper<PlaylistSong>()
+                .eq(PlaylistSong::getPlaylistId, playlistId)
+                .in(PlaylistSong::getSongId, songIds));
+        normalizeSortOrder(playlistId);
+        return toPlaylistDetail(playlist, userId);
+    }
+
+    @Override
+    @Transactional
+    public PlaylistDetailResponse recordPlay(Long playlistId, Long currentUserId) {
+        Playlist playlist = getVisiblePlaylist(playlistId, currentUserId);
+        baseMapper.incrementPlayCount(playlistId);
+        return toPlaylistDetail(getById(playlistId), currentUserId);
     }
 
     private void applyPlaylistRequest(Playlist playlist, PlaylistUpsertRequest request) {
-        playlist.setTitle(request.title());
-        playlist.setDescription(request.description());
-        playlist.setCoverUrl(request.coverUrl());
+        playlist.setTitle(request.title().trim());
+        playlist.setDescription(normalizeNullableText(request.description()));
+        playlist.setCoverUrl(normalizeNullableText(request.coverUrl()));
         playlist.setVisibility(normalizeVisibility(request.visibility()));
+    }
+
+    private void replaceTags(Long playlistId, List<String> requestedTags) {
+        List<String> tags = normalizeTags(requestedTags);
+        playlistTagMapper.delete(new LambdaQueryWrapper<PlaylistTag>().eq(PlaylistTag::getPlaylistId, playlistId));
+        for (int index = 0; index < tags.size(); index++) {
+            PlaylistTag relation = new PlaylistTag();
+            relation.setPlaylistId(playlistId);
+            relation.setTag(tags.get(index));
+            relation.setSortOrder(index + 1);
+            playlistTagMapper.insert(relation);
+        }
+    }
+
+    private List<String> normalizeTags(List<String> requestedTags) {
+        if (requestedTags == null || requestedTags.isEmpty()) {
+            return List.of();
+        }
+        List<String> tags = requestedTags.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (tags.size() > 5 || tags.stream().anyMatch(tag -> tag.codePointCount(0, tag.length()) > 12)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "歌单标签最多 5 个且每个不超过 12 字", HttpStatus.BAD_REQUEST);
+        }
+        return tags;
+    }
+
+    private List<Long> distinctSongIds(List<Long> songIds) {
+        List<Long> distinct = songIds.stream().distinct().toList();
+        if (distinct.size() != songIds.size()) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "批量歌曲不能重复", HttpStatus.BAD_REQUEST);
+        }
+        return distinct;
+    }
+
+    private String normalizeNullableText(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private String normalizeVisibility(String visibility) {
@@ -261,33 +373,81 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         }
     }
 
-    private PageResult<PlaylistResponse> toPlaylistPageResult(Page<Playlist> page) {
+    private PageResult<PlaylistResponse> toPlaylistPageResult(Page<Playlist> page, Long currentUserId) {
         return new PageResult<>(
-                page.getRecords().stream().map(this::toPlaylistResponse).toList(),
+                toPlaylistResponses(page.getRecords(), currentUserId),
                 page.getCurrent(),
                 page.getSize(),
                 page.getTotal()
         );
     }
 
-    private PlaylistResponse toPlaylistResponse(Playlist playlist) {
-        return new PlaylistResponse(
-                playlist.getId(),
-                playlist.getUserId(),
-                playlist.getTitle(),
-                playlist.getDescription(),
-                playlist.getCoverUrl(),
-                playlist.getVisibility(),
-                playlist.getPlayCount(),
-                playlist.getFavoriteCount(),
-                playlistSongService.count(new LambdaQueryWrapper<PlaylistSong>()
-                        .eq(PlaylistSong::getPlaylistId, playlist.getId())),
-                playlist.getCreatedAt(),
-                playlist.getUpdatedAt()
-        );
+    private List<PlaylistResponse> toPlaylistResponses(List<Playlist> playlists, Long currentUserId) {
+        if (playlists.isEmpty()) {
+            return List.of();
+        }
+        List<Long> playlistIds = playlists.stream().map(Playlist::getId).toList();
+        Map<Long, Long> songCounts = playlistSongService.list(new LambdaQueryWrapper<PlaylistSong>()
+                        .in(PlaylistSong::getPlaylistId, playlistIds))
+                .stream()
+                .collect(Collectors.groupingBy(PlaylistSong::getPlaylistId, Collectors.counting()));
+        Map<Long, List<String>> tagsByPlaylist = playlistTagMapper.selectList(new LambdaQueryWrapper<PlaylistTag>()
+                        .in(PlaylistTag::getPlaylistId, playlistIds)
+                        .orderByAsc(PlaylistTag::getSortOrder)
+                        .orderByAsc(PlaylistTag::getId))
+                .stream()
+                .collect(Collectors.groupingBy(
+                        PlaylistTag::getPlaylistId,
+                        Collectors.mapping(PlaylistTag::getTag, Collectors.toList())
+                ));
+        Map<Long, Long> commentCounts = commentService.list(new LambdaQueryWrapper<Comment>()
+                        .eq(Comment::getTargetType, TARGET_TYPE_PLAYLIST)
+                        .in(Comment::getTargetId, playlistIds)
+                        .isNull(Comment::getParentId)
+                        .eq(Comment::getStatus, 1))
+                .stream()
+                .collect(Collectors.groupingBy(Comment::getTargetId, Collectors.counting()));
+        Map<Long, User> creators = userMapper.selectBatchIds(
+                        playlists.stream().map(Playlist::getUserId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        Set<Long> favoriteIds = currentUserId == null
+                ? Set.of()
+                : favoriteService.list(new LambdaQueryWrapper<Favorite>()
+                                .eq(Favorite::getUserId, currentUserId)
+                                .eq(Favorite::getTargetType, TARGET_TYPE_PLAYLIST)
+                                .in(Favorite::getTargetId, playlistIds))
+                        .stream()
+                        .map(Favorite::getTargetId)
+                        .collect(Collectors.toSet());
+        return playlists.stream().map(playlist -> {
+            User creator = creators.get(playlist.getUserId());
+            return new PlaylistResponse(
+                    playlist.getId(),
+                    playlist.getUserId(),
+                    playlist.getTitle(),
+                    playlist.getDescription(),
+                    playlist.getCoverUrl(),
+                    playlist.getVisibility(),
+                    playlist.getPlayCount(),
+                    playlist.getFavoriteCount(),
+                    songCounts.getOrDefault(playlist.getId(), 0L),
+                    playlist.getCreatedAt(),
+                    playlist.getUpdatedAt(),
+                    creator == null ? "已注销用户" : creator.getNickname(),
+                    creator == null ? null : creator.getAvatarUrl(),
+                    tagsByPlaylist.getOrDefault(playlist.getId(), List.of()),
+                    VISIBILITY_PUBLIC.equals(playlist.getVisibility())
+                            ? commentCounts.getOrDefault(playlist.getId(), 0L)
+                            : 0L,
+                    favoriteIds.contains(playlist.getId()),
+                    currentUserId != null && Objects.equals(playlist.getUserId(), currentUserId)
+            );
+        }).toList();
     }
 
-    private PlaylistDetailResponse toPlaylistDetail(Playlist playlist) {
+    private PlaylistDetailResponse toPlaylistDetail(Playlist playlist, Long currentUserId) {
+        PlaylistResponse summary = toPlaylistResponses(List.of(playlist), currentUserId).get(0);
         return new PlaylistDetailResponse(
                 playlist.getId(),
                 playlist.getUserId(),
@@ -297,8 +457,15 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
                 playlist.getVisibility(),
                 playlist.getPlayCount(),
                 playlist.getFavoriteCount(),
+                summary.songCount(),
                 playlist.getCreatedAt(),
                 playlist.getUpdatedAt(),
+                summary.creatorNickname(),
+                summary.creatorAvatarUrl(),
+                summary.tags(),
+                summary.commentCount(),
+                summary.favorited(),
+                summary.canManage(),
                 toPlaylistSongResponses(listPlaylistSongs(playlist.getId()))
         );
     }

@@ -354,7 +354,13 @@ public class SearchServiceImpl implements SearchService {
                 playlistSongService.count(new LambdaQueryWrapper<PlaylistSong>()
                         .eq(PlaylistSong::getPlaylistId, playlist.getId())),
                 playlist.getCreatedAt(),
-                playlist.getUpdatedAt()
+                playlist.getUpdatedAt(),
+                null,
+                null,
+                List.of(),
+                0L,
+                false,
+                false
         );
     }
 

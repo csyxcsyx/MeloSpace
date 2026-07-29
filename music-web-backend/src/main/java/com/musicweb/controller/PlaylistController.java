@@ -4,6 +4,7 @@ import com.musicweb.common.ApiResponse;
 import com.musicweb.common.PageResult;
 import com.musicweb.dto.PlaylistOrderRequest;
 import com.musicweb.dto.PlaylistSongRequest;
+import com.musicweb.dto.PlaylistSongBatchRequest;
 import com.musicweb.dto.PlaylistUpsertRequest;
 import com.musicweb.security.UserPrincipal;
 import com.musicweb.service.PlaylistService;
@@ -40,9 +41,15 @@ public class PlaylistController {
     public ApiResponse<PageResult<PlaylistResponse>> listPlaylists(
             @RequestParam(defaultValue = "1") @Min(1) long page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) long size,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.ok(playlistService.listPublicPlaylists(page, size, keyword));
+        return ApiResponse.ok(playlistService.listPublicPlaylists(
+                page,
+                size,
+                keyword,
+                principal == null ? null : principal.getId()
+        ));
     }
 
     @GetMapping("/{id}")
@@ -105,5 +112,31 @@ public class PlaylistController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ApiResponse.ok(playlistService.reorderSongs(id, request, principal.getId()));
+    }
+
+    @PostMapping("/{id}/songs/batch")
+    public ApiResponse<PlaylistDetailResponse> addSongs(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody PlaylistSongBatchRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(playlistService.addSongs(id, request, principal.getId()));
+    }
+
+    @DeleteMapping("/{id}/songs/batch")
+    public ApiResponse<PlaylistDetailResponse> removeSongs(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody PlaylistSongBatchRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(playlistService.removeSongs(id, request, principal.getId()));
+    }
+
+    @PostMapping("/{id}/play")
+    public ApiResponse<PlaylistDetailResponse> recordPlay(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ApiResponse.ok(playlistService.recordPlay(id, principal == null ? null : principal.getId()));
     }
 }
