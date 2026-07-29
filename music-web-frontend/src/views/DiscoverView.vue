@@ -219,7 +219,18 @@ function relativeTime(value: string) {
   display: flex;
   align-items: end;
   justify-content: space-between;
+  min-width: 0;
   gap: 16px;
+}
+
+.discover-title-row > div {
+  min-width: 0;
+}
+
+.discover-title-row .page-title {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .discover-title-row p,
@@ -412,6 +423,11 @@ function relativeTime(value: string) {
   .discover-title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .discover-title-row .page-title {
+    font-size: clamp(29px, 9vw, 36px);
+    line-height: 1.08;
   }
 
   .latest-playlist-list,
