@@ -1,15 +1,15 @@
 # MeloSpace
 
-MeloSpace 是一个 Java Web 音乐网站课程项目，基于 Spring Boot REST API、Vue 3、MySQL 和 Nginx 实现。项目支持歌曲浏览、搜索、播放、歌单、收藏、评论、后台管理、媒体上传和 LDDC 歌词匹配。
+MeloSpace 是一个 Java Web 音乐社区项目，基于 Spring Boot REST API、Vue 3、MySQL 和 Nginx 实现。项目支持综合搜索、公开用户主页、互动评论、社区歌单、发现推荐、歌曲播放、后台管理、媒体上传和 LDDC 歌词匹配。
 
 ## 在线访问
 
-- 站点：<http://melospace.asia/>
-- 健康检查：<http://melospace.asia/api/actuator/health>
+- 站点：<https://melospace.asia/>
+- 健康检查：<https://melospace.asia/api/actuator/health>
 
 ## 技术栈
 
-- 后端：Java 17、Spring Boot 3.5、Spring Security、MyBatis-Plus、MySQL
+- 后端：Java 17、Spring Boot 3.5、Spring Security、MyBatis-Plus、Flyway、MySQL
 - 前端：Vue 3、Vite、Pinia、Vue Router、Axios
 - 部署：Ubuntu 24.04、Nginx、systemd、MySQL、本地媒体目录
 - 歌词：本地 LDDC 源码 + Python 虚拟环境
@@ -59,6 +59,8 @@ cd music-web-backend
 
 ```bash
 cd music-web-frontend
+npm test
+npm run type-check
 npm run build
 ```
 
@@ -85,10 +87,11 @@ systemctl restart melospace-backend
 ## 答辩与验收
 
 - 步骤七测试、部署复测和答辩脚本：`docs/step-7/testing-deployment-defense.md`
-- 项目宪章：`music_web_project_charter.md`
-- 项目计划：`music_web_feasibility_stable_plan.md`
+- 社区闭环接口、数据库、测试和上线记录：`docs/community-rollout.md`
+- 项目宪章：`docs/music_web_project_charter.md`
+- 项目计划：`docs/music_web_feasibility_stable_plan.md`
 
-截至 2026-07-07，后端集成测试、前端生产构建、公网访问、健康检查、歌曲接口、媒体访问和 ECS 只读服务检查均已通过。
+截至 2026-07-29，后端 36 项测试、前端 9 项测试、类型检查、生产构建、Flyway V4 生产结构副本迁移、社区闭环线上流程和多宽度响应式验收均已通过。
 
 ## 说明
 

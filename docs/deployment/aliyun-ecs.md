@@ -367,3 +367,24 @@ certbot renew --dry-run
 * `certbot renew --dry-run` 成功，当前无需补充阿里云安全组规则。
 
 真机锁屏呈现仍需在 iPhone Safari 中播放一首歌曲后完成最终人工验收；代码侧已按 Safari 能力检测处理不支持的 Media Session 动作。
+
+## 13. 核心社区闭环上线
+
+执行日期：2026-07-29。
+
+本次连续上线搜索与公开资料、互动评论、完整歌单社区和社区发现功能。数据库通过 Flyway 从 V1 基线增量升级至 V4，V4 在生产结构副本中先完成迁移与数据量校验，正式部署日志确认：
+
+```text
+Successfully applied 1 migration to schema `music_web`, now at version v4
+```
+
+关键上线结果：
+
+- 当前社区业务版本：`23080a4`。
+- Actuator 返回 `UP`。
+- Nginx、MySQL、`melospace-backend` 均为 `active`。
+- 每次 `melospace-update` 均生成数据库、jar 和前端产物备份。
+- 正式接口已创建两张 24 首的 `MeloSpace 官方` 公开歌单。
+- 临时账号完成评论、回复、点赞、举报、批量加歌、收藏、私有化和删除验收后已清理。
+
+完整接口、数据结构、提交和演示记录见 `docs/community-rollout.md`。
