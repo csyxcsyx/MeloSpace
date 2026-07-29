@@ -45,6 +45,7 @@ public class SecurityConfig {
             "/api/songs/*",
             "/api/artists",
             "/api/albums",
+            "/api/discover/community",
             "/api/search",
             "/api/search/*",
             "/api/playlists",

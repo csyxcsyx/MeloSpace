@@ -6,6 +6,7 @@ import type {
   AuthResponse,
   CommentItem,
   CommentReportItem,
+  CommunityDiscover,
   FavoriteItem,
   LddcLyricResult,
   PageResult,
@@ -136,6 +137,10 @@ export const searchApi = {
   ) => unwrap<PageResult<SearchResultItemMap[T]>>(
     http.get(`/api/search/${type}`, { params: { keyword, page, size }, signal })
   )
+};
+
+export const discoverApi = {
+  community: () => unwrap<CommunityDiscover>(http.get("/api/discover/community"))
 };
 
 export const uploadApi = {

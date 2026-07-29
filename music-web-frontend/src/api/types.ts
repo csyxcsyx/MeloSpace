@@ -110,6 +110,27 @@ export interface PlaylistDetail extends Playlist {
   songs: PlaylistSong[];
 }
 
+export interface DiscoverComment {
+  id: number;
+  userId: number;
+  userNickname: string;
+  userAvatarUrl: string | null;
+  targetType: "SONG" | "PLAYLIST";
+  targetId: number;
+  targetTitle: string;
+  targetCoverUrl: string | null;
+  content: string;
+  likeCount: number;
+  replyCount: number;
+  createdAt: string;
+}
+
+export interface CommunityDiscover {
+  popularPlaylists: Playlist[];
+  latestPlaylists: Playlist[];
+  hotComments: DiscoverComment[];
+}
+
 export interface SearchResponse {
   songs: Song[];
   artists: Artist[];

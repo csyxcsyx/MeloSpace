@@ -58,6 +58,13 @@ class BackendFoundationIntegrationTests {
         );
         assertThat(publicSongDetail.getStatusCode()).isEqualTo(HttpStatus.OK);
 
+        ResponseEntity<JsonNode> publicCommunity = restTemplate.getForEntity(
+                url("/api/discover/community"),
+                JsonNode.class
+        );
+        assertThat(publicCommunity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(publicCommunity.getBody().get("data").has("popularPlaylists")).isTrue();
+
         ResponseEntity<String> missingMedia = restTemplate.getForEntity(
                 url("/media/does-not-exist.mp3"),
                 String.class
