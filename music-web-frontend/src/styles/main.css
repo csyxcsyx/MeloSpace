@@ -490,6 +490,7 @@ button {
   font-weight: 740;
   white-space: nowrap;
   box-shadow: 0 10px 24px rgba(15, 15, 18, 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -887,6 +888,7 @@ button {
   background: #d8d8dc;
   box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   text-align: left;
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -1747,6 +1749,7 @@ button {
   background: var(--glass-bg);
   font-family: var(--font-lyric);
   grid-template-rows: auto 1fr;
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -2094,6 +2097,7 @@ button {
   color: var(--muted);
   font-size: 12px;
   box-shadow: 0 12px 28px rgba(15, 15, 18, 0.07);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -2259,6 +2263,7 @@ button {
   border-radius: var(--radius-card);
   background: var(--glass-bg);
   box-shadow: 0 16px 34px rgba(15, 15, 18, 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -2657,8 +2662,8 @@ button {
 .play-queue-head button,
 .queue-remove {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
   border-radius: 50%;
@@ -2683,7 +2688,7 @@ button {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 34px;
+  min-height: 44px;
   gap: 5px;
   border-radius: 999px;
   border: 1px solid transparent;
@@ -2729,7 +2734,7 @@ button {
   align-items: center;
   min-width: 0;
   border-radius: 8px;
-  grid-template-columns: minmax(0, 1fr) 32px;
+  grid-template-columns: minmax(0, 1fr) 44px;
 }
 
 .play-queue-item.active {
@@ -2783,7 +2788,7 @@ button {
 
 .queue-clear {
   margin: 0 14px 14px;
-  min-height: 34px;
+  min-height: 44px;
   border-radius: 999px;
   background: #f0f5f2;
   color: #46544e;
@@ -2806,8 +2811,8 @@ button {
 
 .player-controls button {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border-radius: 50%;
   transition: background 160ms ease, color 160ms ease, transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -2833,8 +2838,8 @@ button {
 
 .player-tool-button {
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border-radius: 50%;
   color: #3d4a44;
@@ -2959,6 +2964,7 @@ button {
   background: var(--glass-bg);
   color: var(--muted);
   text-align: center;
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
   backdrop-filter: blur(16px) saturate(145%);
 }
 
@@ -2999,6 +3005,7 @@ button {
   border-radius: var(--radius-card);
   background: var(--glass-bg);
   box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
 
@@ -3076,6 +3083,7 @@ button {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   backdrop-filter: blur(18px) saturate(160%);
   transition: background 160ms ease, transform 160ms ease;
 }
@@ -3135,6 +3143,7 @@ button {
     linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
     rgba(13, 13, 16, 0.72);
   box-shadow: 0 34px 84px rgba(0, 0, 0, 0.36);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
   backdrop-filter: blur(12px) saturate(135%);
 }
 
@@ -3252,6 +3261,7 @@ button {
   border: 0;
   background: transparent;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   grid-template-rows: 1fr;
 }
@@ -3344,6 +3354,7 @@ button {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.12);
   box-shadow: 0 20px 58px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
   backdrop-filter: blur(14px) saturate(145%);
 }
 
@@ -3357,6 +3368,7 @@ button {
   background: rgba(18, 24, 52, 0.92);
   color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
   backdrop-filter: blur(26px) saturate(150%);
 }
 
@@ -3588,8 +3600,8 @@ button {
     padding-top: env(safe-area-inset-top, 0px);
     border-right: 0;
     border-bottom: 1px solid var(--soft-line);
-    background: rgba(247, 247, 249, 0.98);
-    box-shadow: 0 8px 26px rgba(15, 15, 18, 0.06);
+    background: rgba(252, 253, 252, 0.94);
+    box-shadow: 0 8px 26px rgba(42, 76, 64, 0.07);
   }
 
   .sidebar-top-row {
@@ -3651,9 +3663,10 @@ button {
     gap: 2px;
     overflow: visible;
     padding: 5px 8px env(safe-area-inset-bottom, 0px);
-    border-top: 1px solid rgba(222, 222, 227, 0.82);
-    background: rgba(250, 250, 252, 0.94);
-    box-shadow: 0 -10px 30px rgba(15, 15, 18, 0.08);
+    border-top: 1px solid var(--soft-line);
+    background: rgba(252, 253, 252, 0.94);
+    box-shadow: 0 -10px 30px rgba(42, 76, 64, 0.09);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
     backdrop-filter: blur(24px) saturate(180%);
   }
 
@@ -3874,13 +3887,13 @@ button {
   }
 
   .player-controls button {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
   }
 
   .player-controls .play-toggle {
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
 
   .player-tools {
@@ -6033,7 +6046,7 @@ button {
   border: 1px dashed rgba(var(--brand-rgb), 0.3);
   border-radius: 15px;
   background: var(--brand-soft);
-  color: #b30927;
+  color: var(--brand-strong);
   font-weight: 760;
 }
 
@@ -6120,7 +6133,7 @@ button {
   padding: 3px 7px;
   border-radius: 999px;
   background: var(--brand-soft);
-  color: #b30927;
+  color: var(--brand-strong);
   font-size: 11px;
   font-weight: 760;
 }
@@ -6167,7 +6180,7 @@ button {
 }
 
 .comment-actions button.danger {
-  color: #b42336;
+  color: var(--danger);
 }
 
 .comment-replies {
@@ -6244,8 +6257,8 @@ button {
   gap: 12px;
   padding: 10px 14px;
   border-radius: 13px;
-  background: #fff1f2;
-  color: #a2162d;
+  background: var(--danger-soft);
+  color: var(--danger-strong);
 }
 
 .comment-feedback button {
@@ -6476,5 +6489,162 @@ button {
     border: 1px solid CanvasText;
     background: Canvas;
     box-shadow: none;
+  }
+}
+
+/* Final accessibility and material fallbacks */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.danger:focus-visible,
+.danger-action:focus-visible,
+.account-menu-logout:focus-visible {
+  outline-color: var(--danger);
+}
+
+.player-page a:focus-visible,
+.player-page button:focus-visible,
+.player-page input:focus-visible,
+.player-page [tabindex]:not([tabindex="-1"]):focus-visible {
+  outline-color: #ffffff;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  [data-glass],
+  .sidebar,
+  .page-header,
+  .account-menu,
+  .song-actions-menu,
+  .player,
+  .play-queue-panel,
+  .page-toolbar-action,
+  .lyric-panel,
+  .song-library-summary span,
+  .metric,
+  .empty-state,
+  .login-card {
+    background: var(--lg-solid);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .round-icon-button,
+  .turntable-card,
+  .player-bottom-dock {
+    background: rgba(20, 28, 25, 0.94);
+  }
+
+  .player-page-queue-panel {
+    background: #182034;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-glass],
+  .sidebar,
+  .page-header,
+  .account-menu,
+  .song-actions-menu,
+  .player,
+  .play-queue-panel,
+  .page-toolbar-action,
+  .lyric-panel,
+  .song-library-summary span,
+  .metric,
+  .empty-state,
+  .login-card {
+    background: var(--lg-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .round-icon-button,
+  .turntable-card,
+  .player-bottom-dock {
+    background: rgba(20, 28, 25, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .player-page-queue-panel {
+    background: #182034;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: #a8b3ae;
+    --soft-line: #c3ccc8;
+    --muted: #46534d;
+  }
+
+  [data-glass],
+  .sidebar,
+  .page-header,
+  .account-menu,
+  .song-actions-menu,
+  .player,
+  .play-queue-panel,
+  .card,
+  .metric,
+  .empty-state,
+  .login-card {
+    border-color: #74817b;
+    box-shadow: none;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline-width: 3px;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-glass],
+  .sidebar,
+  .page-header,
+  .account-menu,
+  .song-actions-menu,
+  .player,
+  .play-queue-panel,
+  .page-toolbar-action,
+  .lyric-panel,
+  .song-library-summary span,
+  .metric,
+  .empty-state,
+  .login-card,
+  .round-icon-button,
+  .turntable-card,
+  .player-bottom-dock,
+  .player-page-queue-panel {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .nav-link.active,
+  .play-mode-tabs button.active,
+  .play-queue-item.active {
+    border: 1px solid Highlight;
+  }
+
+  .mini-progress span,
+  .player-progress-fill {
+    background: Highlight;
   }
 }
