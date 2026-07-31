@@ -172,7 +172,8 @@ const queueOpen = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
 let activePlayRequest: Promise<boolean> | null = null;
 let playRequestToken = 0;
-let progressAnimationFrame: number | null = null;
+const PROGRESS_SYNC_INTERVAL_MS = 100;
+let progressTimer: number | null = null;
 
 interface PlayRequestDetail {
   song: Song;
@@ -344,28 +345,27 @@ function onAudioPause() {
 }
 
 function startProgressLoop() {
-  if (progressAnimationFrame !== null) return;
-  progressAnimationFrame = window.requestAnimationFrame(syncProgressFrame);
+  if (progressTimer !== null) return;
+  syncProgressTime();
+  progressTimer = window.setInterval(syncProgressTime, PROGRESS_SYNC_INTERVAL_MS);
 }
 
 function stopProgressLoop() {
-  if (progressAnimationFrame === null) return;
-  window.cancelAnimationFrame(progressAnimationFrame);
-  progressAnimationFrame = null;
+  if (progressTimer === null) return;
+  window.clearInterval(progressTimer);
+  progressTimer = null;
 }
 
-function syncProgressFrame() {
+function syncProgressTime() {
   const audio = audioRef.value;
   if (!audio) {
-    progressAnimationFrame = null;
+    stopProgressLoop();
     return;
   }
 
   player.setTime(audio.currentTime, Number.isFinite(audio.duration) ? audio.duration : 0);
-  if (player.isPlaying && !audio.paused && !audio.ended) {
-    progressAnimationFrame = window.requestAnimationFrame(syncProgressFrame);
-  } else {
-    progressAnimationFrame = null;
+  if (!player.isPlaying || audio.paused || audio.ended) {
+    stopProgressLoop();
   }
 }
 

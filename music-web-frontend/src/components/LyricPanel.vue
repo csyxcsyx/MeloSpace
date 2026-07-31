@@ -23,6 +23,7 @@
           v-for="(line, index) in lines"
           :key="`${line.time}-${index}`"
           :ref="(element) => setLineRef(element, index)"
+          v-memo="[index === activeIndex, index < activeIndex, index === activeIndex ? lyricRenderTick : 0]"
           type="button"
           class="lyric-line"
           :class="{ active: index === activeIndex, past: isCurrentSong && index < activeIndex, seekable: Boolean(song) }"
@@ -58,7 +59,6 @@ import {
   computed,
   nextTick,
   onBeforeUnmount,
-  onBeforeUpdate,
   ref,
   watch,
   type ComponentPublicInstance
@@ -89,8 +89,6 @@ interface TimeToken {
 
 const LYRIC_LEAD_SECONDS = 0.14;
 const MIN_WORD_DURATION_SECONDS = 0.16;
-const AUTO_SCROLL_DURATION_MS = 860;
-const AUTO_SCROLL_MIN_DELTA = 2;
 const DEFAULT_ACTIVE_ANCHOR = 0.5;
 const FULLSCREEN_ACTIVE_ANCHOR = 0.36;
 const LYRIC_CACHE_LIMIT = 80;
@@ -116,12 +114,13 @@ const scrollRef = ref<HTMLElement | null>(null);
 const userBrowsing = ref(false);
 const autoScrolling = ref(false);
 let browsingTimer: ReturnType<typeof setTimeout> | null = null;
-let scrollAnimationFrame: number | null = null;
+let autoScrollTimer: ReturnType<typeof setTimeout> | null = null;
 let centerAnimationFrame: number | null = null;
 let lastProgrammaticScrollAt = 0;
 
 const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
 const syncedTime = computed(() => props.currentTime + LYRIC_LEAD_SECONDS);
+const lyricRenderTick = computed(() => Math.floor(syncedTime.value * 10));
 const activeIndex = computed(() => {
   if (!props.isCurrentSong || !lines.value.length) return -1;
   let index = -1;
@@ -149,20 +148,6 @@ watch(activeIndex, async (index) => {
   }
 });
 
-watch(
-  () => props.currentTime,
-  () => {
-    if (!props.fullscreen || !props.isCurrentSong || userBrowsing.value || activeIndex.value < 0) return;
-    if (scrollAnimationFrame !== null) return;
-    queueActiveLineCenter("auto");
-  },
-  { flush: "post" }
-);
-
-onBeforeUpdate(() => {
-  lineRefs.value = [];
-});
-
 onBeforeUnmount(() => {
   if (browsingTimer) clearTimeout(browsingTimer);
   stopAutoScrollAnimation();
@@ -171,6 +156,7 @@ onBeforeUnmount(() => {
 
 async function loadLyrics(url: string) {
   lines.value = [];
+  lineRefs.value = [];
   errorMessage.value = "";
   userBrowsing.value = false;
   if (browsingTimer) clearTimeout(browsingTimer);
@@ -376,7 +362,7 @@ function scrollToLine(index: number, behavior: ScrollBehavior) {
   const targetTop = Math.max(0, nextTop);
 
   if (behavior === "smooth") {
-    animateScrollTo(container, targetTop);
+    startNativeScroll(container, targetTop);
     return;
   }
 
@@ -398,43 +384,23 @@ function queueActiveLineCenter(behavior: ScrollBehavior) {
   });
 }
 
-function animateScrollTo(container: HTMLElement, targetTop: number) {
+function startNativeScroll(container: HTMLElement, targetTop: number) {
   stopAutoScrollAnimation();
-
-  const startTop = container.scrollTop;
-  const distance = targetTop - startTop;
-  if (Math.abs(distance) < AUTO_SCROLL_MIN_DELTA) {
-    return;
-  }
-
   autoScrolling.value = true;
-  const startedAt = performance.now();
-
-  const step = (now: number) => {
-    const elapsed = now - startedAt;
-    const progress = Math.min(elapsed / AUTO_SCROLL_DURATION_MS, 1);
-    const easedProgress = easeInOutCubic(progress);
-
-    lastProgrammaticScrollAt = now;
-    container.scrollTop = startTop + distance * easedProgress;
-
-    if (progress < 1) {
-      scrollAnimationFrame = requestAnimationFrame(step);
-      return;
-    }
-
-    container.scrollTop = targetTop;
+  lastProgrammaticScrollAt = performance.now();
+  container.scrollTo({ top: targetTop, behavior: "smooth" });
+  autoScrollTimer = setTimeout(() => {
     autoScrolling.value = false;
-    scrollAnimationFrame = null;
-  };
-
-  scrollAnimationFrame = requestAnimationFrame(step);
+    autoScrollTimer = null;
+    lastProgrammaticScrollAt = performance.now();
+  }, 620);
 }
 
 function stopAutoScrollAnimation() {
-  if (scrollAnimationFrame === null) return;
-  cancelAnimationFrame(scrollAnimationFrame);
-  scrollAnimationFrame = null;
+  if (autoScrollTimer !== null) {
+    clearTimeout(autoScrollTimer);
+    autoScrollTimer = null;
+  }
   autoScrolling.value = false;
 }
 
@@ -444,9 +410,4 @@ function cancelQueuedCentering() {
   centerAnimationFrame = null;
 }
 
-function easeInOutCubic(progress: number) {
-  return progress < 0.5
-    ? 4 * progress * progress * progress
-    : 1 - (-2 * progress + 2) ** 3 / 2;
-}
 </script>
