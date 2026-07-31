@@ -1040,8 +1040,8 @@ function formatDate(value: string) {
   gap: 7px;
   border-radius: 999px;
   padding: 0 16px;
-  background: rgba(184, 32, 50, 0.09);
-  color: #b31d31;
+  background: var(--danger-soft);
+  color: var(--danger-strong);
   font-weight: 690;
 }
 

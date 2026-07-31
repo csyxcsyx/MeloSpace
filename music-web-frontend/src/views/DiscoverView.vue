@@ -1,6 +1,6 @@
 <template>
   <section class="discover-page community-discover-page">
-    <header class="page-header discover-title-row">
+    <header class="page-header discover-title-row" data-glass="regular">
       <div>
         <p class="feature-label">MeloSpace 每日推荐</p>
         <h1 class="page-title">一首一首，遇见今天的好音乐</h1>
@@ -28,6 +28,7 @@
             v-for="(song, index) in recommendedSongs"
             :key="song.id"
             class="song-recommendation-card"
+            data-glass="solid"
             :class="{ 'is-current': player.currentSong?.id === song.id }"
           >
             <span class="recommendation-number">{{ String(index + 1).padStart(2, "0") }}</span>
@@ -102,6 +103,7 @@
           v-for="comment in community?.hotComments || []"
           :key="comment.id"
           class="discover-comment-card"
+          data-glass="solid"
           :to="targetPath(comment)"
         >
           <div class="discover-comment-author">
@@ -262,11 +264,11 @@ function relativeTime(value: string) {
   min-width: 0;
   min-height: 128px;
   gap: 16px;
-  border: 1px solid rgba(20, 20, 24, 0.07);
+  border: 1px solid rgba(49, 79, 68, 0.1);
   border-radius: 22px;
   padding: 14px 16px 14px 13px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 9px 28px rgba(15, 15, 20, 0.055);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--lg-inner-light), 0 9px 28px rgba(42, 76, 64, 0.055);
   grid-template-columns: 34px 100px minmax(0, 1fr) max-content;
   content-visibility: auto;
   contain-intrinsic-size: auto 128px;
@@ -274,14 +276,15 @@ function relativeTime(value: string) {
 }
 
 .song-recommendation-card:hover {
-  border-color: rgba(235, 40, 76, 0.2);
-  box-shadow: 0 14px 34px rgba(15, 15, 20, 0.085);
+  border-color: rgba(var(--brand-rgb), 0.2);
+  box-shadow: var(--lg-inner-light), 0 14px 34px rgba(42, 76, 64, 0.085);
   transform: translateY(-1px);
 }
 
 .song-recommendation-card.is-current {
-  border-color: rgba(235, 40, 76, 0.28);
-  background: linear-gradient(105deg, rgba(255, 247, 249, 0.97), rgba(255, 255, 255, 0.94));
+  border-color: rgba(var(--brand-rgb), 0.26);
+  background: linear-gradient(105deg, rgba(233, 247, 241, 0.86), rgba(255, 255, 255, 0.95));
+  box-shadow: var(--lg-inner-light), 0 16px 38px rgba(var(--brand-rgb), 0.085);
 }
 
 .recommendation-number {
@@ -301,7 +304,7 @@ function relativeTime(value: string) {
   border: 0;
   border-radius: 17px;
   padding: 0;
-  background: linear-gradient(145deg, #f7e7ea, #e8e8ee);
+  background: linear-gradient(145deg, var(--brand-soft), #e7eeeb);
   color: white;
   cursor: pointer;
   place-items: center;
@@ -403,8 +406,8 @@ function relativeTime(value: string) {
 .recommendation-tags span {
   border-radius: 999px;
   padding: 4px 9px;
-  background: #f2f2f5;
-  color: #696970;
+  background: #f1f5f3;
+  color: #5f6e67;
   font-size: 12px;
 }
 
@@ -465,10 +468,11 @@ function relativeTime(value: string) {
   display: grid;
   min-width: 0;
   gap: 13px;
-  border: 1px solid rgba(20, 20, 24, 0.06);
+  border: 1px solid rgba(49, 79, 68, 0.09);
   border-radius: 20px;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--lg-inner-light), 0 12px 32px rgba(42, 76, 64, 0.055);
   color: inherit;
   text-decoration: none;
   content-visibility: auto;
@@ -520,7 +524,7 @@ function relativeTime(value: string) {
   height: 42px;
   overflow: hidden;
   border-radius: 10px;
-  background: #ececf1;
+  background: #edf3f0;
   place-items: center;
 }
 

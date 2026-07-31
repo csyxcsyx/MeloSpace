@@ -1,5 +1,5 @@
 <template>
-  <footer class="player" :class="{ 'player-hidden': hidden }" :aria-hidden="hidden" aria-label="全局播放器">
+  <footer class="player" :class="{ 'player-hidden': hidden }" :aria-hidden="hidden" aria-label="全局播放器" data-glass="regular">
     <audio
       ref="audioRef"
       :volume="player.volume"
