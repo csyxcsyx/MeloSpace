@@ -125,11 +125,9 @@ button {
 }
 
 .app-shell.discover-shell {
-  height: 100dvh;
-  max-height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
-  padding-bottom: 0;
+  min-height: 100dvh;
+  overflow: visible;
+  padding-bottom: var(--player-reserved-height);
 }
 
 .app-shell.immersive-shell {
@@ -396,10 +394,8 @@ button {
 }
 
 .main.discover-main {
-  height: 100dvh;
-  max-height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 100dvh;
+  overflow: visible;
   padding-top: 14px;
   padding-bottom: var(--player-reserved-height);
 }
@@ -531,12 +527,8 @@ button {
 
 .discover-page {
   display: grid;
-  height: 100%;
   min-height: 100%;
-  max-height: 100%;
-  min-block-size: 0;
-  overflow: hidden;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: visible;
 }
 
 .discover-page .page-title {
@@ -599,9 +591,8 @@ button {
 
 .discover-recommendations {
   display: flex;
-  min-height: 0;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   animation: melospace-rise 420ms 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

@@ -7,7 +7,7 @@ import { resolveMediaUrl } from "@/utils/format";
 const DISCOVER_RECOMMENDATION_KEY = "melospace-discover-recommendation";
 const RECOMMENDATION_SIZE = 12;
 const JAY_CHOU_MINIMUM = 3;
-const ARTWORK_PRELOAD_LOOKAHEAD = [0, 1, 2];
+const ARTWORK_PRELOAD_COUNT = 2;
 const preloadedArtworkUrls = new Set<string>();
 
 interface RecommendationState {
@@ -117,13 +117,6 @@ function pickRecommendedSongs(source: Song[], state: RecommendationState) {
   return selected;
 }
 
-function recommendationStateAtOffset(state: RecommendationState, offset: number) {
-  return {
-    dateKey: state.dateKey,
-    refreshIndex: state.refreshIndex + offset
-  };
-}
-
 function scheduleIdlePreload(callback: () => void) {
   if (typeof window === "undefined") return;
   const idleWindow = window as WindowWithIdleCallback;
@@ -136,9 +129,8 @@ function scheduleIdlePreload(callback: () => void) {
 
 function preloadSongArtwork(source: Song[], state: RecommendationState) {
   if (!source.length) return;
-  const artworkUrls = ARTWORK_PRELOAD_LOOKAHEAD.flatMap((offset) => (
-    pickRecommendedSongs(source, recommendationStateAtOffset(state, offset))
-  ))
+  const artworkUrls = pickRecommendedSongs(source, state)
+    .slice(0, ARTWORK_PRELOAD_COUNT)
     .map((song) => resolveMediaUrl(song.coverUrl))
     .filter((url): url is string => Boolean(url && !preloadedArtworkUrls.has(url)));
 
@@ -171,7 +163,7 @@ export const useDiscoverStore = defineStore("discover", () => {
     if (loadPromise) return loadPromise;
 
     loading.value = true;
-    loadPromise = fetchAllSongs()
+    loadPromise = fetchRecommendationPool()
       .then((items) => {
         songs.value = items;
         loaded.value = true;
@@ -184,15 +176,9 @@ export const useDiscoverStore = defineStore("discover", () => {
     return loadPromise;
   }
 
-  async function fetchAllSongs() {
-    const firstPage = await songApi.list({ page: 1, size: 100 });
-    const items = [...firstPage.items];
-    const totalPages = Math.ceil(firstPage.total / firstPage.size);
-    for (let page = 2; page <= totalPages; page += 1) {
-      const result = await songApi.list({ page, size: 100 });
-      items.push(...result.items);
-    }
-    return items;
+  async function fetchRecommendationPool() {
+    const result = await songApi.list({ page: 1, size: 100 });
+    return result.items;
   }
 
   function refreshRecommendations() {

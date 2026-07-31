@@ -2,146 +2,144 @@
   <section class="discover-page community-discover-page">
     <header class="page-header discover-title-row">
       <div>
-        <p class="feature-label">MeloSpace 社区</p>
-        <h1 class="page-title">发现好音乐，也发现同路的人</h1>
+        <p class="feature-label">MeloSpace 每日推荐</p>
+        <h1 class="page-title">一首一首，遇见今天的好音乐</h1>
+        <p class="discover-subtitle">从曲库中为你挑选 12 首歌，轻一点封面就能开始播放。</p>
       </div>
-      <RouterLink class="secondary-action" to="/search">搜索全站</RouterLink>
+      <RouterLink class="secondary-action discover-search-link" to="/search">搜索全站</RouterLink>
     </header>
 
-    <button class="discover-banner" type="button" @click="scrollToRecommendations">
-      <img src="/discover-banner.png" alt="MeloSpace 发现属于你的音乐空间" />
-    </button>
-
-    <EmptyState v-if="discover.loading && !discover.loaded">正在加载音乐内容...</EmptyState>
+    <EmptyState v-if="discover.loading && !discover.loaded">正在准备今天的歌曲...</EmptyState>
     <section v-else ref="recommendationRef" class="discover-recommendations community-section">
       <div class="section-head recommendation-head">
         <div>
-          <p class="feature-label">每日歌曲</p>
-          <h2>今天听点不一样的</h2>
+          <p class="feature-label">今日 12 首</p>
+          <h2>为你逐首推荐</h2>
         </div>
         <button class="secondary-action refresh-recommendation" type="button" @click="refreshRecommendations">
           <RefreshCw :size="16" />
           换一批
         </button>
       </div>
+
       <Transition name="recommendation-swap" mode="out-in">
-        <SongColumnList
-          v-if="recommendedSongs.length"
-          :key="recommendationKey"
-          :songs="recommendedSongs"
-          :column-count="3"
-          @toggle-play="toggleSongPlayback"
-          @open-player="openPlayer"
-        />
+        <div v-if="recommendedSongs.length" :key="recommendationKey" class="song-recommendation-feed">
+          <article
+            v-for="(song, index) in recommendedSongs"
+            :key="song.id"
+            class="song-recommendation-card"
+            :class="{ 'is-current': player.currentSong?.id === song.id }"
+          >
+            <span class="recommendation-number">{{ String(index + 1).padStart(2, "0") }}</span>
+            <button
+              class="recommendation-cover-button"
+              type="button"
+              :aria-label="player.currentSong?.id === song.id && player.isPlaying ? `暂停 ${song.title}` : `播放 ${song.title}`"
+              @click="toggleSongPlayback(song)"
+            >
+              <img
+                v-if="song.coverUrl"
+                :src="resolveMediaUrl(song.coverUrl)"
+                :alt="`${song.title} 封面`"
+                :loading="index < 2 ? 'eager' : 'lazy'"
+                decoding="async"
+              />
+              <span v-else class="recommendation-cover-fallback">♪</span>
+              <span class="recommendation-play-icon">
+                <Pause v-if="player.currentSong?.id === song.id && player.isPlaying" :size="21" fill="currentColor" />
+                <Play v-else :size="21" fill="currentColor" />
+              </span>
+            </button>
+
+            <div class="recommendation-copy">
+              <div class="recommendation-heading">
+                <div>
+                  <RouterLink class="recommendation-title" :to="`/songs/${song.id}`">{{ song.title }}</RouterLink>
+                  <p>{{ song.artistName || "未知歌手" }}<span v-if="song.albumTitle"> · {{ song.albumTitle }}</span></p>
+                </div>
+                <span v-if="player.currentSong?.id === song.id" class="now-playing-label">
+                  {{ player.isPlaying ? "正在播放" : "已暂停" }}
+                </span>
+              </div>
+
+              <div class="recommendation-tags">
+                <span v-if="song.genre">{{ song.genre }}</span>
+                <span v-if="song.mood">{{ song.mood }}</span>
+                <span v-if="song.language">{{ song.language }}</span>
+              </div>
+
+              <div class="recommendation-meta">
+                <span><Headphones :size="15" /> {{ formatCount(song.playCount) }} 次播放</span>
+                <span><Clock3 :size="15" /> {{ formatDuration(song.durationSeconds) }}</span>
+              </div>
+            </div>
+
+            <div class="recommendation-actions">
+              <button class="primary-action recommendation-listen" type="button" @click="openPlayer(song)">
+                <AudioLines :size="17" />
+                沉浸播放
+              </button>
+              <RouterLink class="recommendation-detail-link" :to="`/songs/${song.id}`">
+                详情与评论 <ChevronRight :size="17" />
+              </RouterLink>
+            </div>
+          </article>
+        </div>
         <EmptyState v-else key="empty">还没有可展示的歌曲。</EmptyState>
       </Transition>
     </section>
 
-    <EmptyState v-if="communityLoading">正在加载社区精选...</EmptyState>
-    <template v-else-if="community">
-      <section class="community-section">
-        <div class="section-head">
-          <div>
-            <p class="feature-label">社区热门</p>
-            <h2>正在被大家收藏的歌单</h2>
+    <section v-if="communityLoading || community?.hotComments.length" class="community-section hot-comment-section">
+      <div class="section-head">
+        <div>
+          <p class="feature-label">近期热评</p>
+          <h2>听友们正在聊</h2>
+        </div>
+      </div>
+      <EmptyState v-if="communityLoading">正在加载社区热评...</EmptyState>
+      <div v-else class="discover-comment-grid">
+        <RouterLink
+          v-for="comment in community?.hotComments || []"
+          :key="comment.id"
+          class="discover-comment-card"
+          :to="targetPath(comment)"
+        >
+          <div class="discover-comment-author">
+            <span>{{ (comment.userNickname || "M").slice(0, 1) }}</span>
+            <strong>{{ comment.userNickname || "MeloSpace 用户" }}</strong>
+            <small>{{ relativeTime(comment.createdAt) }}</small>
           </div>
-        </div>
-        <div v-if="community.popularPlaylists.length" class="community-playlist-grid">
-          <RouterLink
-            v-for="playlist in community.popularPlaylists"
-            :key="playlist.id"
-            class="community-playlist-card"
-            :to="`/playlists/${playlist.id}`"
-          >
-            <span class="community-card-cover">
-              <img v-if="playlist.coverUrl" :src="resolveMediaUrl(playlist.coverUrl)" alt="" />
-              <span v-else>♬</span>
-            </span>
-            <strong>{{ playlist.title }}</strong>
-            <span>{{ playlist.creatorNickname || "MeloSpace 用户" }}</span>
-            <small>
-              <Heart :size="14" /> {{ playlist.favoriteCount }}
-              <MessageCircle :size="14" /> {{ playlist.commentCount }}
-              <Play :size="14" /> {{ playlist.playCount }}
-            </small>
-          </RouterLink>
-        </div>
-        <EmptyState v-else>社区还没有公开歌单。</EmptyState>
-      </section>
-
-      <section class="community-section">
-        <div class="section-head">
-          <div>
-            <p class="feature-label">新鲜出炉</p>
-            <h2>最近更新的歌单</h2>
-          </div>
-        </div>
-        <div class="latest-playlist-list">
-          <RouterLink
-            v-for="playlist in community.latestPlaylists"
-            :key="playlist.id"
-            :to="`/playlists/${playlist.id}`"
-          >
-            <span class="latest-cover">
-              <img v-if="playlist.coverUrl" :src="resolveMediaUrl(playlist.coverUrl)" alt="" />
+          <p>{{ comment.content }}</p>
+          <div class="discover-comment-target">
+            <span class="comment-target-cover">
+              <img
+                v-if="comment.targetCoverUrl"
+                :src="resolveMediaUrl(comment.targetCoverUrl)"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
               <span v-else>♪</span>
             </span>
-            <span>
-              <strong>{{ playlist.title }}</strong>
-              <small>{{ playlist.songCount }} 首 · {{ formatDate(playlist.updatedAt) }}</small>
-            </span>
-            <span class="latest-chevron">›</span>
-          </RouterLink>
-        </div>
-      </section>
-
-      <section class="community-section">
-        <div class="section-head">
-          <div>
-            <p class="feature-label">近期热评</p>
-            <h2>听友们正在聊</h2>
+            <span>来自《{{ comment.targetTitle }}》</span>
+            <small>♡ {{ comment.likeCount }} · 回复 {{ comment.replyCount }}</small>
           </div>
-        </div>
-        <div v-if="community.hotComments.length" class="discover-comment-grid">
-          <RouterLink
-            v-for="comment in community.hotComments"
-            :key="comment.id"
-            class="discover-comment-card"
-            :to="targetPath(comment)"
-          >
-            <div class="discover-comment-author">
-              <span>{{ (comment.userNickname || "M").slice(0, 1) }}</span>
-              <strong>{{ comment.userNickname }}</strong>
-              <small>{{ relativeTime(comment.createdAt) }}</small>
-            </div>
-            <p>{{ comment.content }}</p>
-            <div class="discover-comment-target">
-              <span class="latest-cover">
-                <img v-if="comment.targetCoverUrl" :src="resolveMediaUrl(comment.targetCoverUrl)" alt="" />
-                <span v-else>♪</span>
-              </span>
-              <span>来自《{{ comment.targetTitle }}》</span>
-              <small>♡ {{ comment.likeCount }} · 回复 {{ comment.replyCount }}</small>
-            </div>
-          </RouterLink>
-        </div>
-        <EmptyState v-else>还没有近期热评，去歌曲详情留下第一条感受吧。</EmptyState>
-      </section>
-    </template>
+        </RouterLink>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Heart, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
+import { AudioLines, ChevronRight, Clock3, Headphones, Pause, Play, RefreshCw } from "lucide-vue-next";
 import { discoverApi } from "@/api";
 import type { CommunityDiscover, DiscoverComment, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
-import SongColumnList from "@/components/SongColumnList.vue";
 import { useDiscoverStore } from "@/stores/discover";
 import { usePlayerStore } from "@/stores/player";
-import { resolveMediaUrl } from "@/utils/format";
+import { formatDuration, resolveMediaUrl } from "@/utils/format";
 
 defineOptions({ name: "DiscoverView" });
 
@@ -169,9 +167,6 @@ async function loadCommunity() {
 
 function refreshRecommendations() {
   discover.refreshRecommendations();
-}
-
-function scrollToRecommendations() {
   recommendationRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -194,8 +189,9 @@ function targetPath(comment: DiscoverComment) {
     : `/songs/${comment.targetId}`;
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value));
+function formatCount(value: number) {
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)} 万`;
+  return new Intl.NumberFormat("zh-CN").format(value);
 }
 
 function relativeTime(value: string) {
@@ -210,7 +206,7 @@ function relativeTime(value: string) {
 <style scoped>
 .community-discover-page {
   display: grid;
-  gap: 36px;
+  gap: 38px;
   min-width: 0;
   padding-bottom: 28px;
 }
@@ -220,7 +216,7 @@ function relativeTime(value: string) {
   align-items: end;
   justify-content: space-between;
   min-width: 0;
-  gap: 16px;
+  gap: 20px;
 }
 
 .discover-title-row > div {
@@ -228,16 +224,20 @@ function relativeTime(value: string) {
 }
 
 .discover-title-row .page-title {
-  max-width: 100%;
+  max-width: 780px;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
-.discover-title-row p,
-.discover-title-row h1,
-.community-section h2,
-.community-section p {
-  margin-top: 0;
+.discover-subtitle {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.discover-search-link {
+  flex: 0 0 auto;
 }
 
 .community-section {
@@ -245,109 +245,214 @@ function relativeTime(value: string) {
   scroll-margin-top: 18px;
 }
 
-.community-section :deep(.song-columns) {
-  max-height: none;
-  overflow: visible;
+.recommendation-head {
+  justify-content: space-between;
+  gap: 14px;
 }
 
-.community-playlist-grid {
+.song-recommendation-feed {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.community-playlist-card {
+.song-recommendation-card {
+  position: relative;
   display: grid;
+  align-items: center;
   min-width: 0;
-  gap: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 20px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.62);
-  color: inherit;
-  text-decoration: none;
-  box-shadow: 0 14px 38px rgba(15, 15, 20, 0.07);
-  backdrop-filter: blur(20px) saturate(140%);
+  min-height: 128px;
+  gap: 16px;
+  border: 1px solid rgba(20, 20, 24, 0.07);
+  border-radius: 22px;
+  padding: 14px 16px 14px 13px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 9px 28px rgba(15, 15, 20, 0.055);
+  grid-template-columns: 34px 100px minmax(0, 1fr) max-content;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 128px;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.community-card-cover {
+.song-recommendation-card:hover {
+  border-color: rgba(235, 40, 76, 0.2);
+  box-shadow: 0 14px 34px rgba(15, 15, 20, 0.085);
+  transform: translateY(-1px);
+}
+
+.song-recommendation-card.is-current {
+  border-color: rgba(235, 40, 76, 0.28);
+  background: linear-gradient(105deg, rgba(255, 247, 249, 0.97), rgba(255, 255, 255, 0.94));
+}
+
+.recommendation-number {
+  color: #a1a1a8;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+  text-align: center;
+}
+
+.recommendation-cover-button {
+  position: relative;
   display: grid;
-  width: 100%;
-  aspect-ratio: 1;
-  place-items: center;
+  width: 100px;
+  height: 100px;
   overflow: hidden;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #f6e2e6, #e7e7ed);
-  color: var(--brand);
-  font-size: 30px;
+  border: 0;
+  border-radius: 17px;
+  padding: 0;
+  background: linear-gradient(145deg, #f7e7ea, #e8e8ee);
+  color: white;
+  cursor: pointer;
+  place-items: center;
 }
 
-.community-card-cover img,
-.latest-cover img {
+.recommendation-cover-button img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 240ms ease;
 }
 
-.community-playlist-card > strong,
-.community-playlist-card > span:not(.community-card-cover) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.recommendation-cover-button:hover img {
+  transform: scale(1.035);
 }
 
-.community-playlist-card > span {
-  color: var(--muted);
-  font-size: 13px;
+.recommendation-cover-fallback {
+  color: var(--brand);
+  font-size: 28px;
 }
 
-.community-playlist-card small {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-}
-
-.latest-playlist-list {
+.recommendation-play-icon {
+  position: absolute;
+  inset: 0;
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.latest-playlist-list > a {
-  display: grid;
-  align-items: center;
-  min-height: 68px;
-  gap: 12px;
-  border-radius: 16px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.54);
-  color: inherit;
-  text-decoration: none;
-  grid-template-columns: 52px minmax(0, 1fr) 24px;
-}
-
-.latest-cover {
-  display: grid;
-  width: 52px;
-  height: 52px;
+  background: rgba(12, 12, 15, 0.22);
+  opacity: 0;
+  transition: opacity 160ms ease;
   place-items: center;
-  overflow: hidden;
-  border-radius: 11px;
-  background: #ececf1;
 }
 
-.latest-playlist-list strong,
-.latest-playlist-list small {
+.recommendation-cover-button:hover .recommendation-play-icon,
+.recommendation-cover-button:focus-visible .recommendation-play-icon,
+.is-current .recommendation-play-icon {
+  opacity: 1;
+}
+
+.recommendation-copy {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.recommendation-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 12px;
+}
+
+.recommendation-heading > div {
+  min-width: 0;
+}
+
+.recommendation-title {
   display: block;
   overflow: hidden;
+  color: var(--text);
+  font-size: clamp(18px, 1.55vw, 22px);
+  font-weight: 820;
+  line-height: 1.25;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.latest-playlist-list small,
-.latest-chevron {
+.recommendation-title:hover {
+  color: var(--brand);
+}
+
+.recommendation-heading p {
+  margin: 5px 0 0;
+  overflow: hidden;
   color: var(--muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing-label {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.recommendation-tags,
+.recommendation-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.recommendation-tags span {
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f2f2f5;
+  color: #696970;
+  font-size: 12px;
+}
+
+.recommendation-meta {
+  color: var(--muted);
+  font-size: 13px;
+  gap: 16px;
+}
+
+.recommendation-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.recommendation-actions {
+  display: grid;
+  justify-items: stretch;
+  width: 132px;
+  gap: 8px;
+}
+
+.recommendation-listen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.recommendation-detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.recommendation-detail-link:hover {
+  color: var(--brand);
+}
+
+.hot-comment-section {
+  padding-top: 4px;
 }
 
 .discover-comment-grid {
@@ -358,12 +463,16 @@ function relativeTime(value: string) {
 
 .discover-comment-card {
   display: grid;
+  min-width: 0;
   gap: 13px;
+  border: 1px solid rgba(20, 20, 24, 0.06);
   border-radius: 20px;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.86);
   color: inherit;
   text-decoration: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 190px;
 }
 
 .discover-comment-author {
@@ -390,7 +499,7 @@ function relativeTime(value: string) {
 
 .discover-comment-card > p {
   display: -webkit-box;
-  margin-bottom: 0;
+  margin: 0;
   overflow: hidden;
   line-height: 1.65;
   -webkit-box-orient: vertical;
@@ -400,24 +509,52 @@ function relativeTime(value: string) {
 .discover-comment-target {
   display: grid;
   align-items: center;
+  min-width: 0;
   gap: 10px;
   grid-template-columns: 42px minmax(0, 1fr) max-content;
 }
 
-.discover-comment-target .latest-cover {
+.comment-target-cover {
+  display: grid;
   width: 42px;
   height: 42px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #ececf1;
+  place-items: center;
+}
+
+.comment-target-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 @media (max-width: 900px) {
-  .community-playlist-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .song-recommendation-card {
+    grid-template-columns: 28px 88px minmax(0, 1fr);
+  }
+
+  .recommendation-cover-button {
+    width: 88px;
+    height: 88px;
+  }
+
+  .recommendation-actions {
+    display: flex;
+    width: auto;
+    grid-column: 3;
+  }
+
+  .recommendation-listen,
+  .recommendation-detail-link {
+    min-width: 128px;
   }
 }
 
 @media (max-width: 620px) {
   .community-discover-page {
-    gap: 28px;
+    gap: 30px;
   }
 
   .discover-title-row {
@@ -430,7 +567,74 @@ function relativeTime(value: string) {
     line-height: 1.08;
   }
 
-  .latest-playlist-list,
+  .discover-search-link {
+    display: none;
+  }
+
+  .song-recommendation-card {
+    min-height: 106px;
+    gap: 12px;
+    border-radius: 18px;
+    padding: 11px;
+    grid-template-columns: 78px minmax(0, 1fr);
+    contain-intrinsic-size: auto 106px;
+  }
+
+  .recommendation-number {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 1;
+    border-radius: 999px;
+    padding: 3px 6px;
+    background: rgba(10, 10, 12, 0.56);
+    color: white;
+    font-size: 10px;
+  }
+
+  .recommendation-cover-button {
+    width: 78px;
+    height: 78px;
+    border-radius: 14px;
+  }
+
+  .recommendation-title {
+    font-size: 17px;
+  }
+
+  .recommendation-heading p {
+    font-size: 13px;
+  }
+
+  .recommendation-tags {
+    display: none;
+  }
+
+  .recommendation-meta {
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .recommendation-meta span:first-child {
+    display: none;
+  }
+
+  .now-playing-label {
+    display: none;
+  }
+
+  .recommendation-actions {
+    display: none;
+  }
+
+  .recommendation-play-icon {
+    opacity: 1;
+    background: linear-gradient(0deg, rgba(10, 10, 12, 0.32), transparent 58%);
+    align-items: end;
+    justify-content: end;
+    padding: 0 8px 7px 0;
+  }
+
   .discover-comment-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -441,6 +645,21 @@ function relativeTime(value: string) {
 
   .discover-comment-author small {
     grid-column: 2;
+  }
+
+  .discover-comment-target {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .discover-comment-target small {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .song-recommendation-card,
+  .recommendation-cover-button img {
+    transition: none;
   }
 }
 </style>
