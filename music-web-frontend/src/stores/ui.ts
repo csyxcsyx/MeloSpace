@@ -11,6 +11,7 @@ export const useUiStore = defineStore("ui", () => {
   let nextId = 1;
 
   function toast(message: string) {
+    if (toasts.value.some((item) => item.message === message)) return;
     const id = nextId++;
     toasts.value.push({ id, message });
     window.setTimeout(() => dismiss(id), 3200);

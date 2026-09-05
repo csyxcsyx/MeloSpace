@@ -53,7 +53,9 @@ http.interceptors.response.use(
     const auth = useAuthStore();
     const ui = useUiStore();
     const url = String(error.config?.url || "");
-    const message = error.response?.data?.message || error.message || "网络请求失败";
+    const message = status === 502 || status === 503 || status === 504
+      ? "服务暂时不可用，请稍后重试"
+      : error.response?.data?.message || error.message || "网络请求失败";
 
     if (status === 401 && url.startsWith("/api/auth/")) {
       ui.toast(message);
