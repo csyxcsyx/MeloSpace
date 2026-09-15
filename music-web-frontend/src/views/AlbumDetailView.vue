@@ -26,10 +26,9 @@
         <div class="section-head">
           <h2>歌曲</h2>
         </div>
-        <SongColumnList
+        <SongList
           v-if="songs.length"
           :songs="songs"
-          :column-count="2"
           @toggle-play="toggleSongPlayback"
           @open-player="openPlayer"
         />
@@ -47,7 +46,7 @@ import { Disc3, Play } from "lucide-vue-next";
 import type { Album, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
-import SongColumnList from "@/components/SongColumnList.vue";
+import SongList from "@/components/SongList.vue";
 import { useCatalogCacheStore } from "@/stores/catalogCache";
 import { usePlayerStore } from "@/stores/player";
 import { resolveMediaUrl } from "@/utils/format";

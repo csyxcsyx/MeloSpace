@@ -1,32 +1,32 @@
 <template>
-  <article class="search-song-row">
-    <button
-      type="button"
-      class="search-song-play"
-      :aria-label="isCurrent && isPlaying ? `暂停 ${song.title}` : `播放 ${song.title}`"
-      @click="$emit('toggle', song)"
-    >
-      <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
-      <Music2 v-else :size="20" aria-hidden="true" />
-      <span class="search-song-play-overlay">
-        <component :is="isCurrent && isPlaying ? Pause : CirclePlay" :size="23" fill="currentColor" aria-hidden="true" />
-      </span>
-    </button>
-    <RouterLink class="search-song-copy" :to="`/songs/${song.id}`">
-      <strong><SearchHighlightText :text="song.title" :keyword="keyword" /></strong>
-      <small>
+  <SongRow
+    class="search-song-row"
+    :song="song"
+    :is-current="isCurrent"
+    :is-playing="isPlaying"
+    @toggle-play="$emit('toggle', $event)"
+  >
+    <template #title>
+      <RouterLink class="search-song-copy search-song-title" :to="`/songs/${song.id}`">
+        <strong><SearchHighlightText :text="song.title" :keyword="keyword" /></strong>
+      </RouterLink>
+    </template>
+    <template #subtitle>
+      <RouterLink class="search-song-copy search-song-subtitle" :to="song.artistId ? `/artists/${song.artistId}` : `/songs/${song.id}`">
         <SearchHighlightText :text="song.artistName || '未知歌手'" :keyword="keyword" />
         <template v-if="song.albumTitle"> · {{ song.albumTitle }}</template>
-      </small>
-    </RouterLink>
-    <span class="search-song-plays">{{ formatCount(song.playCount) }} 次播放</span>
-  </article>
+      </RouterLink>
+    </template>
+    <template #meta>
+      <span class="search-song-plays">{{ formatCount(song.playCount) }} 次播放</span>
+    </template>
+  </SongRow>
 </template>
 
 <script setup lang="ts">
-import { CirclePlay, Music2, Pause } from "lucide-vue-next";
 import type { Song } from "@/api/types";
-import { formatCount, resolveMediaUrl } from "@/utils/format";
+import SongRow from "@/components/SongRow.vue";
+import { formatCount } from "@/utils/format";
 import SearchHighlightText from "./SearchHighlightText.vue";
 
 withDefaults(defineProps<{

@@ -44,9 +44,10 @@
             <MessageCircle :size="17" />
             <span>歌曲详情 / 查看评论</span>
           </button>
-          <button type="button" role="menuitem" @click="favoriteSong">
-            <Heart :size="17" />
-            <span>收藏</span>
+          <button type="button" role="menuitem" @click="toggleFavoriteSong">
+            <HeartOff v-if="favorited" :size="17" />
+            <Heart v-else :size="17" />
+            <span>{{ favorited ? "取消收藏" : "收藏" }}</span>
           </button>
           <button type="button" role="menuitem" @click="addToPlayQueue">
             <ListMusic :size="17" />
@@ -87,7 +88,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ChevronDown, Download, FolderPlus, Heart, ListMusic, ListPlus, MessageCircle, MoreHorizontal } from "lucide-vue-next";
+import { ChevronDown, Download, FolderPlus, Heart, HeartOff, ListMusic, ListPlus, MessageCircle, MoreHorizontal } from "lucide-vue-next";
 import { favoriteApi, playlistApi, userApi } from "@/api";
 import type { Playlist, Song } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
@@ -98,9 +99,15 @@ import { resolveMediaUrl } from "@/utils/format";
 const props = withDefaults(defineProps<{
   song: Song;
   variant?: "row" | "player";
+  favorited?: boolean;
 }>(), {
-  variant: "row"
+  variant: "row",
+  favorited: false
 });
+
+const emit = defineEmits<{
+  favoriteChange: [favorited: boolean];
+}>();
 
 const MENU_OPEN_EVENT = "melospace-song-actions-menu-open";
 const auth = useAuthStore();
@@ -241,10 +248,17 @@ function goToSongDetail() {
   closeMenu();
 }
 
-async function favoriteSong() {
+async function toggleFavoriteSong() {
   if (!requireLogin()) return;
-  await favoriteApi.add("SONG", props.song.id);
-  ui.toast("已收藏歌曲");
+  if (props.favorited) {
+    await favoriteApi.remove("SONG", props.song.id);
+    emit("favoriteChange", false);
+    ui.toast("已取消收藏");
+  } else {
+    await favoriteApi.add("SONG", props.song.id);
+    emit("favoriteChange", true);
+    ui.toast("已收藏歌曲");
+  }
   closeMenu();
 }
 

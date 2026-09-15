@@ -135,7 +135,7 @@
           class="playlist-sort-list"
           :class="{ 'playlist-sort-saving': savingOrder }"
         >
-          <div
+          <SongRow
             v-for="(item, index) in filteredPlaylistSongs"
             :key="item.id"
             class="playlist-sort-row playlist-manage-row"
@@ -148,53 +148,55 @@
             @dragover.prevent="moveDraggedSong(item)"
             @drop.prevent="dropDraggedSong"
             @dragend="endDrag"
+            :song="item.song"
+            :is-current="player.currentSong?.id === item.songId"
+            :is-playing="player.isPlaying"
+            @toggle-play="toggleSongPlayback"
+            @open-player="openPlayer"
           >
-            <label class="playlist-select-song" :aria-label="`选择 ${item.song.title}`">
-              <input
-                type="checkbox"
-                :checked="selectedSongIds.has(item.songId)"
-                @change="toggleSelectedSong(item.songId)"
-              />
-            </label>
-            <span class="playlist-drag-grip" :class="{ 'is-disabled': !canReorder }" aria-hidden="true">
-              <GripVertical :size="18" />
-            </span>
-            <SongRow
-              :song="item.song"
-              :is-current="player.currentSong?.id === item.songId"
-              :is-playing="player.isPlaying"
-              @toggle-play="toggleSongPlayback"
-              @open-player="openPlayer"
-            />
-            <div class="playlist-sort-actions">
-              <button
-                type="button"
-                :disabled="!canReorder || index === 0 || savingOrder"
-                :aria-label="`上移 ${item.song.title}`"
-                @click="moveSongByButton(item.songId, -1)"
-              >
-                <ArrowUp :size="17" />
-              </button>
-              <button
-                type="button"
-                :disabled="!canReorder || index === filteredPlaylistSongs.length - 1 || savingOrder"
-                :aria-label="`下移 ${item.song.title}`"
-                @click="moveSongByButton(item.songId, 1)"
-              >
-                <ArrowDown :size="17" />
-              </button>
-              <button
-                type="button"
-                :disabled="savingOrder"
-                :aria-label="`从歌单移除 ${item.song.title}`"
-                @click="removeOneSong(item.songId)"
-              >
-                <Trash2 :size="17" />
-              </button>
-            </div>
-          </div>
+            <template #leading>
+              <label class="playlist-select-song" :aria-label="`选择 ${item.song.title}`">
+                <input
+                  type="checkbox"
+                  :checked="selectedSongIds.has(item.songId)"
+                  @change="toggleSelectedSong(item.songId)"
+                />
+              </label>
+              <span class="playlist-drag-grip" :class="{ 'is-disabled': !canReorder }" aria-hidden="true">
+                <GripVertical :size="18" />
+              </span>
+            </template>
+            <template #actions>
+              <div class="playlist-sort-actions">
+                <button
+                  type="button"
+                  :disabled="!canReorder || index === 0 || savingOrder"
+                  :aria-label="`上移 ${item.song.title}`"
+                  @click="moveSongByButton(item.songId, -1)"
+                >
+                  <ArrowUp :size="17" />
+                </button>
+                <button
+                  type="button"
+                  :disabled="!canReorder || index === filteredPlaylistSongs.length - 1 || savingOrder"
+                  :aria-label="`下移 ${item.song.title}`"
+                  @click="moveSongByButton(item.songId, 1)"
+                >
+                  <ArrowDown :size="17" />
+                </button>
+                <button
+                  type="button"
+                  :disabled="savingOrder"
+                  :aria-label="`从歌单移除 ${item.song.title}`"
+                  @click="removeOneSong(item.songId)"
+                >
+                  <Trash2 :size="17" />
+                </button>
+              </div>
+            </template>
+          </SongRow>
         </div>
-        <SongColumnList
+        <SongList
           v-else-if="filteredSongs.length"
           :songs="filteredSongs"
           @toggle-play="toggleSongPlayback"
@@ -242,7 +244,7 @@ import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import PlaylistEditor from "@/components/playlist/PlaylistEditor.vue";
 import PlaylistHero from "@/components/playlist/PlaylistHero.vue";
-import SongColumnList from "@/components/SongColumnList.vue";
+import SongList from "@/components/SongList.vue";
 import SongRow from "@/components/SongRow.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";

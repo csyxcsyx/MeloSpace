@@ -72,19 +72,32 @@
 
     <section v-else-if="activeSection === 'favorites'" class="profile-section-panel">
       <div class="section-head"><div><p class="feature-label">稍后再听</p><h2>收藏</h2></div></div>
-      <div class="profile-server-list">
-        <article v-for="favorite in favoritePage.items" :key="favorite.id">
-          <RouterLink :to="favoritePath(favorite)">
-            <span class="profile-item-cover">
-              <img v-if="favoriteCover(favorite)" :src="resolveMediaUrl(favoriteCover(favorite))" alt="" />
-              <span v-else>♥</span>
-            </span>
-            <span><strong>{{ favoriteTitle(favorite) }}</strong><small>{{ favoriteSubtitle(favorite) }}</small></span>
-          </RouterLink>
-          <button type="button" class="danger-icon-action" aria-label="取消收藏" @click="removeFavorite(favorite)">
-            <HeartOff :size="17" /><span>取消</span>
-          </button>
-        </article>
+      <div class="profile-server-list" role="list">
+        <template v-for="favorite in favoritePage.items" :key="favorite.id">
+          <SongRow
+            v-if="favorite.targetType === 'SONG' && favorite.song"
+            :song="favorite.song"
+            :is-current="player.currentSong?.id === favorite.song.id"
+            :is-playing="player.isPlaying"
+            :favorited="true"
+            role="listitem"
+            @toggle-play="toggleFavoriteSongPlayback"
+            @open-player="openFavoritePlayer"
+            @favorite-change="handleFavoriteChange"
+          />
+          <article v-else role="listitem">
+            <RouterLink :to="favoritePath(favorite)">
+              <span class="profile-item-cover">
+                <img v-if="favoriteCover(favorite)" :src="resolveMediaUrl(favoriteCover(favorite))" alt="" />
+                <span v-else>♥</span>
+              </span>
+              <span><strong>{{ favoriteTitle(favorite) }}</strong><small>{{ favoriteSubtitle(favorite) }}</small></span>
+            </RouterLink>
+            <button type="button" class="danger-icon-action" aria-label="取消收藏" @click="removeFavorite(favorite)">
+              <HeartOff :size="17" /><span>取消</span>
+            </button>
+          </article>
+        </template>
         <EmptyState v-if="!sectionLoading && !favoritePage.items.length">收藏歌曲或公开歌单后会出现在这里。</EmptyState>
       </div>
       <ProfilePagination :page="favoritePage.page" :size="favoritePage.size" :total="favoritePage.total" @change="loadFavorites" />
@@ -97,16 +110,30 @@
           <Trash2 :size="17" /><span>{{ clearingRecent ? "清空中" : "清空" }}</span>
         </button>
       </div>
-      <div class="profile-server-list">
-        <article v-for="item in recentPage.items" :key="item.id">
-          <RouterLink :to="`/songs/${item.song?.id || item.songId}`">
-            <span class="profile-item-cover">
-              <img v-if="item.song?.coverUrl" :src="resolveMediaUrl(item.song.coverUrl)" alt="" />
-              <span v-else>▶</span>
-            </span>
-            <span><strong>{{ item.song?.title || `歌曲 #${item.songId}` }}</strong><small>{{ item.song?.artistName || "MeloSpace" }} · {{ formatDate(item.playedAt) }}</small></span>
-          </RouterLink>
-        </article>
+      <div class="profile-server-list" role="list">
+        <template v-for="item in recentPage.items" :key="item.id">
+          <SongRow
+            v-if="item.song"
+            :song="item.song"
+            :is-current="player.currentSong?.id === item.song.id"
+            :is-playing="player.isPlaying"
+            role="listitem"
+            @toggle-play="toggleRecentSongPlayback"
+            @open-player="openRecentPlayer"
+          >
+            <template #meta="{ song }">
+              <RouterLink v-if="song.albumId" :to="`/albums/${song.albumId}`">{{ song.albumTitle || "未绑定专辑" }}</RouterLink>
+              <span v-else>未绑定专辑</span>
+              <span>{{ formatDate(item.playedAt) }}</span>
+            </template>
+          </SongRow>
+          <article v-else role="listitem">
+            <RouterLink :to="`/songs/${item.songId}`">
+              <span class="profile-item-cover">▶</span>
+              <span><strong>歌曲 #{{ item.songId }}</strong><small>{{ formatDate(item.playedAt) }}</small></span>
+            </RouterLink>
+          </article>
+        </template>
         <EmptyState v-if="!sectionLoading && !recentPage.items.length">最近播放会按时间保存在这里。</EmptyState>
       </div>
       <ProfilePagination :page="recentPage.page" :size="recentPage.size" :total="recentPage.total" @change="loadRecent" />
@@ -139,9 +166,11 @@ import { computed, defineComponent, h, onMounted, ref } from "vue";
 import { Clock3, Heart, HeartOff, Library, Trash2, Upload, UserRound } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { favoriteApi, playlistApi, uploadApi, userApi } from "@/api";
-import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist } from "@/api/types";
+import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import SongRow from "@/components/SongRow.vue";
 import { useAuthStore } from "@/stores/auth";
+import { usePlayerStore } from "@/stores/player";
 import { useUiStore } from "@/stores/ui";
 import { resolveMediaUrl } from "@/utils/format";
 
@@ -168,6 +197,7 @@ const ProfilePagination = defineComponent({
 const ui = useUiStore();
 const auth = useAuthStore();
 const router = useRouter();
+const player = usePlayerStore();
 const activeSection = ref<ProfileSection>("playlists");
 const sections = [
   { key: "playlists" as const, label: "创建的歌单", icon: Library },
@@ -189,6 +219,8 @@ const uploadingAvatar = ref(false);
 const savingProfile = ref(false);
 const avatarUploadStatus = ref("");
 const profileInitial = computed(() => (profileNickname.value || auth.user?.username || "M").slice(0, 1).toUpperCase());
+const favoriteSongQueue = computed(() => favoritePage.value.items.flatMap((item) => item.targetType === "SONG" && item.song ? [item.song] : []));
+const recentSongQueue = computed(() => recentPage.value.items.flatMap((item) => item.song ? [item.song] : []));
 
 onMounted(async () => {
   syncProfile();
@@ -236,6 +268,32 @@ async function removeFavorite(favorite: FavoriteItem) {
   await favoriteApi.remove(favorite.targetType, favorite.targetId);
   ui.toast("已取消收藏");
   await loadFavorites(favoritePage.value.page);
+}
+
+function toggleSongPlayback(song: Song, queue: Song[]) {
+  if (player.currentSong?.id === song.id) {
+    if (player.isPlaying) player.setPlaying(false);
+    else void player.resumeCurrent();
+    return;
+  }
+  void player.playSong(song, queue);
+}
+
+function toggleFavoriteSongPlayback(song: Song) { toggleSongPlayback(song, favoriteSongQueue.value); }
+function toggleRecentSongPlayback(song: Song) { toggleSongPlayback(song, recentSongQueue.value); }
+
+async function openProfilePlayer(song: Song, queue: Song[]) {
+  const played = await player.playSong(song, queue);
+  if (played) await router.push("/player");
+}
+
+function openFavoritePlayer(song: Song) { return openProfilePlayer(song, favoriteSongQueue.value); }
+function openRecentPlayer(song: Song) { return openProfilePlayer(song, recentSongQueue.value); }
+
+function handleFavoriteChange(song: Song, favorited: boolean) {
+  if (favorited) return;
+  favoritePage.value.items = favoritePage.value.items.filter((item) => !(item.targetType === "SONG" && item.song?.id === song.id));
+  favoritePage.value.total = Math.max(0, favoritePage.value.total - 1);
 }
 
 function favoritePath(item: FavoriteItem) { return item.targetType === "PLAYLIST" ? `/playlists/${item.targetId}` : `/songs/${item.targetId}`; }
@@ -295,8 +353,9 @@ async function deleteMyAccount() {
 .profile-segments button.is-active { border: 1px solid rgba(var(--brand-rgb),.1); background: #fff; color: var(--brand); box-shadow: 0 8px 22px rgba(42,76,64,.08); }
 .profile-section-panel { min-width: 0; border: 1px solid rgba(49,79,68,.08); border-radius: 22px; padding: clamp(16px,3vw,28px); background: rgba(255,255,255,.76); box-shadow: var(--lg-inner-light), 0 18px 48px rgba(42,76,64,.065); }
 .profile-create-form { max-width: 620px; margin-bottom: 18px; }
-.profile-server-list { display: grid; gap: 8px; }
-.profile-server-list article { display: grid; align-items: center; min-width: 0; gap: 8px; border-radius: 14px; padding: 6px 8px; grid-template-columns: minmax(0,1fr) max-content; }
+.profile-server-list { display: grid; gap: 0; border-top: 1px solid var(--soft-line); border-bottom: 1px solid var(--soft-line); }
+.profile-server-list article { display: grid; align-items: center; min-width: 0; gap: 8px; border-bottom: 1px solid var(--soft-line); border-radius: 10px; padding: 6px 8px; grid-template-columns: minmax(0,1fr) max-content; }
+.profile-server-list article:last-of-type { border-bottom-color: transparent; }
 .profile-server-list article:hover { background: rgba(239,246,243,.9); }
 .profile-server-list article > a { display: grid; align-items: center; min-width: 0; min-height: 56px; gap: 12px; color: inherit; text-decoration: none; grid-template-columns: 48px minmax(0,1fr); }
 .profile-server-list article > a > span:last-child { min-width: 0; }

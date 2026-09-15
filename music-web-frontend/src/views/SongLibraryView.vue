@@ -77,24 +77,16 @@
         </div>
       </div>
 
-      <div v-if="songs.length" class="song-library-table" aria-live="polite">
-        <div class="song-library-table-head">
-          <span>歌曲</span>
-          <span>专辑</span>
-          <span>标签</span>
-          <span>时长</span>
-          <span>播放</span>
-        </div>
-        <div v-for="song in songs" :key="song.id" class="song-library-row">
-          <SongRow
-            class="song-library-row-song"
-            :song="song"
-            :is-current="false"
-            :is-playing="false"
-            @toggle-play="toggleSongPlayback"
-            @open-player="openPlayer"
-          />
-          <div class="song-library-mobile-meta">
+      <SongList
+        v-if="songs.length"
+        class="song-library-table"
+        :songs="songs"
+        aria-live="polite"
+        @toggle-play="toggleSongPlayback"
+        @open-player="openPlayer"
+      >
+        <template #meta="{ song }">
+          <div class="song-library-row-meta">
             <RouterLink v-if="song.albumId" :to="`/albums/${song.albumId}`">
               {{ displayName(song.albumTitle, "未绑定专辑") }}
             </RouterLink>
@@ -103,15 +95,8 @@
             <span>{{ formatDuration(song.durationSeconds) }}</span>
             <span>{{ formatPlayCount(song.playCount) }} 次播放</span>
           </div>
-          <RouterLink v-if="song.albumId" class="song-library-row-link song-library-desktop-meta" :to="`/albums/${song.albumId}`">
-            {{ displayName(song.albumTitle, "未绑定专辑") }}
-          </RouterLink>
-          <span v-else class="muted-line song-library-desktop-meta">未绑定专辑</span>
-          <span class="song-library-desktop-meta">{{ song.genre || song.language || song.mood || "未标注" }}</span>
-          <span class="song-library-desktop-meta">{{ formatDuration(song.durationSeconds) }}</span>
-          <span class="song-library-desktop-meta">{{ formatPlayCount(song.playCount) }}</span>
-        </div>
-      </div>
+        </template>
+      </SongList>
 
       <EmptyState v-else-if="loading">正在加载歌曲库...</EmptyState>
       <EmptyState v-else>{{ errorMessage || "暂无匹配歌曲。" }}</EmptyState>
@@ -133,7 +118,7 @@ import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
-import SongRow from "@/components/SongRow.vue";
+import SongList from "@/components/SongList.vue";
 import { usePlayerStore } from "@/stores/player";
 import { displayName, formatDuration } from "@/utils/format";
 

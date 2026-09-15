@@ -95,10 +95,9 @@
           </div>
         </form>
 
-        <SongColumnList
+        <SongList
           v-if="songs.length"
           :songs="songs"
-          :column-count="2"
           @toggle-play="toggleSongPlayback"
           @open-player="openPlayer"
         />
@@ -124,7 +123,7 @@ import type { Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
-import SongColumnList from "@/components/SongColumnList.vue";
+import SongList from "@/components/SongList.vue";
 import { usePlayerStore } from "@/stores/player";
 import { resolveMediaUrl } from "@/utils/format";
 
