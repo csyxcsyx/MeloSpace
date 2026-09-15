@@ -35,23 +35,8 @@
               <span>搜索专辑</span>
               <input v-model.trim="albumFilters.keyword" placeholder="专辑名" />
             </label>
-            <label>
-              <span>排序</span>
-              <select v-model="albumFilters.sort">
-                <option value="releaseDesc">发行时间新到旧</option>
-                <option value="releaseAsc">发行时间旧到新</option>
-                <option value="titleAsc">专辑 A-Z</option>
-                <option value="updatedDesc">最近更新</option>
-              </select>
-            </label>
-            <label>
-              <span>每页</span>
-              <select v-model.number="albumFilters.size">
-                <option :value="4">4 张</option>
-                <option :value="8">8 张</option>
-                <option :value="12">12 张</option>
-              </select>
-            </label>
+            <MeloSelect v-model="albumFilters.sort" label="排序" :options="albumSortOptions" />
+            <MeloSelect v-model="albumFilters.size" label="每页" :options="albumPageSizeOptions" />
             <div class="song-library-filter-actions">
               <button class="secondary-action" type="button" @click="resetAlbumFilters">重置</button>
               <button class="primary-action" type="submit">
@@ -92,32 +77,14 @@
               <span>搜索歌曲</span>
               <input v-model.trim="songFilters.keyword" placeholder="歌曲名" />
             </label>
-            <label>
-              <span>专辑</span>
-              <select v-model.number="songFilters.albumId" :disabled="!albums.length">
-                <option :value="0">全部专辑</option>
-                <option v-for="album in albums" :key="album.id" :value="album.id">{{ album.title }}</option>
-              </select>
-            </label>
-            <label>
-              <span>排序</span>
-              <select v-model="songFilters.sort">
-                <option value="updatedDesc">最近更新</option>
-                <option value="createdDesc">最近创建</option>
-                <option value="playsDesc">播放最多</option>
-                <option value="titleAsc">歌曲 A-Z</option>
-                <option value="durationDesc">时长从长到短</option>
-                <option value="durationAsc">时长从短到长</option>
-              </select>
-            </label>
-            <label>
-              <span>每页</span>
-              <select v-model.number="songFilters.size">
-                <option :value="12">12 首</option>
-                <option :value="20">20 首</option>
-                <option :value="36">36 首</option>
-              </select>
-            </label>
+            <MeloSelect
+              v-model="songFilters.albumId"
+              label="专辑"
+              :options="songAlbumOptions"
+              :disabled="!albums.length"
+            />
+            <MeloSelect v-model="songFilters.sort" label="排序" :options="songSortOptions" />
+            <MeloSelect v-model="songFilters.size" label="每页" :options="songPageSizeOptions" />
             <div class="song-library-filter-actions">
               <button class="secondary-action" type="button" @click="resetSongFilters">重置</button>
               <button class="primary-action" type="submit">
@@ -155,6 +122,7 @@ import { Disc3, Play, Search, UserRound } from "lucide-vue-next";
 import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import { usePlayerStore } from "@/stores/player";
@@ -190,6 +158,27 @@ const songFilters = reactive({
   sort: "updatedDesc" as SongSort,
   size: 20
 });
+
+const albumSortOptions: MeloSelectOption[] = [
+  { value: "releaseDesc", label: "发行时间新到旧" },
+  { value: "releaseAsc", label: "发行时间旧到新" },
+  { value: "titleAsc", label: "专辑 A-Z" },
+  { value: "updatedDesc", label: "最近更新" }
+];
+const albumPageSizeOptions: MeloSelectOption[] = [4, 8, 12].map((value) => ({ value, label: `${value} 张` }));
+const songSortOptions: MeloSelectOption[] = [
+  { value: "updatedDesc", label: "最近更新" },
+  { value: "createdDesc", label: "最近创建" },
+  { value: "playsDesc", label: "播放最多" },
+  { value: "titleAsc", label: "歌曲 A-Z" },
+  { value: "durationDesc", label: "时长从长到短" },
+  { value: "durationAsc", label: "时长从短到长" }
+];
+const songPageSizeOptions: MeloSelectOption[] = [12, 20, 36].map((value) => ({ value, label: `${value} 首` }));
+const songAlbumOptions = computed<MeloSelectOption[]>(() => [
+  { value: 0, label: "全部专辑" },
+  ...albums.value.map((album) => ({ value: album.id, label: album.title }))
+]);
 
 const filteredAlbums = computed(() => {
   const keyword = albumFilters.keyword.toLowerCase();

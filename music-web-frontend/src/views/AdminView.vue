@@ -23,22 +23,8 @@
             <input v-model.trim="songForm.title" required />
           </label>
           <div class="form-row">
-            <label>
-              歌手
-              <select v-model.number="songForm.artistId" required>
-                <option :value="0">选择歌手</option>
-                <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
-              </select>
-            </label>
-            <label>
-              专辑
-              <select v-model.number="songForm.albumId" required>
-                <option :value="0">选择专辑</option>
-                <option v-for="album in albums" :key="album.id" :value="album.id">
-                  {{ album.title }}{{ album.artistName ? ` - ${album.artistName}` : "" }}
-                </option>
-              </select>
-            </label>
+            <MeloSelect v-model="songForm.artistId" label="歌手" :options="artistSelectOptions" required />
+            <MeloSelect v-model="songForm.albumId" label="专辑" :options="albumSelectOptions" required />
             <label>
               时长（秒）
               <input v-model.number="songForm.durationSeconds" min="0" type="number" />
@@ -139,13 +125,7 @@
             专辑名
             <input v-model.trim="albumForm.title" required />
           </label>
-          <label>
-            歌手
-            <select v-model.number="albumForm.artistId" required>
-              <option :value="0">选择歌手</option>
-              <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
-            </select>
-          </label>
+          <MeloSelect v-model="albumForm.artistId" label="歌手" :options="artistSelectOptions" required />
           <label class="file-picker">
             <span>专辑图</span>
             <input
@@ -180,30 +160,9 @@
           <span>搜索</span>
           <input v-model.trim="songFilters.keyword" placeholder="歌曲、歌手或专辑" />
         </label>
-        <label>
-          <span>状态</span>
-          <select v-model="songFilters.status">
-            <option value="ALL">全部</option>
-            <option value="PUBLISHED">上架中</option>
-            <option value="OFFLINE">已下架</option>
-          </select>
-        </label>
-        <label>
-          <span>歌手</span>
-          <select v-model.number="songFilters.artistId">
-            <option :value="0">全部歌手</option>
-            <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
-          </select>
-        </label>
-        <label>
-          <span>排序</span>
-          <select v-model="songFilters.sort">
-            <option value="createdDesc">最近创建</option>
-            <option value="titleAsc">歌曲 A-Z</option>
-            <option value="artistAsc">歌手 A-Z</option>
-            <option value="playsDesc">播放最多</option>
-          </select>
-        </label>
+        <MeloSelect v-model="songFilters.status" label="状态" :options="songStatusOptions" />
+        <MeloSelect v-model="songFilters.artistId" label="歌手" :options="allArtistOptions" />
+        <MeloSelect v-model="songFilters.sort" label="排序" :options="songSortOptions" />
       </div>
       <div class="admin-song-list">
         <div v-for="song in pagedSongs" :key="song.id" class="admin-song-row">
@@ -246,38 +205,10 @@
           <span>搜索</span>
           <input v-model.trim="albumFilters.keyword" placeholder="专辑或歌手" />
         </label>
-        <label>
-          <span>歌手</span>
-          <select v-model.number="albumFilters.artistId">
-            <option :value="0">全部歌手</option>
-            <option v-for="artist in artists" :key="artist.id" :value="artist.id">{{ artist.name }}</option>
-          </select>
-        </label>
-        <label>
-          <span>专辑图</span>
-          <select v-model="albumFilters.cover">
-            <option value="ALL">全部</option>
-            <option value="REAL_COVER">有实际图</option>
-            <option value="MISSING_REAL_COVER">缺实际图</option>
-          </select>
-        </label>
-        <label>
-          <span>歌手图</span>
-          <select v-model="albumFilters.artistImage">
-            <option value="ALL">全部</option>
-            <option value="REAL_IMAGE">有实际图</option>
-            <option value="MISSING_REAL_IMAGE">缺实际图</option>
-          </select>
-        </label>
-        <label>
-          <span>排序</span>
-          <select v-model="albumFilters.sort">
-            <option value="createdDesc">最近创建</option>
-            <option value="titleAsc">专辑 A-Z</option>
-            <option value="artistAsc">歌手 A-Z</option>
-            <option value="releaseDesc">发行日期新到旧</option>
-          </select>
-        </label>
+        <MeloSelect v-model="albumFilters.artistId" label="歌手" :options="allArtistOptions" />
+        <MeloSelect v-model="albumFilters.cover" label="专辑图" :options="albumCoverOptions" />
+        <MeloSelect v-model="albumFilters.artistImage" label="歌手图" :options="artistImageOptions" />
+        <MeloSelect v-model="albumFilters.sort" label="排序" :options="albumSortOptions" />
       </div>
       <div class="admin-album-list">
         <div v-for="album in pagedAlbums" :key="album.id" class="admin-song-row">
@@ -326,22 +257,8 @@
           <span>搜索</span>
           <input v-model.trim="artistFilters.keyword" placeholder="歌手名或简介" />
         </label>
-        <label>
-          <span>歌手图</span>
-          <select v-model="artistFilters.image">
-            <option value="ALL">全部</option>
-            <option value="REAL_IMAGE">有实际图</option>
-            <option value="MISSING_REAL_IMAGE">缺实际图</option>
-          </select>
-        </label>
-        <label>
-          <span>排序</span>
-          <select v-model="artistFilters.sort">
-            <option value="updatedDesc">最近更新</option>
-            <option value="nameAsc">歌手 A-Z</option>
-            <option value="createdDesc">最近创建</option>
-          </select>
-        </label>
+        <MeloSelect v-model="artistFilters.image" label="歌手图" :options="artistImageOptions" />
+        <MeloSelect v-model="artistFilters.sort" label="排序" :options="artistSortOptions" />
       </div>
       <div class="admin-song-list">
         <div v-for="artist in pagedArtists" :key="artist.id" class="admin-song-row">
@@ -391,30 +308,9 @@
           <span>搜索</span>
           <input v-model.trim="userFilters.keyword" placeholder="用户名或昵称" />
         </label>
-        <label>
-          <span>角色</span>
-          <select v-model="userFilters.role">
-            <option value="ALL">全部</option>
-            <option value="ADMIN">管理员</option>
-            <option value="USER">普通用户</option>
-          </select>
-        </label>
-        <label>
-          <span>状态</span>
-          <select v-model="userFilters.status">
-            <option value="ALL">全部</option>
-            <option value="ACTIVE">正常</option>
-            <option value="DISABLED">禁用</option>
-          </select>
-        </label>
-        <label>
-          <span>排序</span>
-          <select v-model="userFilters.sort">
-            <option value="createdDesc">最近注册</option>
-            <option value="usernameAsc">用户名 A-Z</option>
-            <option value="roleAsc">角色</option>
-          </select>
-        </label>
+        <MeloSelect v-model="userFilters.role" label="角色" :options="userRoleOptions" />
+        <MeloSelect v-model="userFilters.status" label="状态" :options="userStatusOptions" />
+        <MeloSelect v-model="userFilters.sort" label="排序" :options="userSortOptions" />
       </div>
       <div class="admin-song-list">
         <div v-for="user in pagedUsers" :key="user.id" class="admin-song-row">
@@ -454,14 +350,7 @@
         </div>
       </div>
       <div class="list-controls admin-list-controls">
-        <label>
-          <span>处理状态</span>
-          <select v-model="reportStatus">
-            <option value="OPEN">待处理</option>
-            <option value="RESOLVED">已处理</option>
-            <option value="ALL">全部</option>
-          </select>
-        </label>
+        <MeloSelect v-model="reportStatus" label="处理状态" :options="reportStatusOptions" />
       </div>
       <p v-if="reportsLoading" class="muted-line">正在加载举报…</p>
       <div v-else class="admin-report-list">
@@ -514,6 +403,7 @@ import type { AdminUser, Album, Artist, CommentReportItem, PageResult, Song } fr
 import AdminDashboardMetrics from "@/components/admin/AdminDashboardMetrics.vue";
 import AdminPagination from "@/components/admin/AdminPagination.vue";
 import EmptyState from "@/components/EmptyState.vue";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { compareDate, compareText, matchesQuery, normalizeSearch, pageCount, paginate } from "@/utils/admin";
@@ -541,6 +431,59 @@ const editingAlbumId = ref<number | null>(null);
 const songFileInputKey = ref(0);
 const artistFileInputKey = ref(0);
 const albumFileInputKey = ref(0);
+
+const songStatusOptions: MeloSelectOption[] = [
+  { value: "ALL", label: "全部" },
+  { value: "PUBLISHED", label: "上架中" },
+  { value: "OFFLINE", label: "已下架" }
+];
+const songSortOptions: MeloSelectOption[] = [
+  { value: "createdDesc", label: "最近创建" },
+  { value: "titleAsc", label: "歌曲 A-Z" },
+  { value: "artistAsc", label: "歌手 A-Z" },
+  { value: "playsDesc", label: "播放最多" }
+];
+const albumCoverOptions: MeloSelectOption[] = [
+  { value: "ALL", label: "全部" },
+  { value: "REAL_COVER", label: "有实际图" },
+  { value: "MISSING_REAL_COVER", label: "缺实际图" }
+];
+const artistImageOptions: MeloSelectOption[] = [
+  { value: "ALL", label: "全部" },
+  { value: "REAL_IMAGE", label: "有实际图" },
+  { value: "MISSING_REAL_IMAGE", label: "缺实际图" }
+];
+const albumSortOptions: MeloSelectOption[] = [
+  { value: "createdDesc", label: "最近创建" },
+  { value: "titleAsc", label: "专辑 A-Z" },
+  { value: "artistAsc", label: "歌手 A-Z" },
+  { value: "releaseDesc", label: "发行日期新到旧" }
+];
+const artistSortOptions: MeloSelectOption[] = [
+  { value: "updatedDesc", label: "最近更新" },
+  { value: "nameAsc", label: "歌手 A-Z" },
+  { value: "createdDesc", label: "最近创建" }
+];
+const userRoleOptions: MeloSelectOption[] = [
+  { value: "ALL", label: "全部" },
+  { value: "ADMIN", label: "管理员" },
+  { value: "USER", label: "普通用户" }
+];
+const userStatusOptions: MeloSelectOption[] = [
+  { value: "ALL", label: "全部" },
+  { value: "ACTIVE", label: "正常" },
+  { value: "DISABLED", label: "禁用" }
+];
+const userSortOptions: MeloSelectOption[] = [
+  { value: "createdDesc", label: "最近注册" },
+  { value: "usernameAsc", label: "用户名 A-Z" },
+  { value: "roleAsc", label: "角色" }
+];
+const reportStatusOptions: MeloSelectOption[] = [
+  { value: "OPEN", label: "待处理" },
+  { value: "RESOLVED", label: "已处理" },
+  { value: "ALL", label: "全部" }
+];
 
 const songAudioFile = ref<File | null>(null);
 const songLyricFile = ref<File | null>(null);
@@ -604,6 +547,22 @@ const adminPages = reactive({
   albums: 1,
   users: 1
 });
+
+const artistSelectOptions = computed<MeloSelectOption[]>(() => [
+  { value: 0, label: "选择歌手" },
+  ...artists.value.map((artist) => ({ value: artist.id, label: artist.name }))
+]);
+const allArtistOptions = computed<MeloSelectOption[]>(() => [
+  { value: 0, label: "全部歌手" },
+  ...artists.value.map((artist) => ({ value: artist.id, label: artist.name }))
+]);
+const albumSelectOptions = computed<MeloSelectOption[]>(() => [
+  { value: 0, label: "选择专辑" },
+  ...albums.value.map((album) => ({
+    value: album.id,
+    label: `${album.title}${album.artistName ? ` - ${album.artistName}` : ""}`
+  }))
+]);
 
 const selectedSongArtist = computed(() => artists.value.find((item) => item.id === songForm.artistId) ?? null);
 const selectedSongAlbum = computed(() => albums.value.find((item) => item.id === songForm.albumId) ?? null);

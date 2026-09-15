@@ -30,11 +30,13 @@
           <span class="chevron">›</span>
         </div>
         <form class="inline-form" @submit.prevent="addToPlaylist">
-          <label class="sr-only" for="song-playlist-select">选择要加入的歌单</label>
-          <select id="song-playlist-select" v-model.number="selectedPlaylistId">
-            <option :value="0">选择我的歌单</option>
-            <option v-for="playlist in myPlaylists" :key="playlist.id" :value="playlist.id">{{ playlist.title }}</option>
-          </select>
+          <MeloSelect
+            id="song-playlist-select"
+            v-model="selectedPlaylistId"
+            label="选择要加入的歌单"
+            :options="playlistOptions"
+            :show-label="false"
+          />
           <button type="submit">添加</button>
         </form>
       </section>
@@ -53,6 +55,7 @@ import type { Playlist, Song } from "@/api/types";
 import CommentThread from "@/components/CommentThread.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import LyricPanel from "@/components/LyricPanel.vue";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";
@@ -68,6 +71,10 @@ const song = ref<Song | null>(null);
 const myPlaylists = ref<Playlist[]>([]);
 const selectedPlaylistId = ref(0);
 const isCurrentSong = computed(() => Boolean(song.value && player.currentSong?.id === song.value.id));
+const playlistOptions = computed<MeloSelectOption[]>(() => [
+  { value: 0, label: "选择我的歌单" },
+  ...myPlaylists.value.map((playlist) => ({ value: playlist.id, label: playlist.title }))
+]);
 
 onMounted(loadSong);
 

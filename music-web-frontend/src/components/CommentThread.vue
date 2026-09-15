@@ -186,16 +186,7 @@
             <button type="button" aria-label="关闭举报面板" @click="closeReport"><X :size="19" /></button>
           </header>
           <p class="comment-report-preview">{{ reportTarget.content }}</p>
-          <label>
-            <span>举报原因</span>
-            <select v-model="reportReason">
-              <option value="SPAM">垃圾广告</option>
-              <option value="ABUSE">辱骂或攻击</option>
-              <option value="HARASSMENT">骚扰</option>
-              <option value="COPYRIGHT">侵权内容</option>
-              <option value="OTHER">其他</option>
-            </select>
-          </label>
+          <MeloSelect v-model="reportReason" label="举报原因" :options="reportReasonOptions" />
           <label>
             <span>补充说明（选填）</span>
             <textarea v-model="reportDetail" maxlength="500" rows="4" placeholder="请提供有助于管理员判断的信息" />
@@ -225,6 +216,7 @@ import {
 } from "lucide-vue-next";
 import { commentApi } from "@/api";
 import type { CommentItem } from "@/api/types";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { formatRelativeTime, resolveMediaUrl } from "@/utils/format";
@@ -257,6 +249,13 @@ const replyLoading = reactive(new Set<number>());
 const pendingLikes = reactive(new Set<number>());
 const reportTarget = ref<CommentItem | null>(null);
 const reportReason = ref("SPAM");
+const reportReasonOptions: MeloSelectOption[] = [
+  { value: "SPAM", label: "垃圾广告" },
+  { value: "ABUSE", label: "辱骂或攻击" },
+  { value: "HARASSMENT", label: "骚扰" },
+  { value: "COPYRIGHT", label: "侵权内容" },
+  { value: "OTHER", label: "其他" }
+];
 const reportDetail = ref("");
 const reporting = ref(false);
 const reportPanel = ref<HTMLElement | null>(null);

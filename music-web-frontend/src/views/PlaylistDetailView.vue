@@ -62,15 +62,12 @@
               <X :size="17" />
             </button>
           </label>
-          <label class="playlist-sort-field">
-            <span>排序</span>
-            <select v-model="songSort">
-              <option value="CUSTOM">歌单顺序</option>
-              <option value="TITLE">歌曲名称</option>
-              <option value="ARTIST">歌手名称</option>
-              <option value="NEWEST">最近添加</option>
-            </select>
-          </label>
+          <MeloSelect
+            v-model="songSort"
+            class="playlist-sort-field"
+            label="排序"
+            :options="songSortOptions"
+          />
           <button
             v-if="playlist.canManage && selectedSongIds.size"
             type="button"
@@ -241,6 +238,7 @@ import { favoriteApi, playlistApi, songApi, uploadApi } from "@/api";
 import type { PlaylistDetail, PlaylistSong, Song } from "@/api/types";
 import CommentThread from "@/components/CommentThread.vue";
 import EmptyState from "@/components/EmptyState.vue";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
 import PlaylistEditor from "@/components/playlist/PlaylistEditor.vue";
 import PlaylistHero from "@/components/playlist/PlaylistHero.vue";
@@ -253,6 +251,13 @@ import { resolveMediaUrl } from "@/utils/format";
 import { applyPlaylistFavorite, canManagePlaylist } from "@/utils/playlist";
 
 type SongSort = "CUSTOM" | "TITLE" | "ARTIST" | "NEWEST";
+
+const songSortOptions: MeloSelectOption[] = [
+  { value: "CUSTOM", label: "歌单顺序" },
+  { value: "TITLE", label: "歌曲名称" },
+  { value: "ARTIST", label: "歌手名称" },
+  { value: "NEWEST", label: "最近添加" }
+];
 
 const route = useRoute();
 const router = useRouter();

@@ -14,13 +14,7 @@
         <span>歌单名称</span>
         <input v-model.trim="title" maxlength="100" required />
       </label>
-      <label>
-        <span>公开状态</span>
-        <select v-model="visibility">
-          <option value="PUBLIC">公开，所有人可发现与评论</option>
-          <option value="PRIVATE">私有，仅自己可见</option>
-        </select>
-      </label>
+      <MeloSelect v-model="visibility" label="公开状态" :options="visibilityOptions" />
       <label class="playlist-editor-wide">
         <span>描述</span>
         <textarea v-model.trim="description" maxlength="500" rows="4" />
@@ -58,6 +52,12 @@
 
 <script setup lang="ts">
 import { ImagePlus, X } from "lucide-vue-next";
+import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
+
+const visibilityOptions: MeloSelectOption[] = [
+  { value: "PUBLIC", label: "公开，所有人可发现与评论" },
+  { value: "PRIVATE", label: "私有，仅自己可见" }
+];
 
 defineProps<{
   saving: boolean;
@@ -101,6 +101,7 @@ defineEmits<{
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .playlist-editor-grid label,
+.playlist-editor-grid :deep(.melo-select-field),
 .playlist-cover-field {
   display: grid;
   align-content: start;
