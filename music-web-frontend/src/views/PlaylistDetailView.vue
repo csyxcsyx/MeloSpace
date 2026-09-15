@@ -15,61 +15,20 @@
         @edit="toggleEditor"
       />
 
-      <form v-if="playlist.canManage && editing" class="playlist-editor glass-panel" @submit.prevent="savePlaylist">
-        <div class="section-head playlist-panel-head">
-          <div>
-            <p class="feature-label">管理歌单</p>
-            <h2>编辑资料</h2>
-          </div>
-          <button type="button" class="playlist-icon-button" aria-label="关闭编辑" @click="editing = false">
-            <X :size="19" />
-          </button>
-        </div>
-        <div class="playlist-editor-grid">
-          <label>
-            <span>歌单名称</span>
-            <input v-model.trim="editForm.title" maxlength="100" required />
-          </label>
-          <label>
-            <span>公开状态</span>
-            <select v-model="editForm.visibility">
-              <option value="PUBLIC">公开，所有人可发现与评论</option>
-              <option value="PRIVATE">私有，仅自己可见</option>
-            </select>
-          </label>
-          <label class="playlist-editor-wide">
-            <span>描述</span>
-            <textarea v-model.trim="editForm.description" maxlength="500" rows="4" />
-            <small>{{ editForm.description.length }}/500</small>
-          </label>
-          <label class="playlist-editor-wide">
-            <span>标签（使用逗号分隔，最多 5 个，每个最多 12 字）</span>
-            <input v-model="editForm.tagsText" maxlength="69" placeholder="例如：华语流行, 通勤, 治愈" />
-          </label>
-          <div class="playlist-editor-wide playlist-cover-field">
-            <span>歌单封面</span>
-            <div class="playlist-cover-controls">
-              <label class="secondary-action playlist-file-button">
-                <ImagePlus :size="18" />
-                {{ coverUploading ? "正在上传..." : "上传图片" }}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  :disabled="coverUploading"
-                  @change="uploadCover"
-                />
-              </label>
-              <input v-model.trim="editForm.coverUrl" aria-label="歌单封面地址" placeholder="或填写图片地址" />
-            </div>
-          </div>
-        </div>
-        <div class="playlist-editor-actions">
-          <button type="button" class="secondary-action" @click="resetEditor">恢复</button>
-          <button type="submit" class="primary-action" :disabled="editSaving || coverUploading">
-            {{ editSaving ? "正在保存..." : "保存修改" }}
-          </button>
-        </div>
-      </form>
+      <PlaylistEditor
+        v-if="playlist.canManage && editing"
+        v-model:title="editForm.title"
+        v-model:description="editForm.description"
+        v-model:cover-url="editForm.coverUrl"
+        v-model:visibility="editForm.visibility"
+        v-model:tags-text="editForm.tagsText"
+        :saving="editSaving"
+        :cover-uploading="coverUploading"
+        @close="editing = false"
+        @reset="resetEditor"
+        @save="savePlaylist"
+        @upload-cover="uploadCover"
+      />
 
       <section class="playlist-song-section">
         <div class="section-head playlist-panel-head">
@@ -272,7 +231,6 @@ import {
   ArrowDown,
   ArrowUp,
   GripVertical,
-  ImagePlus,
   ListPlus,
   Lock,
   Search,
@@ -284,6 +242,7 @@ import type { PlaylistDetail, PlaylistSong, Song } from "@/api/types";
 import CommentThread from "@/components/CommentThread.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import PageToolbar from "@/components/PageToolbar.vue";
+import PlaylistEditor from "@/components/playlist/PlaylistEditor.vue";
 import PlaylistHero from "@/components/playlist/PlaylistHero.vue";
 import SongColumnList from "@/components/SongColumnList.vue";
 import SongRow from "@/components/SongRow.vue";
@@ -685,8 +644,7 @@ function resetDragState() {
   min-width: 0;
 }
 
-.playlist-panel-head > button,
-.playlist-editor-actions button {
+.playlist-panel-head > button {
   min-height: 44px;
 }
 
@@ -699,7 +657,6 @@ function resetDragState() {
   -webkit-backdrop-filter: blur(24px) saturate(145%);
 }
 
-.playlist-editor,
 .playlist-song-picker {
   padding: clamp(18px, 3vw, 28px);
 }
@@ -725,32 +682,12 @@ function resetDragState() {
   color: #4f4f56;
 }
 
-.playlist-editor-grid {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.playlist-editor-grid label,
-.playlist-cover-field {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.playlist-editor-grid label > span,
-.playlist-cover-field > span,
 .playlist-sort-field > span {
   color: #52525a;
   font-size: 13px;
   font-weight: 680;
 }
 
-.playlist-editor-grid input,
-.playlist-editor-grid select,
-.playlist-editor-grid textarea,
-.playlist-cover-controls > input,
 .playlist-song-tools input,
 .playlist-song-tools select,
 .playlist-picker-search input {
@@ -761,48 +698,6 @@ function resetDragState() {
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.86);
   color: inherit;
-}
-
-.playlist-editor-grid textarea {
-  resize: vertical;
-}
-
-.playlist-editor-grid small {
-  justify-self: end;
-  color: var(--muted);
-}
-
-.playlist-editor-wide {
-  grid-column: 1 / -1;
-}
-
-.playlist-cover-controls {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: max-content minmax(0, 1fr);
-}
-
-.playlist-file-button {
-  display: inline-flex !important;
-  align-items: center;
-  min-height: 44px;
-  gap: 7px !important;
-  cursor: pointer;
-}
-
-.playlist-file-button input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.playlist-editor-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
 }
 
 .playlist-song-section {
@@ -1041,14 +936,11 @@ function resetDragState() {
 }
 
 @media (max-width: 620px) {
-  .playlist-editor-grid,
-  .playlist-cover-controls,
   .playlist-song-tools,
   .playlist-picker-search {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .playlist-editor-wide,
   .playlist-danger-button {
     grid-column: auto;
   }
@@ -1082,13 +974,9 @@ function resetDragState() {
     height: 44px;
   }
 
-  .playlist-editor-actions {
-    flex-wrap: wrap;
-  }
 }
 
 @media (max-width: 390px) {
-  .playlist-editor,
   .playlist-song-picker {
     padding: 16px;
   }
