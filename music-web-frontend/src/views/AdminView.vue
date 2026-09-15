@@ -8,24 +8,7 @@
       </button>
     </header>
 
-    <section class="metrics">
-      <div class="metric">
-        <strong>{{ dashboard.users ?? 0 }}</strong>
-        <span>用户</span>
-      </div>
-      <div class="metric">
-        <strong>{{ dashboard.songs ?? 0 }}</strong>
-        <span>歌曲</span>
-      </div>
-      <div class="metric">
-        <strong>{{ dashboard.playlists ?? 0 }}</strong>
-        <span>歌单</span>
-      </div>
-      <div class="metric">
-        <strong>{{ dashboard.comments ?? 0 }}</strong>
-        <span>评论</span>
-      </div>
-    </section>
+    <AdminDashboardMetrics :dashboard="dashboard" />
 
     <section class="admin-layout">
       <div class="compact-panel">
@@ -245,11 +228,12 @@
         </div>
         <EmptyState v-if="!filteredSongs.length">暂无匹配歌曲。</EmptyState>
       </div>
-      <div v-if="songPageCount > 1" class="list-pagination">
-        <button type="button" :disabled="adminPages.songs <= 1" @click="setAdminPage('songs', adminPages.songs - 1)">上一页</button>
-        <span>{{ adminPages.songs }} / {{ songPageCount }} · {{ filteredSongs.length }} 首</span>
-        <button type="button" :disabled="adminPages.songs >= songPageCount" @click="setAdminPage('songs', adminPages.songs + 1)">下一页</button>
-      </div>
+      <AdminPagination
+        :page="adminPages.songs"
+        :page-count="songPageCount"
+        :summary="`${filteredSongs.length} 首`"
+        @change="setAdminPage('songs', $event)"
+      />
     </section>
 
     <section class="compact-panel admin-list-section">
@@ -324,11 +308,12 @@
         </div>
         <EmptyState v-if="!filteredAlbums.length">暂无匹配专辑。</EmptyState>
       </div>
-      <div v-if="albumPageCount > 1" class="list-pagination">
-        <button type="button" :disabled="adminPages.albums <= 1" @click="setAdminPage('albums', adminPages.albums - 1)">上一页</button>
-        <span>{{ adminPages.albums }} / {{ albumPageCount }} · {{ filteredAlbums.length }} 张</span>
-        <button type="button" :disabled="adminPages.albums >= albumPageCount" @click="setAdminPage('albums', adminPages.albums + 1)">下一页</button>
-      </div>
+      <AdminPagination
+        :page="adminPages.albums"
+        :page-count="albumPageCount"
+        :summary="`${filteredAlbums.length} 张`"
+        @change="setAdminPage('albums', $event)"
+      />
     </section>
 
     <section class="compact-panel admin-list-section">
@@ -388,11 +373,12 @@
         </div>
         <EmptyState v-if="!filteredArtists.length">暂无匹配歌手。</EmptyState>
       </div>
-      <div v-if="artistPageCount > 1" class="list-pagination">
-        <button type="button" :disabled="adminPages.artists <= 1" @click="setAdminPage('artists', adminPages.artists - 1)">上一页</button>
-        <span>{{ adminPages.artists }} / {{ artistPageCount }} · {{ filteredArtists.length }} 位</span>
-        <button type="button" :disabled="adminPages.artists >= artistPageCount" @click="setAdminPage('artists', adminPages.artists + 1)">下一页</button>
-      </div>
+      <AdminPagination
+        :page="adminPages.artists"
+        :page-count="artistPageCount"
+        :summary="`${filteredArtists.length} 位`"
+        @change="setAdminPage('artists', $event)"
+      />
     </section>
 
     <section class="compact-panel admin-list-section">
@@ -451,11 +437,12 @@
         </div>
         <EmptyState v-if="!filteredUsers.length">暂无匹配用户。</EmptyState>
       </div>
-      <div v-if="userPageCount > 1" class="list-pagination">
-        <button type="button" :disabled="adminPages.users <= 1" @click="setAdminPage('users', adminPages.users - 1)">上一页</button>
-        <span>{{ adminPages.users }} / {{ userPageCount }} · {{ filteredUsers.length }} 位</span>
-        <button type="button" :disabled="adminPages.users >= userPageCount" @click="setAdminPage('users', adminPages.users + 1)">下一页</button>
-      </div>
+      <AdminPagination
+        :page="adminPages.users"
+        :page-count="userPageCount"
+        :summary="`${filteredUsers.length} 位`"
+        @change="setAdminPage('users', $event)"
+      />
     </section>
 
     <section class="compact-panel admin-list-section">
@@ -514,11 +501,7 @@
         </article>
         <EmptyState v-if="!commentReports.items.length">暂无匹配的评论举报。</EmptyState>
       </div>
-      <div v-if="reportPageCount > 1" class="list-pagination">
-        <button type="button" :disabled="reportPage <= 1" @click="setReportPage(reportPage - 1)">上一页</button>
-        <span>{{ reportPage }} / {{ reportPageCount }}</span>
-        <button type="button" :disabled="reportPage >= reportPageCount" @click="setReportPage(reportPage + 1)">下一页</button>
-      </div>
+      <AdminPagination :page="reportPage" :page-count="reportPageCount" @change="setReportPage" />
     </section>
   </section>
 </template>
@@ -528,9 +511,12 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Disc3, ListMusic, Mic2, Music2, Pencil, Pin, Plus, RefreshCw, ShieldCheck, Trash2, Users, Wand2 } from "lucide-vue-next";
 import { adminApi, albumApi, artistApi } from "@/api";
 import type { AdminUser, Album, Artist, CommentReportItem, PageResult, Song } from "@/api/types";
+import AdminDashboardMetrics from "@/components/admin/AdminDashboardMetrics.vue";
+import AdminPagination from "@/components/admin/AdminPagination.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
+import { compareDate, compareText, matchesQuery, normalizeSearch, pageCount, paginate } from "@/utils/admin";
 import { resolveMediaUrl } from "@/utils/format";
 
 const ui = useUiStore();
@@ -588,7 +574,6 @@ const artistForm = reactive({
 });
 
 type AdminListKey = "songs" | "artists" | "albums" | "users";
-const ADMIN_PAGE_SIZE = 8;
 const songFilters = reactive({
   keyword: "",
   status: "ALL",
@@ -815,34 +800,6 @@ function setAdminPage(key: AdminListKey, page: number) {
     users: userPageCount.value
   }[key];
   adminPages[key] = Math.min(Math.max(page, 1), maxPage);
-}
-
-function paginate<T>(items: T[], page: number) {
-  const start = (page - 1) * ADMIN_PAGE_SIZE;
-  return items.slice(start, start + ADMIN_PAGE_SIZE);
-}
-
-function pageCount(total: number) {
-  return Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
-}
-
-function normalizeSearch(value: string) {
-  return value.trim().toLocaleLowerCase();
-}
-
-function matchesQuery(value: string, query: string) {
-  if (!query) return true;
-  return value.toLocaleLowerCase().includes(query);
-}
-
-function compareText(first: string, second: string) {
-  return first.localeCompare(second, "zh-CN");
-}
-
-function compareDate(first: string, second: string) {
-  const firstTime = new Date(first).getTime() || 0;
-  const secondTime = new Date(second).getTime() || 0;
-  return firstTime - secondTime;
 }
 
 function mediaPath(value?: string | null) {
