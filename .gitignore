@@ -36,6 +36,7 @@ src/main/resources/static/media/audio/*.flac
 
 ### Local deployment credentials ###
 REX.pem
+Secret.pem
 
 ### Frontend ###
 music-web-frontend/node_modules/
