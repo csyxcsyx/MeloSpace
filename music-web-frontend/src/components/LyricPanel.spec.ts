@@ -25,6 +25,7 @@ const lyricSong: Song = {
 
 describe("LyricPanel performance behavior", () => {
   const scrollTo = vi.fn();
+  let cleanupWrapper: (() => void) | null = null;
 
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
@@ -41,6 +42,8 @@ describe("LyricPanel performance behavior", () => {
   });
 
   afterEach(() => {
+    cleanupWrapper?.();
+    cleanupWrapper = null;
     scrollTo.mockClear();
     Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
     vi.unstubAllGlobals();
@@ -55,6 +58,7 @@ describe("LyricPanel performance behavior", () => {
         fullscreen: true
       }
     });
+    cleanupWrapper = () => wrapper.unmount();
     await flushPromises();
     await waitForAnimationFrame();
 
@@ -69,6 +73,29 @@ describe("LyricPanel performance behavior", () => {
     await flushPromises();
     await waitForAnimationFrame();
     expect(scrollTo.mock.calls.length).toBeGreaterThan(initialScrollCount);
+  });
+
+  it("为逐字歌词输出连续的百分比进度", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("[00:00.00]<00:01.00>逐<00:02.00>字<00:03.00>歌词")
+    }));
+    const wrapper = mount(LyricPanel, {
+      props: {
+        song: { ...lyricSong, lyricUrl: "/media/test-word-timed.lrc" },
+        currentTime: 2.36,
+        isCurrentSong: true,
+        fullscreen: true
+      }
+    });
+    cleanupWrapper = () => wrapper.unmount();
+    await flushPromises();
+
+    const words = wrapper.findAll(".lyric-word");
+    expect(words).toHaveLength(3);
+    expect(words[0].attributes("style")).toContain("100.00%");
+    expect(words[1].attributes("style")).toContain("50.00%");
+    expect(words[2].attributes("style")).toContain("0.00%");
   });
 });
 

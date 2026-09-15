@@ -1,9 +1,5 @@
 <template>
   <section class="player-page" :style="themeStyle">
-    <div class="player-page-backdrop" aria-hidden="true">
-      <img v-if="player.currentSong?.coverUrl" :src="resolveMediaUrl(player.currentSong.coverUrl)" alt="" />
-    </div>
-
     <header class="player-page-head">
       <div class="player-nav-actions">
         <button class="round-icon-button" type="button" aria-label="返回" @click="goBack">
@@ -110,12 +106,14 @@
         <div class="player-progress-control">
           <span>{{ formatDuration(player.currentTime) }}</span>
           <input
+            class="player-dock-range"
             aria-label="播放进度"
             type="range"
             min="0"
             :max="rangeMax"
             step="0.1"
             :value="player.currentTime"
+            :style="progressRangeStyle"
             @input="seekFromRange"
           />
           <span>{{ formatDuration(player.duration) }}</span>
@@ -155,12 +153,14 @@
           <div class="player-volume-row">
             <Volume2 :size="18" />
             <input
+              class="player-dock-range"
               aria-label="音量"
               type="range"
               min="0"
               max="1"
               step="0.01"
               :value="player.volume"
+              :style="volumeRangeStyle"
               @input="setVolume"
             />
           </div>
@@ -185,20 +185,26 @@ const router = useRouter();
 const player = usePlayerStore();
 const queueOpen = ref(false);
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
+const progressRangeStyle = computed(() => ({ "--player-range-progress": `${player.progressPercent}%` }));
+const volumeRangeStyle = computed(() => ({ "--player-range-progress": `${clamp(player.volume, 0, 1) * 100}%` }));
 const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
 const THEME_CACHE_PREFIX = "melospace-player-theme:";
 const theme = ref(readCachedTheme(player.currentSong?.coverUrl) ?? DEFAULT_THEME);
 const lyricPalette = computed(() => deriveLyricPalette(theme.value));
+const backgroundPalette = computed(() => deriveBackgroundPalette(theme.value));
 const themeStyle = computed(() => ({
   "--player-theme": `rgb(${theme.value.r}, ${theme.value.g}, ${theme.value.b})`,
+  "--player-theme-rgb": `${theme.value.r}, ${theme.value.g}, ${theme.value.b}`,
   "--player-theme-soft": `rgba(${theme.value.r}, ${theme.value.g}, ${theme.value.b}, 0.34)`,
   "--player-theme-muted": `rgba(${theme.value.r}, ${theme.value.g}, ${theme.value.b}, 0.16)`,
   "--player-lyric-active": lyricPalette.value.active,
   "--player-lyric-rest": lyricPalette.value.rest,
   "--player-lyric-muted": lyricPalette.value.muted,
   "--player-lyric-shadow": lyricPalette.value.shadow,
-  "--player-bg-start": `rgb(${Math.max(theme.value.r - 82, 18)}, ${Math.max(theme.value.g - 72, 18)}, ${Math.max(theme.value.b - 68, 18)})`,
-  "--player-bg-end": `rgb(${Math.max(theme.value.r - 118, 12)}, ${Math.max(theme.value.g - 104, 12)}, ${Math.max(theme.value.b - 98, 12)})`
+  "--player-range-fill": lyricPalette.value.active,
+  "--player-bg-start": backgroundPalette.value.start,
+  "--player-bg-end": backgroundPalette.value.end,
+  "--player-bg-glow": backgroundPalette.value.glow
 }));
 let themeRequestId = 0;
 
@@ -262,6 +268,19 @@ function deriveLyricPalette(color: { r: number; g: number; b: number }) {
   const muted = `hsla(${hue}, ${Math.round(saturation * 0.58)}%, ${Math.max(lightness - 24, 42)}%, 0.34)`;
   const shadow = `hsla(${hue}, ${saturation}%, ${Math.max(lightness - 12, 48)}%, 0.42)`;
   return { active, rest, muted, shadow };
+}
+
+function deriveBackgroundPalette(color: { r: number; g: number; b: number }) {
+  const hsl = rgbToHsl(color.r, color.g, color.b);
+  const hue = Math.round(hsl.h);
+  const saturation = Math.round(clamp(hsl.s * 0.72, 22, 56));
+  const startLightness = Math.round(clamp(hsl.l * 0.34, 13, 24));
+  const endLightness = Math.round(clamp(hsl.l * 0.2, 7, 14));
+  return {
+    start: `hsl(${hue}, ${saturation}%, ${startLightness}%)`,
+    end: `hsl(${hue}, ${Math.max(saturation - 8, 18)}%, ${endLightness}%)`,
+    glow: `hsla(${hue}, ${Math.min(saturation + 12, 68)}%, ${Math.min(startLightness + 10, 34)}%, 0.42)`
+  };
 }
 
 function rgbToHsl(r: number, g: number, b: number) {
