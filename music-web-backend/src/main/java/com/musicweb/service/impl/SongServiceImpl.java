@@ -24,15 +24,14 @@ import com.musicweb.service.ArtistService;
 import com.musicweb.service.PlaylistSongService;
 import com.musicweb.service.SearchService;
 import com.musicweb.service.SongService;
+import com.musicweb.support.MusicCatalogReader;
 import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.SearchResponse;
 import com.musicweb.vo.SongResponse;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -49,6 +48,7 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     private final AlbumService albumService;
     private final PlaylistSongService playlistSongService;
     private final SearchService searchService;
+    private final MusicCatalogReader musicCatalogReader;
     private final FavoriteMapper favoriteMapper;
     private final CommentMapper commentMapper;
     private final PlayHistoryMapper playHistoryMapper;
@@ -58,6 +58,7 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
             AlbumService albumService,
             PlaylistSongService playlistSongService,
             SearchService searchService,
+            MusicCatalogReader musicCatalogReader,
             FavoriteMapper favoriteMapper,
             CommentMapper commentMapper,
             PlayHistoryMapper playHistoryMapper
@@ -66,6 +67,7 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         this.albumService = albumService;
         this.playlistSongService = playlistSongService;
         this.searchService = searchService;
+        this.musicCatalogReader = musicCatalogReader;
         this.favoriteMapper = favoriteMapper;
         this.commentMapper = commentMapper;
         this.playHistoryMapper = playHistoryMapper;
@@ -221,31 +223,15 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         if (songs.isEmpty()) {
             return List.of();
         }
-        Map<Long, Artist> artistsById = loadArtistsByIds(
+        Map<Long, Artist> artistsById = musicCatalogReader.artistsById(
                 songs.stream().map(Song::getArtistId).collect(Collectors.toSet())
         );
-        Map<Long, Album> albumsById = loadAlbumsByIds(
+        Map<Long, Album> albumsById = musicCatalogReader.albumsById(
                 songs.stream().map(Song::getAlbumId).filter(Objects::nonNull).collect(Collectors.toSet())
         );
         return songs.stream()
                 .map(song -> MusicResponseAssembler.toSongResponse(song, artistsById, albumsById))
                 .toList();
-    }
-
-    private Map<Long, Artist> loadArtistsByIds(Set<Long> artistIds) {
-        if (artistIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return artistService.listByIds(artistIds).stream()
-                .collect(Collectors.toMap(Artist::getId, Function.identity()));
-    }
-
-    private Map<Long, Album> loadAlbumsByIds(Set<Long> albumIds) {
-        if (albumIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return albumService.listByIds(albumIds).stream()
-                .collect(Collectors.toMap(Album::getId, Function.identity()));
     }
 
 }

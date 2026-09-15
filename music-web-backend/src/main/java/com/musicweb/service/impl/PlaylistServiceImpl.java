@@ -22,20 +22,18 @@ import com.musicweb.exception.BusinessException;
 import com.musicweb.mapper.PlaylistMapper;
 import com.musicweb.mapper.PlaylistTagMapper;
 import com.musicweb.mapper.UserMapper;
-import com.musicweb.service.AlbumService;
-import com.musicweb.service.ArtistService;
 import com.musicweb.service.CommentService;
 import com.musicweb.service.FavoriteService;
 import com.musicweb.service.PlaylistService;
 import com.musicweb.service.PlaylistSongService;
 import com.musicweb.service.SongService;
+import com.musicweb.support.MusicCatalogReader;
 import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.PlaylistDetailResponse;
 import com.musicweb.vo.PlaylistResponse;
 import com.musicweb.vo.PlaylistSongResponse;
 import com.musicweb.vo.SongResponse;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +56,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
     private final PlaylistSongService playlistSongService;
     private final SongService songService;
-    private final ArtistService artistService;
-    private final AlbumService albumService;
+    private final MusicCatalogReader musicCatalogReader;
     private final FavoriteService favoriteService;
     private final CommentService commentService;
     private final PlaylistTagMapper playlistTagMapper;
@@ -68,8 +65,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     public PlaylistServiceImpl(
             PlaylistSongService playlistSongService,
             SongService songService,
-            ArtistService artistService,
-            AlbumService albumService,
+            MusicCatalogReader musicCatalogReader,
             FavoriteService favoriteService,
             CommentService commentService,
             PlaylistTagMapper playlistTagMapper,
@@ -77,8 +73,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     ) {
         this.playlistSongService = playlistSongService;
         this.songService = songService;
-        this.artistService = artistService;
-        this.albumService = albumService;
+        this.musicCatalogReader = musicCatalogReader;
         this.favoriteService = favoriteService;
         this.commentService = commentService;
         this.playlistTagMapper = playlistTagMapper;
@@ -485,10 +480,10 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         Map<Long, Song> songsById = songService.listByIds(songIds).stream()
                 .filter(song -> Objects.equals(song.getStatus(), STATUS_PUBLISHED))
                 .collect(Collectors.toMap(Song::getId, Function.identity()));
-        Map<Long, Artist> artistsById = loadArtistsByIds(
+        Map<Long, Artist> artistsById = musicCatalogReader.artistsById(
                 songsById.values().stream().map(Song::getArtistId).collect(Collectors.toSet())
         );
-        Map<Long, Album> albumsById = loadAlbumsByIds(
+        Map<Long, Album> albumsById = musicCatalogReader.albumsById(
                 songsById.values().stream().map(Song::getAlbumId).filter(Objects::nonNull).collect(Collectors.toSet())
         );
 
@@ -510,19 +505,4 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         return responses;
     }
 
-    private Map<Long, Artist> loadArtistsByIds(Set<Long> artistIds) {
-        if (artistIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return artistService.listByIds(artistIds).stream()
-                .collect(Collectors.toMap(Artist::getId, Function.identity()));
-    }
-
-    private Map<Long, Album> loadAlbumsByIds(Set<Long> albumIds) {
-        if (albumIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return albumService.listByIds(albumIds).stream()
-                .collect(Collectors.toMap(Album::getId, Function.identity()));
-    }
 }

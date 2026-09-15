@@ -11,10 +11,9 @@ import com.musicweb.entity.Song;
 import com.musicweb.exception.BusinessException;
 import com.musicweb.mapper.SearchMapper;
 import com.musicweb.mapper.projection.SearchUserProjection;
-import com.musicweb.service.AlbumService;
-import com.musicweb.service.ArtistService;
 import com.musicweb.service.PlaylistSongService;
 import com.musicweb.service.SearchService;
+import com.musicweb.support.MusicCatalogReader;
 import com.musicweb.support.MusicResponseAssembler;
 import com.musicweb.vo.AlbumResponse;
 import com.musicweb.vo.ArtistResponse;
@@ -25,13 +24,11 @@ import com.musicweb.vo.SearchSuggestionResponse;
 import com.musicweb.vo.SearchTotalsResponse;
 import com.musicweb.vo.SongResponse;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,19 +42,16 @@ public class SearchServiceImpl implements SearchService {
     private static final int MAX_SUGGESTION_SIZE = 20;
 
     private final SearchMapper searchMapper;
-    private final ArtistService artistService;
-    private final AlbumService albumService;
+    private final MusicCatalogReader musicCatalogReader;
     private final PlaylistSongService playlistSongService;
 
     public SearchServiceImpl(
             SearchMapper searchMapper,
-            ArtistService artistService,
-            AlbumService albumService,
+            MusicCatalogReader musicCatalogReader,
             PlaylistSongService playlistSongService
     ) {
         this.searchMapper = searchMapper;
-        this.artistService = artistService;
-        this.albumService = albumService;
+        this.musicCatalogReader = musicCatalogReader;
         this.playlistSongService = playlistSongService;
     }
 
@@ -110,7 +104,7 @@ public class SearchServiceImpl implements SearchService {
         List<Album> albumEntities = searchMapper.searchAlbums(
                 query.exact(), query.prefix(), query.contains(), 0, limit
         );
-        albumArtists = loadArtistsByIds(
+        albumArtists = musicCatalogReader.artistsById(
                 albumEntities.stream().map(Album::getArtistId).collect(Collectors.toSet())
         );
 
@@ -234,7 +228,7 @@ public class SearchServiceImpl implements SearchService {
         List<Album> albums = searchMapper.searchAlbums(
                 query.exact(), query.prefix(), query.contains(), offset, size
         );
-        Map<Long, Artist> artistsById = loadArtistsByIds(
+        Map<Long, Artist> artistsById = musicCatalogReader.artistsById(
                 albums.stream().map(Album::getArtistId).collect(Collectors.toSet())
         );
         return new PageResult<>(
@@ -314,31 +308,15 @@ public class SearchServiceImpl implements SearchService {
         if (songs.isEmpty()) {
             return List.of();
         }
-        Map<Long, Artist> artistsById = loadArtistsByIds(
+        Map<Long, Artist> artistsById = musicCatalogReader.artistsById(
                 songs.stream().map(Song::getArtistId).collect(Collectors.toSet())
         );
-        Map<Long, Album> albumsById = loadAlbumsByIds(
+        Map<Long, Album> albumsById = musicCatalogReader.albumsById(
                 songs.stream().map(Song::getAlbumId).filter(Objects::nonNull).collect(Collectors.toSet())
         );
         return songs.stream()
                 .map(song -> MusicResponseAssembler.toSongResponse(song, artistsById, albumsById))
                 .toList();
-    }
-
-    private Map<Long, Artist> loadArtistsByIds(Set<Long> artistIds) {
-        if (artistIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return artistService.listByIds(artistIds).stream()
-                .collect(Collectors.toMap(Artist::getId, Function.identity()));
-    }
-
-    private Map<Long, Album> loadAlbumsByIds(Set<Long> albumIds) {
-        if (albumIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return albumService.listByIds(albumIds).stream()
-                .collect(Collectors.toMap(Album::getId, Function.identity()));
     }
 
     private PlaylistResponse toPlaylistResponse(Playlist playlist) {
