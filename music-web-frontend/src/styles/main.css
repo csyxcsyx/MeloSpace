@@ -6551,6 +6551,40 @@ textarea:focus-visible,
   outline-offset: 3px;
 }
 
+/* Pointer interaction should not leave a focus ring behind. Keyboard navigation
+   keeps the accessible focus treatments declared throughout this stylesheet. */
+:root[data-input-modality="pointer"] a:focus,
+:root[data-input-modality="pointer"] button:focus,
+:root[data-input-modality="pointer"] input:focus,
+:root[data-input-modality="pointer"] select:focus,
+:root[data-input-modality="pointer"] textarea:focus,
+:root[data-input-modality="pointer"] [tabindex]:not([tabindex="-1"]):focus {
+  outline: 0 !important;
+  outline-offset: 0 !important;
+}
+
+:root[data-input-modality="pointer"] :is(
+  .search-page-form,
+  .inline-form,
+  .login-card,
+  .comment-form,
+  .comment-report-sheet,
+  .list-controls,
+  .profile-editor-form,
+  .admin-form,
+  .playlist-song-tools,
+  .playlist-picker-search
+) :is(input, select, textarea):focus {
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+}
+
+:root[data-input-modality="pointer"] .search-input-shell:focus-within {
+  border-color: rgba(75, 101, 91, 0.16);
+  box-shadow: none;
+  transform: none;
+}
+
 .danger:focus-visible,
 .danger-action:focus-visible,
 .account-menu-logout:focus-visible {
