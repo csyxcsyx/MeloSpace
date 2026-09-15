@@ -174,7 +174,15 @@
           </button>
         </div>
         <div class="search-song-list">
-          <SearchSongRow v-for="song in summary.songs" :key="song.id" :song="song" />
+          <SearchSongRow
+            v-for="song in summary.songs"
+            :key="song.id"
+            :song="song"
+            :keyword="activeKeyword"
+            :is-current="player.currentSong?.id === song.id"
+            :is-playing="player.isPlaying"
+            @toggle="toggleSongPlayback"
+          />
         </div>
       </section>
 
@@ -198,8 +206,8 @@
             >
               <ResultImage :url="artist.avatarUrl" shape="circle" :fallback="UserRound" />
               <span class="search-entity-copy">
-                <strong><HighlightText :text="artist.name" /></strong>
-                <small><HighlightText :text="artist.bio || '歌手'" /></small>
+                <strong><SearchHighlightText :text="artist.name" :keyword="activeKeyword" /></strong>
+                <small><SearchHighlightText :text="artist.bio || '歌手'" :keyword="activeKeyword" /></small>
               </span>
             </RouterLink>
           </div>
@@ -224,8 +232,8 @@
             >
               <ResultImage :url="album.coverUrl" :fallback="Disc3" />
               <span class="search-entity-copy">
-                <strong><HighlightText :text="album.title" /></strong>
-                <small><HighlightText :text="album.artistName || '专辑'" /></small>
+                <strong><SearchHighlightText :text="album.title" :keyword="activeKeyword" /></strong>
+                <small><SearchHighlightText :text="album.artistName || '专辑'" :keyword="activeKeyword" /></small>
               </span>
             </RouterLink>
           </div>
@@ -250,7 +258,7 @@
             >
               <ResultImage :url="playlist.coverUrl" :fallback="ListMusic" />
               <span class="search-entity-copy">
-                <strong><HighlightText :text="playlist.title" /></strong>
+                <strong><SearchHighlightText :text="playlist.title" :keyword="activeKeyword" /></strong>
                 <small>{{ playlist.songCount }} 首 · {{ formatCount(playlist.favoriteCount) }} 人收藏</small>
               </span>
             </RouterLink>
@@ -276,15 +284,15 @@
             >
               <ResultImage :url="user.avatarUrl" shape="circle" :fallback="UserRound" />
               <span class="search-entity-copy">
-                <strong><HighlightText :text="user.nickname" /></strong>
-                <small><HighlightText :text="user.bio || `${user.publicPlaylistCount} 个公开歌单`" /></small>
+                <strong><SearchHighlightText :text="user.nickname" :keyword="activeKeyword" /></strong>
+                <small><SearchHighlightText :text="user.bio || `${user.publicPlaylistCount} 个公开歌单`" :keyword="activeKeyword" /></small>
               </span>
             </RouterLink>
           </div>
         </section>
       </div>
 
-      <SearchEmpty v-if="!hasAnySummaryResult" />
+      <SearchEmpty v-if="!hasAnySummaryResult" :starters="searchStarters" @select="searchHistoryItem" />
     </template>
 
     <template v-else-if="categoryResult">
@@ -297,7 +305,15 @@
         </div>
 
         <div v-if="categorySongs.length" class="search-song-list">
-          <SearchSongRow v-for="song in categorySongs" :key="song.id" :song="song" />
+          <SearchSongRow
+            v-for="song in categorySongs"
+            :key="song.id"
+            :song="song"
+            :keyword="activeKeyword"
+            :is-current="player.currentSong?.id === song.id"
+            :is-playing="player.isPlaying"
+            @toggle="toggleSongPlayback"
+          />
         </div>
 
         <div v-else-if="categoryArtists.length" class="search-category-grid">
@@ -309,8 +325,8 @@
           >
             <ResultImage :url="artist.avatarUrl" shape="circle" size="large" :fallback="UserRound" />
             <span>
-              <strong><HighlightText :text="artist.name" /></strong>
-              <small><HighlightText :text="artist.bio || '歌手'" /></small>
+              <strong><SearchHighlightText :text="artist.name" :keyword="activeKeyword" /></strong>
+              <small><SearchHighlightText :text="artist.bio || '歌手'" :keyword="activeKeyword" /></small>
             </span>
           </RouterLink>
         </div>
@@ -324,8 +340,8 @@
           >
             <ResultImage :url="album.coverUrl" size="large" :fallback="Disc3" />
             <span>
-              <strong><HighlightText :text="album.title" /></strong>
-              <small><HighlightText :text="album.artistName || '专辑'" /></small>
+              <strong><SearchHighlightText :text="album.title" :keyword="activeKeyword" /></strong>
+              <small><SearchHighlightText :text="album.artistName || '专辑'" :keyword="activeKeyword" /></small>
             </span>
           </RouterLink>
         </div>
@@ -339,7 +355,7 @@
           >
             <ResultImage :url="playlist.coverUrl" size="large" :fallback="ListMusic" />
             <span>
-              <strong><HighlightText :text="playlist.title" /></strong>
+              <strong><SearchHighlightText :text="playlist.title" :keyword="activeKeyword" /></strong>
               <small>{{ playlist.songCount }} 首 · {{ formatCount(playlist.favoriteCount) }} 人收藏</small>
             </span>
           </RouterLink>
@@ -354,14 +370,14 @@
           >
             <ResultImage :url="user.avatarUrl" shape="circle" size="large" :fallback="UserRound" />
             <span class="search-user-card-copy">
-              <strong><HighlightText :text="user.nickname" /></strong>
-              <small><HighlightText :text="user.bio || 'MeloSpace 用户'" /></small>
+              <strong><SearchHighlightText :text="user.nickname" :keyword="activeKeyword" /></strong>
+              <small><SearchHighlightText :text="user.bio || 'MeloSpace 用户'" :keyword="activeKeyword" /></small>
               <span>{{ user.publicPlaylistCount }} 个公开歌单 · {{ formatCount(user.receivedFavoriteCount) }} 次收藏</span>
             </span>
           </RouterLink>
         </div>
 
-        <SearchEmpty v-else />
+        <SearchEmpty v-else :starters="searchStarters" @select="searchHistoryItem" />
       </section>
 
       <nav v-if="pageCount > 1" class="search-pagination" aria-label="搜索结果分页">
@@ -380,28 +396,16 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  defineComponent,
-  h,
-  markRaw,
-  onBeforeUnmount,
-  ref,
-  watch,
-  type Component,
-  type PropType
-} from "vue";
-import { RouterLink, useRoute, useRouter } from "vue-router";
+import { computed, markRaw, onBeforeUnmount, ref, watch, type Component } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  CirclePlay,
   Clock3,
   Disc3,
   ListMusic,
   Music2,
-  Pause,
   RotateCcw,
   Search,
   UserRound,
@@ -422,15 +426,18 @@ import type {
   Song
 } from "@/api/types";
 import PageToolbar from "@/components/PageToolbar.vue";
+import SearchEmpty from "@/components/search/SearchEmpty.vue";
+import SearchHighlightText from "@/components/search/SearchHighlightText.vue";
+import SearchResultImage from "@/components/search/SearchResultImage.vue";
+import SearchSongRow from "@/components/search/SearchSongRow.vue";
 import { usePlayerStore } from "@/stores/player";
-import { resolveMediaUrl } from "@/utils/format";
+import { formatCount, resolveMediaUrl } from "@/utils/format";
 import {
   clearSearchHistory,
   createLatestRequestGate,
   readSearchHistory,
   rememberSearch,
-  removeSearchHistory,
-  splitHighlight
+  removeSearchHistory
 } from "@/utils/search";
 
 type SearchResultItem = SearchResultItemMap[SearchResultType];
@@ -492,127 +499,6 @@ const searchTabs = computed(() => {
 });
 const activeTabLabel = computed(() => searchTabs.value.find((tab) => tab.id === activeType.value)?.label ?? "搜索结果");
 const displayedSongQueue = computed(() => activeType.value === "all" ? summary.value?.songs ?? [] : categorySongs.value);
-
-const HighlightText = defineComponent({
-  name: "HighlightText",
-  props: {
-    text: {
-      type: String,
-      default: ""
-    }
-  },
-  setup(props) {
-    return () => splitHighlight(props.text, activeKeyword.value).map((segment, index) =>
-      segment.matched
-        ? h("mark", { key: index, class: "search-highlight" }, segment.text)
-        : h("span", { key: index }, segment.text)
-    );
-  }
-});
-
-const ResultImage = defineComponent({
-  name: "ResultImage",
-  props: {
-    url: {
-      type: String as PropType<string | null>,
-      default: null
-    },
-    shape: {
-      type: String as PropType<"square" | "circle">,
-      default: "square"
-    },
-    size: {
-      type: String as PropType<"default" | "large">,
-      default: "default"
-    },
-    fallback: {
-      type: Object as PropType<Component>,
-      required: true
-    }
-  },
-  setup(props) {
-    return () => h("span", {
-      class: [
-        "search-result-image",
-        props.shape === "circle" && "is-circle",
-        props.size === "large" && "is-large"
-      ]
-    }, props.url
-      ? h("img", { src: resolveMediaUrl(props.url), alt: "" })
-      : h(props.fallback, { size: props.size === "large" ? 25 : 18, "aria-hidden": "true" }));
-  }
-});
-
-const SearchSongRow = defineComponent({
-  name: "SearchSongRow",
-  props: {
-    song: {
-      type: Object as PropType<Song>,
-      required: true
-    }
-  },
-  setup(props) {
-    return () => h("article", { class: "search-song-row" }, [
-      h("button", {
-        type: "button",
-        class: "search-song-play",
-        "aria-label": player.currentSong?.id === props.song.id && player.isPlaying
-          ? `暂停 ${props.song.title}`
-          : `播放 ${props.song.title}`,
-        onClick: () => toggleSongPlayback(props.song)
-      }, [
-        props.song.coverUrl
-          ? h("img", { src: resolveMediaUrl(props.song.coverUrl), alt: "" })
-          : h(Music2, { size: 20, "aria-hidden": "true" }),
-        h("span", { class: "search-song-play-overlay" }, [
-          h(player.currentSong?.id === props.song.id && player.isPlaying ? Pause : CirclePlay, {
-            size: 23,
-            fill: "currentColor",
-            "aria-hidden": "true"
-          })
-        ])
-      ]),
-      h(RouterLink, {
-        class: "search-song-copy",
-        to: `/songs/${props.song.id}`
-      }, {
-        default: () => [
-          h("strong", null, splitHighlight(props.song.title, activeKeyword.value).map((segment, index) =>
-            segment.matched
-              ? h("mark", { key: index, class: "search-highlight" }, segment.text)
-              : h("span", { key: index }, segment.text)
-          )),
-          h("small", null, [
-            ...splitHighlight(props.song.artistName || "未知歌手", activeKeyword.value).map((segment, index) =>
-              segment.matched
-                ? h("mark", { key: `artist-${index}`, class: "search-highlight" }, segment.text)
-                : h("span", { key: `artist-${index}` }, segment.text)
-            ),
-            props.song.albumTitle ? ` · ${props.song.albumTitle}` : ""
-          ])
-        ]
-      }),
-      h("span", { class: "search-song-plays" }, `${formatCount(props.song.playCount)} 次播放`)
-    ]);
-  }
-});
-
-const SearchEmpty = defineComponent({
-  name: "SearchEmpty",
-  setup() {
-    return () => h("div", { class: "search-empty-state" }, [
-      h(Search, { size: 25, "aria-hidden": "true" }),
-      h("strong", null, "没有找到匹配内容"),
-      h("p", null, "试试缩短关键词、检查拼写，或搜索歌手和专辑名称。"),
-      h("div", { class: "search-empty-actions" }, searchStarters.map((starter) =>
-        h("button", {
-          type: "button",
-          onClick: () => searchHistoryItem(starter)
-        }, starter)
-      ))
-    ]);
-  }
-});
 
 watch(
   () => route.fullPath,
@@ -853,8 +739,4 @@ function toggleSongPlayback(song: Song) {
   player.playSong(song, displayedSongQueue.value.length ? displayedSongQueue.value : [song]);
 }
 
-function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
-  return new Intl.NumberFormat("zh-CN").format(value);
-}
 </script>

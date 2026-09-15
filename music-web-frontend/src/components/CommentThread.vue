@@ -227,7 +227,7 @@ import { commentApi } from "@/api";
 import type { CommentItem } from "@/api/types";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
-import { resolveMediaUrl } from "@/utils/format";
+import { formatRelativeTime, resolveMediaUrl } from "@/utils/format";
 
 const props = defineProps<{
   targetType: "SONG" | "PLAYLIST";
@@ -458,17 +458,5 @@ function goToLogin() {
   void router.push({ name: "login", query: { redirect: route.fullPath } });
 }
 
-function relativeTime(value: string) {
-  const timestamp = new Date(value).getTime();
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (seconds < 60) return "刚刚";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} 分钟前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} 天前`;
-  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" })
-    .format(new Date(value));
-}
+const relativeTime = formatRelativeTime;
 </script>

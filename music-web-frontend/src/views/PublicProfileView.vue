@@ -109,7 +109,7 @@ import {
 import { userApi } from "@/api";
 import type { PageResult, Playlist, PublicUserProfile } from "@/api/types";
 import PageToolbar from "@/components/PageToolbar.vue";
-import { resolveMediaUrl } from "@/utils/format";
+import { formatCount, resolveMediaUrl } from "@/utils/format";
 import { createLatestRequestGate } from "@/utils/search";
 
 const props = defineProps<{
@@ -180,8 +180,4 @@ function setPage(page: number) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
-  return new Intl.NumberFormat("zh-CN").format(value);
-}
 </script>

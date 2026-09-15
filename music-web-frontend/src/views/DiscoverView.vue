@@ -141,7 +141,7 @@ import type { CommunityDiscover, DiscoverComment, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import { useDiscoverStore } from "@/stores/discover";
 import { usePlayerStore } from "@/stores/player";
-import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import { formatCount, formatDuration, resolveMediaUrl } from "@/utils/format";
 
 defineOptions({ name: "DiscoverView" });
 
@@ -189,11 +189,6 @@ function targetPath(comment: DiscoverComment) {
   return comment.targetType === "PLAYLIST"
     ? `/playlists/${comment.targetId}`
     : `/songs/${comment.targetId}`;
-}
-
-function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)} 万`;
-  return new Intl.NumberFormat("zh-CN").format(value);
 }
 
 function relativeTime(value: string) {
