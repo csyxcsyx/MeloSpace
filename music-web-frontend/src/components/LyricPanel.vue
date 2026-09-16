@@ -91,6 +91,7 @@ const LYRIC_LEAD_SECONDS = 0.14;
 const MIN_WORD_DURATION_SECONDS = 0.16;
 const DEFAULT_ACTIVE_ANCHOR = 0.5;
 const FULLSCREEN_ACTIVE_ANCHOR = 0.36;
+const UPCOMING_LINE_SCROLL_LEAD_SECONDS = 0.85;
 const LYRIC_CACHE_LIMIT = 80;
 
 const props = defineProps<{
@@ -122,22 +123,23 @@ const lyricUrl = computed(() => props.song?.lyricUrl ?? "");
 const syncedTime = computed(() => props.currentTime + LYRIC_LEAD_SECONDS);
 const lyricRenderTick = computed(() => Math.floor(syncedTime.value * 10));
 const activeIndex = computed(() => {
-  if (!props.isCurrentSong || !lines.value.length) return -1;
-  let index = -1;
-  for (let i = 0; i < lines.value.length; i += 1) {
-    if (lines.value[i].time <= syncedTime.value) {
-      index = i;
-    } else {
-      break;
-    }
+  if (!props.isCurrentSong) return -1;
+  return findLineIndex(syncedTime.value);
+});
+const scrollFocusIndex = computed(() => {
+  if (!props.isCurrentSong || activeIndex.value < 0) return -1;
+  const nextIndex = activeIndex.value + 1;
+  const nextLine = lines.value[nextIndex];
+  if (nextLine && nextLine.time - syncedTime.value <= UPCOMING_LINE_SCROLL_LEAD_SECONDS) {
+    return nextIndex;
   }
-  return Math.max(index, 0);
+  return activeIndex.value;
 });
 const showFollowButton = computed(() => userBrowsing.value && props.isCurrentSong && activeIndex.value >= 0);
 
 watch(lyricUrl, loadLyrics, { immediate: true });
 
-watch(activeIndex, async (index) => {
+watch(scrollFocusIndex, async (index) => {
   if (index < 0 || !props.isCurrentSong) return;
   if (userBrowsing.value) return;
   await nextTick();
@@ -200,6 +202,19 @@ function rememberCacheEntry<T>(cache: Map<string, T>, key: string, value: T) {
     if (oldestKey) cache.delete(oldestKey);
   }
   cache.set(key, value);
+}
+
+function findLineIndex(time: number) {
+  if (!lines.value.length) return -1;
+  let index = -1;
+  for (let lineIndex = 0; lineIndex < lines.value.length; lineIndex += 1) {
+    if (lines.value[lineIndex].time <= time) {
+      index = lineIndex;
+    } else {
+      break;
+    }
+  }
+  return Math.max(index, 0);
 }
 
 function syncAfterLyricLoad() {

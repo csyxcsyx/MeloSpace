@@ -75,6 +75,28 @@ describe("LyricPanel performance behavior", () => {
     expect(scrollTo.mock.calls.length).toBeGreaterThan(initialScrollCount);
   });
 
+  it("在下一句开始前提前启动居中滚动", async () => {
+    const wrapper = mount(LyricPanel, {
+      props: {
+        song: { ...lyricSong, lyricUrl: "/media/test-scroll-ahead.lrc" },
+        currentTime: 3,
+        isCurrentSong: true,
+        fullscreen: true
+      }
+    });
+    cleanupWrapper = () => wrapper.unmount();
+    await flushPromises();
+    await waitForAnimationFrame();
+
+    const initialScrollCount = scrollTo.mock.calls.length;
+    await wrapper.setProps({ currentTime: 4.2 });
+    await flushPromises();
+    await waitForAnimationFrame();
+
+    expect(wrapper.findAll(".lyric-line")[0].classes()).toContain("active");
+    expect(scrollTo.mock.calls.length).toBeGreaterThan(initialScrollCount);
+  });
+
   it("为逐字歌词输出连续的百分比进度", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,

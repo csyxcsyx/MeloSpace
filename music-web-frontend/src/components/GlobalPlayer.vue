@@ -158,6 +158,7 @@ import { useUiStore } from "@/stores/ui";
 import type { Song } from "@/api/types";
 import { PLAYER_PLAY_REQUEST_EVENT } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import { resolvePlayerShortcut, type PlayerShortcutAction } from "@/utils/playerShortcuts";
 
 withDefaults(defineProps<{ hidden?: boolean }>(), {
   hidden: false
@@ -173,6 +174,7 @@ const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
 let activePlayRequest: Promise<boolean> | null = null;
 let playRequestToken = 0;
 const PROGRESS_SYNC_INTERVAL_MS = 100;
+const KEYBOARD_VOLUME_STEP = 0.05;
 let progressTimer: number | null = null;
 
 interface PlayRequestDetail {
@@ -246,12 +248,14 @@ watch(
 
 onMounted(() => {
   window.addEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+  window.addEventListener("keydown", handlePlayerShortcut);
   registerMediaSessionHandlers();
   updateMediaMetadata(auth.isAuthenticated ? player.currentSong : null);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener(PLAYER_PLAY_REQUEST_EVENT, handlePlayRequest);
+  window.removeEventListener("keydown", handlePlayerShortcut);
   stopProgressLoop();
   unregisterMediaSessionHandlers();
   clearMediaSession();
@@ -313,6 +317,29 @@ function togglePlay() {
   }
   if (!ensureAuthenticatedPlayback()) return;
   playAudio();
+}
+
+function handlePlayerShortcut(event: KeyboardEvent) {
+  const action = resolvePlayerShortcut(event);
+  if (!action) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  runPlayerShortcut(action);
+}
+
+function runPlayerShortcut(action: PlayerShortcutAction) {
+  if (action === "toggle-playback") {
+    togglePlay();
+  } else if (action === "previous-track") {
+    void player.previous();
+  } else if (action === "next-track") {
+    void player.next();
+  } else if (action === "volume-up") {
+    player.setVolume(player.volume + KEYBOARD_VOLUME_STEP);
+  } else if (action === "volume-down") {
+    player.setVolume(player.volume - KEYBOARD_VOLUME_STEP);
+  }
 }
 
 function onLoadedMetadata() {

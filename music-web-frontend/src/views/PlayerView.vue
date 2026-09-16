@@ -104,7 +104,7 @@
         </section>
 
         <div class="player-progress-control">
-          <span>{{ formatDuration(player.currentTime) }}</span>
+          <span>{{ formatDuration(displayedSeekTime) }}</span>
           <input
             class="player-dock-range"
             aria-label="播放进度"
@@ -112,9 +112,14 @@
             min="0"
             :max="rangeMax"
             step="0.1"
-            :value="player.currentTime"
+            :value="displayedSeekTime"
             :style="progressRangeStyle"
-            @input="seekFromRange"
+            @pointerdown="beginRangeSeek"
+            @pointerup="commitRangeSeek"
+            @pointercancel="commitRangeSeek"
+            @input="previewRangeSeek"
+            @change="commitRangeSeek"
+            @blur="commitRangeSeek"
           />
           <span>{{ formatDuration(player.duration) }}</span>
         </div>
@@ -184,8 +189,12 @@ import type { Song } from "@/api/types";
 const router = useRouter();
 const player = usePlayerStore();
 const queueOpen = ref(false);
+const seekPreviewTime = ref<number | null>(null);
+const displayedSeekTime = computed(() => seekPreviewTime.value ?? player.currentTime);
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
-const progressRangeStyle = computed(() => ({ "--player-range-progress": `${player.progressPercent}%` }));
+const progressRangeStyle = computed(() => ({
+  "--player-range-progress": `${Math.min(100, Math.max(0, displayedSeekTime.value / rangeMax.value * 100))}%`
+}));
 const volumeRangeStyle = computed(() => ({ "--player-range-progress": `${clamp(player.volume, 0, 1) * 100}%` }));
 const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
 const THEME_CACHE_PREFIX = "melospace-player-theme:";
@@ -207,6 +216,8 @@ const themeStyle = computed(() => ({
   "--player-bg-glow": backgroundPalette.value.glow
 }));
 let themeRequestId = 0;
+let rangeSeekActive = false;
+let resumeAfterRangeSeek = false;
 
 watch(
   () => player.currentSong?.coverUrl,
@@ -244,9 +255,28 @@ function seekLyric(time: number) {
   player.seekTo(time, true);
 }
 
-function seekFromRange(event: Event) {
+function beginRangeSeek() {
+  if (rangeSeekActive) return;
+  rangeSeekActive = true;
+  resumeAfterRangeSeek = player.isPlaying;
+  if (resumeAfterRangeSeek) player.setPlaying(false);
+}
+
+function previewRangeSeek(event: Event) {
+  beginRangeSeek();
   const input = event.target as HTMLInputElement;
-  player.seekTo(Number(input.value), true);
+  seekPreviewTime.value = Number(input.value);
+}
+
+function commitRangeSeek(event: Event) {
+  if (!rangeSeekActive && seekPreviewTime.value === null) return;
+  const input = event.target as HTMLInputElement;
+  const nextTime = seekPreviewTime.value ?? Number(input.value);
+  const shouldResume = resumeAfterRangeSeek;
+  rangeSeekActive = false;
+  resumeAfterRangeSeek = false;
+  seekPreviewTime.value = null;
+  void player.seekTo(nextTime, shouldResume);
 }
 
 function setVolume(event: Event) {
