@@ -555,6 +555,7 @@ button {
 
 .page-header .page-title {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .page-header p {
@@ -562,6 +563,43 @@ button {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.4;
+}
+
+.page-header-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.page-header .page-header-eyebrow {
+  margin: 0 0 8px;
+  color: var(--brand-deep);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.page-header .page-header-description {
+  max-width: 720px;
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page-header-aside,
+.page-header-summary,
+.page-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.page-header-aside {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.page-header-summary,
+.page-header-actions {
+  gap: 10px;
 }
 
 .page-header .secondary-action {
@@ -2054,22 +2092,6 @@ button {
   gap: 18px;
 }
 
-.song-library-head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.song-library-head .page-title {
-  margin-bottom: 8px;
-}
-
-.song-library-head p {
-  margin: 0;
-  color: var(--muted);
-}
-
 .song-library-summary {
   display: flex;
   flex-wrap: wrap;
@@ -2242,17 +2264,6 @@ button {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-}
-
-.admin-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.admin-title-row .page-title {
-  margin-bottom: 0;
 }
 
 .admin-form {
@@ -3733,6 +3744,11 @@ button {
     border-radius: 16px;
   }
 
+  .page-header-aside {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .app-shell.discover-shell {
     height: auto;
     max-height: none;
@@ -3859,13 +3875,8 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .admin-title-row,
   .field-with-action {
     grid-template-columns: 1fr;
-  }
-
-  .admin-title-row {
-    display: grid;
   }
 
   .metrics,
@@ -3926,7 +3937,6 @@ button {
     margin-top: 6px;
   }
 
-  .song-library-head,
   .song-library-list-head {
     align-items: flex-start;
     flex-direction: column;

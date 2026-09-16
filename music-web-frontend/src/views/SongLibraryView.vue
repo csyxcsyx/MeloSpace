@@ -1,21 +1,23 @@
 <template>
   <section class="song-library-page">
-    <header class="page-header song-library-head">
-      <div>
-        <h1 class="page-title">歌曲库</h1>
-        <p>浏览当前可播放的全部歌曲，按歌手、专辑和热度快速定位。</p>
-      </div>
-      <div class="song-library-summary" aria-label="歌曲库统计">
-        <span>
-          <strong>{{ total }}</strong>
-          首歌曲
-        </span>
-        <span>
-          <strong>{{ currentStart }}-{{ currentEnd }}</strong>
-          当前显示
-        </span>
-      </div>
-    </header>
+    <PageHeader
+      eyebrow="完整曲库"
+      title="歌曲库"
+      description="浏览当前可播放的全部歌曲，按歌手、专辑和热度快速定位。"
+    >
+      <template #summary>
+        <div class="song-library-summary" aria-label="歌曲库统计">
+          <span>
+            <strong>{{ total }}</strong>
+            首歌曲
+          </span>
+          <span>
+            <strong>{{ currentStart }}-{{ currentEnd }}</strong>
+            当前显示
+          </span>
+        </div>
+      </template>
+    </PageHeader>
 
     <button
       class="mobile-filter-toggle"
@@ -118,6 +120,7 @@ import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, PageResult, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import SongList from "@/components/SongList.vue";
 import { usePlayerStore } from "@/stores/player";
 import { displayName, formatDuration } from "@/utils/format";

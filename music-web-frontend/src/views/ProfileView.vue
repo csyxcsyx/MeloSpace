@@ -1,9 +1,10 @@
 <template>
   <section class="profile-page profile-hub">
-    <header class="page-header">
-      <p class="feature-label">个人中心</p>
-      <h1 class="page-title">我的音乐</h1>
-    </header>
+    <PageHeader
+      eyebrow="个人中心"
+      title="我的音乐"
+      description="整理你的歌单与收藏，随时回到最近听过的声音。"
+    />
 
     <section class="profile-editor-card profile-summary-card" data-glass="regular" aria-labelledby="profile-name">
       <div class="profile-editor-avatar">
@@ -168,6 +169,7 @@ import { useRouter } from "vue-router";
 import { favoriteApi, playlistApi, uploadApi, userApi } from "@/api";
 import type { FavoriteItem, PageResult, PlayHistoryItem, Playlist, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import SongRow from "@/components/SongRow.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerStore } from "@/stores/player";

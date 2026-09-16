@@ -1,13 +1,16 @@
 <template>
   <section class="discover-page community-discover-page">
-    <header class="page-header discover-title-row" data-glass="regular">
-      <div>
-        <p class="feature-label">MeloSpace 每日推荐</p>
-        <h1 class="page-title">一首一首，遇见今天的好音乐</h1>
-        <p class="discover-subtitle">从曲库中为你挑选 12 首歌，轻一点封面就能开始播放。</p>
-      </div>
-      <RouterLink class="secondary-action discover-search-link" to="/search">搜索全站</RouterLink>
-    </header>
+    <PageHeader
+      class="discover-title-row"
+      data-glass="regular"
+      eyebrow="MeloSpace 每日推荐"
+      title="一首一首，遇见今天的好音乐"
+      description="从曲库中为你挑选 12 首歌，轻一点封面就能开始播放。"
+    >
+      <template #actions>
+        <RouterLink class="secondary-action discover-search-link" to="/search">搜索全站</RouterLink>
+      </template>
+    </PageHeader>
 
     <EmptyState v-if="discover.loading && !discover.loaded">正在准备今天的歌曲...</EmptyState>
     <section v-else ref="recommendationRef" class="discover-recommendations community-section">
@@ -139,6 +142,7 @@ import { AudioLines, ChevronRight, Clock3, Headphones, Pause, Play, RefreshCw } 
 import { discoverApi } from "@/api";
 import type { CommunityDiscover, DiscoverComment, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import { useDiscoverStore } from "@/stores/discover";
 import { usePlayerStore } from "@/stores/player";
 import { formatCount, formatDuration, resolveMediaUrl } from "@/utils/format";
@@ -209,28 +213,11 @@ function relativeTime(value: string) {
 }
 
 .discover-title-row {
-  display: flex;
   align-items: end;
-  justify-content: space-between;
-  min-width: 0;
-  gap: 20px;
 }
 
-.discover-title-row > div {
-  min-width: 0;
-}
-
-.discover-title-row .page-title {
+.discover-title-row :deep(.page-header-copy) {
   max-width: 780px;
-  overflow-wrap: anywhere;
-}
-
-.discover-subtitle {
-  max-width: 680px;
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.65;
 }
 
 .discover-search-link {
@@ -556,18 +543,9 @@ function relativeTime(value: string) {
     gap: 30px;
   }
 
-  .discover-title-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .discover-title-row .page-title {
+  .discover-title-row :deep(.page-title) {
     font-size: clamp(29px, 9vw, 36px);
     line-height: 1.08;
-  }
-
-  .discover-search-link {
-    display: none;
   }
 
   .song-recommendation-card {

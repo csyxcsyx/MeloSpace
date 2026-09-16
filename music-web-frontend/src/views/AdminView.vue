@@ -1,12 +1,17 @@
 <template>
   <section>
-    <header class="page-header admin-title-row">
-      <h1 class="page-title">后台管理</h1>
-      <button class="secondary-action" type="button" @click="loadAdmin">
-        <RefreshCw :size="16" />
-        <span>刷新</span>
-      </button>
-    </header>
+    <PageHeader
+      eyebrow="站点运维"
+      title="后台管理"
+      description="集中管理曲库内容、用户状态与社区举报。"
+    >
+      <template #actions>
+        <button class="secondary-action" type="button" @click="loadAdmin">
+          <RefreshCw :size="16" />
+          <span>刷新</span>
+        </button>
+      </template>
+    </PageHeader>
 
     <AdminDashboardMetrics :dashboard="dashboard" />
 
@@ -404,6 +409,7 @@ import AdminDashboardMetrics from "@/components/admin/AdminDashboardMetrics.vue"
 import AdminPagination from "@/components/admin/AdminPagination.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { compareDate, compareText, matchesQuery, normalizeSearch, pageCount, paginate } from "@/utils/admin";
