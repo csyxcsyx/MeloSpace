@@ -89,7 +89,7 @@ describe("LyricPanel performance behavior", () => {
     await waitForAnimationFrame();
 
     const initialScrollCount = scrollTo.mock.calls.length;
-    await wrapper.setProps({ currentTime: 4.2 });
+    await wrapper.setProps({ currentTime: 3.85 });
     await flushPromises();
     await waitForAnimationFrame();
 
