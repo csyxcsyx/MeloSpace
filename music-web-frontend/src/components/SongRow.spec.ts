@@ -56,12 +56,15 @@ describe("SongRow", () => {
     const classes = [...wrapper.element.children].map((element) => element.classList[0]);
 
     expect(classes).toEqual([
-      "song-row-leading",
-      "song-cover",
-      "song-info",
+      "song-row-identity",
       "song-row-meta",
       "song-row-context-actions",
       "song-actions-stub"
+    ]);
+    expect([...wrapper.get(".song-row-identity").element.children].map((element) => element.classList[0])).toEqual([
+      "song-row-leading",
+      "song-cover",
+      "song-info"
     ]);
     expect(wrapper.findAll("[data-part]").map((item) => item.attributes("data-part"))).toEqual([
       "leading",

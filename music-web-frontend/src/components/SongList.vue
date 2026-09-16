@@ -1,5 +1,14 @@
 <template>
   <div class="song-list" role="list">
+    <div v-if="showHeader" class="song-list-header" aria-hidden="true">
+      <span class="song-list-header-identity">歌名 / 歌手</span>
+      <span class="song-list-header-meta">
+        <span>专辑</span>
+        <span>时长</span>
+      </span>
+      <span></span>
+      <span></span>
+    </div>
     <SongRow
       v-for="(song, index) in songs"
       :key="song.id"
@@ -36,10 +45,13 @@ import type { Song } from "@/api/types";
 import SongRow from "@/components/SongRow.vue";
 import { usePlayerStore } from "@/stores/player";
 
-defineProps<{
+withDefaults(defineProps<{
   songs: Song[];
   favoritedSongIds?: ReadonlySet<number>;
-}>();
+  showHeader?: boolean;
+}>(), {
+  showHeader: true
+});
 
 defineEmits<{
   togglePlay: [song: Song];

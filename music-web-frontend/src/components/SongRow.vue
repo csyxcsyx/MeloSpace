@@ -4,50 +4,52 @@
     :class="{ 'song-row-active': isCurrent }"
     @dblclick="$emit('openPlayer', song)"
   >
-    <div class="song-row-leading">
-      <slot name="leading" :song="song" />
-    </div>
-    <button
-      class="song-cover"
-      :class="{ 'song-cover-playing': isCurrent && isPlaying }"
-      type="button"
-      :aria-label="coverLabel"
-      :title="coverLabel"
-      @click.stop="$emit('togglePlay', song)"
-      @dblclick.stop
-    >
-      <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
-      <Music v-else :size="16" />
-      <span class="song-cover-action" aria-hidden="true">
-        <Pause v-if="isCurrent && isPlaying" :size="18" fill="currentColor" />
-        <Play v-else :size="18" fill="currentColor" />
-      </span>
-    </button>
-    <div class="song-info">
-      <slot name="title" :song="song">
-        <RouterLink
-          class="song-name song-name-link"
-          :to="{ name: 'song-detail', params: { id: song.id } }"
-          :aria-label="`查看歌曲 ${song.title} 的详情与评论`"
-          @click.stop
-          @dblclick.stop
-        >
-          {{ song.title }}
-        </RouterLink>
-      </slot>
-      <slot name="subtitle" :song="song">
-        <RouterLink
-          v-if="song.artistId"
-          class="song-artist song-artist-link"
-          :to="`/artists/${song.artistId}`"
-          :aria-label="`查看歌手 ${displayName(song.artistName, '未知歌手')}`"
-          @click.stop
-          @dblclick.stop
-        >
-          {{ displayName(song.artistName, "未知歌手") }}
-        </RouterLink>
-        <div v-else class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
-      </slot>
+    <div class="song-row-identity">
+      <div v-if="$slots.leading" class="song-row-leading">
+        <slot name="leading" :song="song" />
+      </div>
+      <button
+        class="song-cover"
+        :class="{ 'song-cover-playing': isCurrent && isPlaying }"
+        type="button"
+        :aria-label="coverLabel"
+        :title="coverLabel"
+        @click.stop="$emit('togglePlay', song)"
+        @dblclick.stop
+      >
+        <img v-if="song.coverUrl" :src="resolveMediaUrl(song.coverUrl)" alt="" />
+        <Music v-else :size="16" />
+        <span class="song-cover-action" aria-hidden="true">
+          <Pause v-if="isCurrent && isPlaying" :size="18" fill="currentColor" />
+          <Play v-else :size="18" fill="currentColor" />
+        </span>
+      </button>
+      <div class="song-info">
+        <slot name="title" :song="song">
+          <RouterLink
+            class="song-name song-name-link"
+            :to="{ name: 'song-detail', params: { id: song.id } }"
+            :aria-label="`查看歌曲 ${song.title} 的详情与评论`"
+            @click.stop
+            @dblclick.stop
+          >
+            {{ song.title }}
+          </RouterLink>
+        </slot>
+        <slot name="subtitle" :song="song">
+          <RouterLink
+            v-if="song.artistId"
+            class="song-artist song-artist-link"
+            :to="`/artists/${song.artistId}`"
+            :aria-label="`查看歌手 ${displayName(song.artistName, '未知歌手')}`"
+            @click.stop
+            @dblclick.stop
+          >
+            {{ displayName(song.artistName, "未知歌手") }}
+          </RouterLink>
+          <div v-else class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</div>
+        </slot>
+      </div>
     </div>
     <div class="song-row-meta">
       <slot name="meta" :song="song">
@@ -105,14 +107,28 @@ const coverLabel = computed(() => {
 
 <style scoped>
 .song-row.song-row {
-  grid-template-columns: var(--song-row-columns, max-content max-content minmax(150px, 1.1fr) minmax(190px, 0.9fr) max-content 44px);
+  grid-template-columns: var(--song-row-columns, minmax(250px, 1.25fr) minmax(220px, 0.85fr) max-content 168px);
 }
 
+.song-row-identity,
 .song-row-leading,
 .song-row-context-actions {
   display: flex;
   align-items: center;
   min-width: 0;
+}
+
+.song-row-identity {
+  gap: 12px;
+}
+
+.song-row-leading {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.song-info {
+  flex: 1 1 auto;
 }
 
 .song-row-meta {
@@ -160,12 +176,24 @@ const coverLabel = computed(() => {
 
 @media (max-width: 760px) {
   .song-row.song-row {
-    grid-template-columns: var(--song-row-mobile-columns, max-content max-content minmax(0, 1fr) max-content 44px);
+    grid-template-columns: var(--song-row-mobile-columns, minmax(0, 1fr) 44px);
   }
 
   .song-row-meta {
-    grid-column: 3 / -1;
+    grid-column: 1;
     grid-row: 2;
+    padding-left: 60px;
+  }
+
+  .song-row-context-actions {
+    grid-column: 1;
+    grid-row: 3;
+    padding-left: 60px;
+  }
+
+  .song-row-menu {
+    grid-column: 2;
+    grid-row: 1 / span 3;
   }
 }
 

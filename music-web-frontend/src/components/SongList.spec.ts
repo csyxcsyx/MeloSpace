@@ -58,11 +58,26 @@ describe("SongList", () => {
     });
 
     const rows = wrapper.findAll(".song-row-stub");
+    expect(wrapper.get(".song-list-header-identity").text()).toBe("歌名 / 歌手");
+    expect(wrapper.get(".song-list-header-meta").text()).toContain("专辑");
+    expect(wrapper.get(".song-list-header-meta").text()).toContain("时长");
     expect(rows.map((row) => Number(row.attributes("data-song-id")))).toEqual([3, 1, 2]);
     expect(wrapper.findAll(".leading-slot").map((item) => item.text())).toEqual(["1", "2", "3"]);
     expect(wrapper.findAll(".meta-slot").map((item) => item.text())).toEqual(["来源 3", "来源 1", "来源 2"]);
 
     await rows[1].get(".toggle").trigger("click");
     expect(wrapper.emitted("togglePlay")?.[0]).toEqual([songs[1]]);
+  });
+
+  it("can hide the shared column heading in compact contexts", () => {
+    const wrapper = mount(SongList, {
+      props: { songs: [song(1)], showHeader: false },
+      global: {
+        plugins: [createPinia()],
+        stubs: { SongRow: SongRowStub }
+      }
+    });
+
+    expect(wrapper.find(".song-list-header").exists()).toBe(false);
   });
 });

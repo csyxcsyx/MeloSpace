@@ -86,19 +86,7 @@
         aria-live="polite"
         @toggle-play="toggleSongPlayback"
         @open-player="openPlayer"
-      >
-        <template #meta="{ song }">
-          <div class="song-library-row-meta">
-            <RouterLink v-if="song.albumId" :to="`/albums/${song.albumId}`">
-              {{ displayName(song.albumTitle, "未绑定专辑") }}
-            </RouterLink>
-            <span v-else>未绑定专辑</span>
-            <span>{{ song.genre || song.language || song.mood || "未标注" }}</span>
-            <span>{{ formatDuration(song.durationSeconds) }}</span>
-            <span>{{ formatPlayCount(song.playCount) }} 次播放</span>
-          </div>
-        </template>
-      </SongList>
+      />
 
       <EmptyState v-else-if="loading">正在加载歌曲库...</EmptyState>
       <EmptyState v-else>{{ errorMessage || "暂无匹配歌曲。" }}</EmptyState>
@@ -114,7 +102,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { RouterLink, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { Play, RefreshCw, Search } from "lucide-vue-next";
 import { albumApi, artistApi, songApi } from "@/api";
 import type { Album, Artist, PageResult, Song } from "@/api/types";
@@ -123,7 +111,6 @@ import MeloSelect, { type MeloSelectOption } from "@/components/MeloSelect.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import SongList from "@/components/SongList.vue";
 import { usePlayerStore } from "@/stores/player";
-import { displayName, formatDuration } from "@/utils/format";
 
 type SongLibrarySort = "updatedDesc" | "createdDesc" | "playsDesc" | "titleAsc" | "durationDesc" | "durationAsc";
 
@@ -371,9 +358,4 @@ function ensureSongInQueue(song: Song, queue: Song[]) {
   return queue.some((item) => item.id === song.id) ? queue : [song, ...queue];
 }
 
-function formatPlayCount(value?: number | null) {
-  if (!value) return "0";
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
-  return String(value);
-}
 </script>

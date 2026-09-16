@@ -1,5 +1,40 @@
 <template>
-  <div ref="rootRef" class="song-actions">
+  <div ref="rootRef" class="song-actions" :class="`song-actions-${variant}`">
+    <div v-if="variant === 'row'" class="song-actions-quick" aria-label="快捷操作">
+      <button
+        class="song-quick-action"
+        type="button"
+        :aria-label="`${favorited ? '取消收藏' : '收藏'}：${song.title}`"
+        :title="favorited ? '取消收藏' : '收藏'"
+        data-quick-action="favorite"
+        @click.stop="toggleFavoriteSong"
+        @dblclick.stop
+      >
+        <Heart :size="17" :fill="favorited ? 'currentColor' : 'none'" />
+      </button>
+      <button
+        class="song-quick-action"
+        type="button"
+        :aria-label="`下载：${song.title}`"
+        title="下载"
+        data-quick-action="download"
+        @click.stop="downloadSong"
+        @dblclick.stop
+      >
+        <Download :size="17" />
+      </button>
+      <button
+        class="song-quick-action"
+        type="button"
+        :aria-label="`添加到歌单：${song.title}`"
+        title="添加到歌单"
+        data-quick-action="playlist"
+        @click.stop="openPlaylistPicker"
+        @dblclick.stop
+      >
+        <FolderPlus :size="17" />
+      </button>
+    </div>
     <button
       ref="triggerRef"
       class="song-actions-trigger"
@@ -279,7 +314,25 @@ async function togglePlaylistPicker() {
   playlistPickerOpen.value = !playlistPickerOpen.value;
   await nextTick();
   positionMenu();
-  if (!playlistPickerOpen.value || playlistsLoaded.value) return;
+  if (!playlistPickerOpen.value) return;
+  await loadPlaylists();
+}
+
+async function openPlaylistPicker() {
+  if (!requireLogin()) return;
+  if (!menuOpen.value) {
+    menuOpen.value = true;
+    window.dispatchEvent(new CustomEvent(MENU_OPEN_EVENT, { detail: menuInstanceId }));
+    await nextTick();
+  }
+  playlistPickerOpen.value = true;
+  await loadPlaylists();
+  await nextTick();
+  positionMenu();
+}
+
+async function loadPlaylists() {
+  if (playlistsLoaded.value || playlistsLoading.value) return;
   playlistsLoading.value = true;
   try {
     const page = await userApi.playlists(1, 50);
@@ -323,10 +376,52 @@ function downloadSong() {
 </script>
 
 <style scoped>
+.song-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 168px;
+  gap: 4px;
+}
+
+.song-actions-quick {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.song-quick-action {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--muted);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.song-quick-action:hover,
+.song-quick-action:focus-visible {
+  background: rgba(var(--brand-rgb), 0.09);
+  color: var(--brand);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
 .song-actions-trigger-row,
 .song-actions-menu > button,
 .song-actions-submenu button {
   min-width: 44px;
   min-height: 44px;
+}
+
+@media (max-width: 760px) {
+  .song-actions-row {
+    min-width: 44px;
+  }
+
+  .song-actions-quick {
+    display: none;
+  }
 }
 </style>

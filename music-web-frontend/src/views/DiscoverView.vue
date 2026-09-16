@@ -26,69 +26,18 @@
       </div>
 
       <Transition name="recommendation-swap" mode="out-in">
-        <div v-if="recommendedSongs.length" :key="recommendationKey" class="song-recommendation-feed">
-          <article
-            v-for="(song, index) in recommendedSongs"
-            :key="song.id"
-            class="song-recommendation-card"
-            data-glass="solid"
-            :class="{ 'is-current': player.currentSong?.id === song.id }"
-          >
+        <SongList
+          v-if="recommendedSongs.length"
+          :key="recommendationKey"
+          class="discover-song-list"
+          :songs="recommendedSongs"
+          @toggle-play="toggleSongPlayback"
+          @open-player="openPlayer"
+        >
+          <template #leading="{ index }">
             <span class="recommendation-number">{{ String(index + 1).padStart(2, "0") }}</span>
-            <button
-              class="recommendation-cover-button"
-              type="button"
-              :aria-label="player.currentSong?.id === song.id && player.isPlaying ? `暂停 ${song.title}` : `播放 ${song.title}`"
-              @click="toggleSongPlayback(song)"
-            >
-              <img
-                v-if="song.coverUrl"
-                :src="resolveMediaUrl(song.coverUrl)"
-                :alt="`${song.title} 封面`"
-                :loading="index < 2 ? 'eager' : 'lazy'"
-                decoding="async"
-              />
-              <span v-else class="recommendation-cover-fallback">♪</span>
-              <span class="recommendation-play-icon">
-                <Pause v-if="player.currentSong?.id === song.id && player.isPlaying" :size="21" fill="currentColor" />
-                <Play v-else :size="21" fill="currentColor" />
-              </span>
-            </button>
-
-            <div class="recommendation-copy">
-              <div class="recommendation-heading">
-                <div>
-                  <RouterLink class="recommendation-title" :to="`/songs/${song.id}`">{{ song.title }}</RouterLink>
-                  <p>{{ song.artistName || "未知歌手" }}<span v-if="song.albumTitle"> · {{ song.albumTitle }}</span></p>
-                </div>
-                <span v-if="player.currentSong?.id === song.id" class="now-playing-label">
-                  {{ player.isPlaying ? "正在播放" : "已暂停" }}
-                </span>
-              </div>
-
-              <div class="recommendation-tags">
-                <span v-if="song.genre">{{ song.genre }}</span>
-                <span v-if="song.mood">{{ song.mood }}</span>
-                <span v-if="song.language">{{ song.language }}</span>
-              </div>
-
-              <div class="recommendation-meta">
-                <span><Headphones :size="15" /> {{ formatCount(song.playCount) }} 次播放</span>
-                <span><Clock3 :size="15" /> {{ formatDuration(song.durationSeconds) }}</span>
-              </div>
-            </div>
-
-            <div class="recommendation-actions">
-              <button class="primary-action recommendation-listen" type="button" @click="openPlayer(song)">
-                <AudioLines :size="17" />
-                沉浸播放
-              </button>
-              <RouterLink class="recommendation-detail-link" :to="`/songs/${song.id}`">
-                详情与评论 <ChevronRight :size="17" />
-              </RouterLink>
-            </div>
-          </article>
-        </div>
+          </template>
+        </SongList>
         <EmptyState v-else key="empty">还没有可展示的歌曲。</EmptyState>
       </Transition>
     </section>
@@ -138,14 +87,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { AudioLines, ChevronRight, Clock3, Headphones, Pause, Play, RefreshCw } from "lucide-vue-next";
+import { RefreshCw } from "lucide-vue-next";
 import { discoverApi } from "@/api";
 import type { CommunityDiscover, DiscoverComment, Song } from "@/api/types";
 import EmptyState from "@/components/EmptyState.vue";
 import PageHeader from "@/components/PageHeader.vue";
+import SongList from "@/components/SongList.vue";
 import { useDiscoverStore } from "@/stores/discover";
 import { usePlayerStore } from "@/stores/player";
-import { formatCount, formatDuration, resolveMediaUrl } from "@/utils/format";
+import { resolveMediaUrl } from "@/utils/format";
 
 defineOptions({ name: "DiscoverView" });
 
@@ -234,206 +184,22 @@ function relativeTime(value: string) {
   gap: 14px;
 }
 
-.song-recommendation-feed {
-  display: grid;
-  gap: 12px;
-}
-
-.song-recommendation-card {
-  position: relative;
-  display: grid;
-  align-items: center;
-  min-width: 0;
-  min-height: 128px;
-  gap: 16px;
-  border: 1px solid rgba(49, 79, 68, 0.1);
-  border-radius: 22px;
-  padding: 14px 16px 14px 13px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--lg-inner-light), 0 9px 28px rgba(42, 76, 64, 0.055);
-  grid-template-columns: 34px 100px minmax(0, 1fr) max-content;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 128px;
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-
-.song-recommendation-card:hover {
-  border-color: rgba(var(--brand-rgb), 0.2);
-  box-shadow: var(--lg-inner-light), 0 14px 34px rgba(42, 76, 64, 0.085);
-  transform: translateY(-1px);
-}
-
-.song-recommendation-card.is-current {
-  border-color: rgba(var(--brand-rgb), 0.26);
-  background: linear-gradient(105deg, rgba(233, 247, 241, 0.86), rgba(255, 255, 255, 0.95));
-  box-shadow: var(--lg-inner-light), 0 16px 38px rgba(var(--brand-rgb), 0.085);
-}
-
 .recommendation-number {
+  display: block;
+  width: 24px;
   color: #a1a1a8;
-  font-size: 13px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 760;
   text-align: center;
 }
 
-.recommendation-cover-button {
-  position: relative;
-  display: grid;
-  width: 100px;
-  height: 100px;
-  overflow: hidden;
-  border: 0;
-  border-radius: 17px;
-  padding: 0;
-  background: linear-gradient(145deg, var(--brand-soft), #e7eeeb);
-  color: white;
-  cursor: pointer;
-  place-items: center;
+.discover-song-list {
+  border-radius: 14px;
 }
 
-.recommendation-cover-button img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 240ms ease;
-}
-
-.recommendation-cover-button:hover img {
-  transform: scale(1.035);
-}
-
-.recommendation-cover-fallback {
-  color: var(--brand);
-  font-size: 28px;
-}
-
-.recommendation-play-icon {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  background: rgba(12, 12, 15, 0.22);
-  opacity: 0;
-  transition: opacity 160ms ease;
-  place-items: center;
-}
-
-.recommendation-cover-button:hover .recommendation-play-icon,
-.recommendation-cover-button:focus-visible .recommendation-play-icon,
-.is-current .recommendation-play-icon {
-  opacity: 1;
-}
-
-.recommendation-copy {
-  display: grid;
-  min-width: 0;
-  gap: 10px;
-}
-
-.recommendation-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  min-width: 0;
-  gap: 12px;
-}
-
-.recommendation-heading > div {
-  min-width: 0;
-}
-
-.recommendation-title {
-  display: block;
-  overflow: hidden;
-  color: var(--text);
-  font-size: clamp(18px, 1.55vw, 22px);
-  font-weight: 820;
-  line-height: 1.25;
-  text-decoration: none;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recommendation-title:hover {
-  color: var(--brand);
-}
-
-.recommendation-heading p {
-  margin: 5px 0 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.now-playing-label {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  font-size: 12px;
-  font-weight: 780;
-}
-
-.recommendation-tags,
-.recommendation-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.recommendation-tags span {
-  border-radius: 999px;
-  padding: 4px 9px;
-  background: #f1f5f3;
-  color: #5f6e67;
-  font-size: 12px;
-}
-
-.recommendation-meta {
-  color: var(--muted);
-  font-size: 13px;
-  gap: 16px;
-}
-
-.recommendation-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.recommendation-actions {
-  display: grid;
-  justify-items: stretch;
-  width: 132px;
-  gap: 8px;
-}
-
-.recommendation-listen {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  gap: 7px;
-  white-space: nowrap;
-}
-
-.recommendation-detail-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.recommendation-detail-link:hover {
-  color: var(--brand);
+.discover-song-list :deep(.song-list-header-identity) {
+  padding-left: 96px;
 }
 
 .hot-comment-section {
@@ -516,28 +282,6 @@ function relativeTime(value: string) {
   object-fit: cover;
 }
 
-@media (max-width: 900px) {
-  .song-recommendation-card {
-    grid-template-columns: 28px 88px minmax(0, 1fr);
-  }
-
-  .recommendation-cover-button {
-    width: 88px;
-    height: 88px;
-  }
-
-  .recommendation-actions {
-    display: flex;
-    width: auto;
-    grid-column: 3;
-  }
-
-  .recommendation-listen,
-  .recommendation-detail-link {
-    min-width: 128px;
-  }
-}
-
 @media (max-width: 620px) {
   .community-discover-page {
     gap: 30px;
@@ -548,68 +292,9 @@ function relativeTime(value: string) {
     line-height: 1.08;
   }
 
-  .song-recommendation-card {
-    min-height: 106px;
-    gap: 12px;
-    border-radius: 18px;
-    padding: 11px;
-    grid-template-columns: 78px minmax(0, 1fr);
-    contain-intrinsic-size: auto 106px;
-  }
-
   .recommendation-number {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    z-index: 1;
-    border-radius: 999px;
-    padding: 3px 6px;
-    background: rgba(10, 10, 12, 0.56);
-    color: white;
+    width: 18px;
     font-size: 10px;
-  }
-
-  .recommendation-cover-button {
-    width: 78px;
-    height: 78px;
-    border-radius: 14px;
-  }
-
-  .recommendation-title {
-    font-size: 17px;
-  }
-
-  .recommendation-heading p {
-    font-size: 13px;
-  }
-
-  .recommendation-tags {
-    display: none;
-  }
-
-  .recommendation-meta {
-    gap: 10px;
-    font-size: 12px;
-  }
-
-  .recommendation-meta span:first-child {
-    display: none;
-  }
-
-  .now-playing-label {
-    display: none;
-  }
-
-  .recommendation-actions {
-    display: none;
-  }
-
-  .recommendation-play-icon {
-    opacity: 1;
-    background: linear-gradient(0deg, rgba(10, 10, 12, 0.32), transparent 58%);
-    align-items: end;
-    justify-content: end;
-    padding: 0 8px 7px 0;
   }
 
   .discover-comment-grid {
@@ -633,10 +318,4 @@ function relativeTime(value: string) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .song-recommendation-card,
-  .recommendation-cover-button img {
-    transition: none;
-  }
-}
 </style>
