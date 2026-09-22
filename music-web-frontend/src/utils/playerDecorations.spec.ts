@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getDecoratedRangeFillPosition,
   getPlayerProgressDecoration,
   getPlayerProgressDecorationStyle
 } from "@/utils/playerDecorations";
@@ -30,5 +31,13 @@ describe("player progress decorations", () => {
       "--player-progress-thumb-image": "url(\"/decorations/handwritten-past-bouquet.png\")",
       "--player-progress-thumb-rotation": "-9deg"
     });
+  });
+
+  it("aligns the decorated fill with the center of the large thumb", () => {
+    expect(getDecoratedRangeFillPosition(0)).toBe("calc(0% + 20px)");
+    expect(getDecoratedRangeFillPosition(25)).toBe("calc(25% + 10px)");
+    expect(getDecoratedRangeFillPosition(50)).toBe("50%");
+    expect(getDecoratedRangeFillPosition(75)).toBe("calc(75% - 10px)");
+    expect(getDecoratedRangeFillPosition(100)).toBe("calc(100% - 20px)");
   });
 });

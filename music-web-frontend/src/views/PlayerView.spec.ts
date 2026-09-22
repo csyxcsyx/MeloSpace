@@ -148,6 +148,7 @@ describe("PlayerView mobile pager", () => {
     const progress = wrapper.get('input[aria-label="播放进度"]');
     expect(progress.classes()).toContain("player-dock-range-decorated");
     expect(progress.attributes("style")).toContain("/decorations/handwritten-past-bouquet.png");
+    expect(progress.attributes("style")).toContain("--player-decorated-range-progress: calc(0% + 20px)");
 
     player.replaceCurrentSong(song, [song]);
     await flushPromises();

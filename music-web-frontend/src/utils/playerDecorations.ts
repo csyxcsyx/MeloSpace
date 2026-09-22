@@ -37,3 +37,11 @@ export function getPlayerProgressDecorationStyle(decoration?: PlayerProgressDeco
     "--player-progress-thumb-rotation": decoration.rotation
   };
 }
+
+export function getDecoratedRangeFillPosition(progressPercent: number, thumbSize = 40) {
+  const percent = Math.min(100, Math.max(0, progressPercent));
+  const offset = thumbSize / 2 * (1 - 2 * percent / 100);
+  if (Math.abs(offset) < 0.001) return `${percent}%`;
+  const operator = offset < 0 ? "-" : "+";
+  return `calc(${percent}% ${operator} ${Math.abs(offset)}px)`;
+}

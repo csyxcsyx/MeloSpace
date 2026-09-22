@@ -240,7 +240,11 @@ import LyricPanel from "@/components/LyricPanel.vue";
 import SongActionsMenu from "@/components/SongActionsMenu.vue";
 import { usePlayerStore } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
-import { getPlayerProgressDecoration, getPlayerProgressDecorationStyle } from "@/utils/playerDecorations";
+import {
+  getDecoratedRangeFillPosition,
+  getPlayerProgressDecoration,
+  getPlayerProgressDecorationStyle
+} from "@/utils/playerDecorations";
 import type { Song } from "@/api/types";
 
 const router = useRouter();
@@ -254,9 +258,13 @@ const displayedSeekTime = computed(() => seekPreviewTime.value ?? player.current
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
 const progressDecoration = computed(() => getPlayerProgressDecoration(player.currentSong));
 const progressDecorationStyle = computed(() => getPlayerProgressDecorationStyle(progressDecoration.value));
-const progressRangeStyle = computed(() => ({
-  "--player-range-progress": `${Math.min(100, Math.max(0, displayedSeekTime.value / rangeMax.value * 100))}%`
-}));
+const progressRangeStyle = computed(() => {
+  const progressPercent = Math.min(100, Math.max(0, displayedSeekTime.value / rangeMax.value * 100));
+  return {
+    "--player-range-progress": `${progressPercent}%`,
+    "--player-decorated-range-progress": getDecoratedRangeFillPosition(progressPercent)
+  };
+});
 const volumeRangeStyle = computed(() => ({ "--player-range-progress": `${clamp(player.volume, 0, 1) * 100}%` }));
 const DEFAULT_THEME = { r: 68, g: 73, b: 84 };
 const THEME_CACHE_PREFIX = "melospace-player-theme:";

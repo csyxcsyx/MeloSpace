@@ -3456,6 +3456,16 @@ button {
   height: 40px;
 }
 
+.player-dock-range-decorated::-webkit-slider-runnable-track,
+.player-dock-range-decorated:hover::-webkit-slider-runnable-track,
+.player-dock-range-decorated:focus::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    90deg,
+    var(--player-range-fill) 0 var(--player-decorated-range-progress),
+    rgba(255, 255, 255, 0.22) var(--player-decorated-range-progress) 100%
+  );
+}
+
 .player-dock-range-decorated::-webkit-slider-thumb {
   width: 40px;
   height: 40px;
