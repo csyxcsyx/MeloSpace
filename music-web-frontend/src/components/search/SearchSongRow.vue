@@ -12,10 +12,14 @@
       </RouterLink>
     </template>
     <template #subtitle>
-      <RouterLink class="search-song-copy search-song-subtitle" :to="song.artistId ? `/artists/${song.artistId}` : `/songs/${song.id}`">
+      <RouterLink class="search-song-copy search-song-subtitle search-song-subtitle-link" :to="song.artistId ? `/artists/${song.artistId}` : `/songs/${song.id}`">
         <SearchHighlightText :text="song.artistName || '未知歌手'" :keyword="keyword" />
         <template v-if="song.albumTitle"> · {{ song.albumTitle }}</template>
       </RouterLink>
+      <span class="search-song-copy search-song-subtitle search-song-subtitle-mobile">
+        <SearchHighlightText :text="song.artistName || '未知歌手'" :keyword="keyword" />
+        <template v-if="song.albumTitle"> · {{ song.albumTitle }}</template>
+      </span>
     </template>
     <template #meta>
       <span class="search-song-plays">{{ formatCount(song.playCount) }} 次播放</span>
@@ -44,3 +48,19 @@ defineEmits<{
   toggle: [song: Song];
 }>();
 </script>
+
+<style scoped>
+.search-song-subtitle-mobile {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .search-song-subtitle-link {
+    display: none;
+  }
+
+  .search-song-subtitle-mobile {
+    display: block;
+  }
+}
+</style>

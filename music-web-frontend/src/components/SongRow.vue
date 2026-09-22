@@ -46,7 +46,7 @@
           <div class="song-subtitle">
             <RouterLink
               v-if="song.artistId"
-              class="song-artist song-artist-link"
+              class="song-artist song-artist-link song-artist-desktop"
               :to="`/artists/${song.artistId}`"
               :aria-label="`查看歌手 ${displayName(song.artistName, '未知歌手')}`"
               @click.stop
@@ -54,18 +54,10 @@
             >
               {{ displayName(song.artistName, "未知歌手") }}
             </RouterLink>
-            <span v-else class="song-artist">{{ displayName(song.artistName, "未知歌手") }}</span>
+            <span v-else class="song-artist song-artist-desktop">{{ displayName(song.artistName, "未知歌手") }}</span>
+            <span class="song-artist song-artist-mobile">{{ displayName(song.artistName, "未知歌手") }}</span>
             <span class="song-mobile-separator" aria-hidden="true">·</span>
-            <RouterLink
-              v-if="song.albumId"
-              class="song-mobile-album"
-              :to="`/albums/${song.albumId}`"
-              @click.stop
-              @dblclick.stop
-            >
-              {{ displayName(song.albumTitle, "未绑定专辑") }}
-            </RouterLink>
-            <span v-else class="song-mobile-album">未绑定专辑</span>
+            <span class="song-mobile-album">{{ displayName(song.albumTitle, "未绑定专辑") }}</span>
           </div>
         </slot>
       </div>
@@ -176,7 +168,8 @@ function handleRowDoubleClick() {
 }
 
 .song-mobile-separator,
-.song-mobile-album {
+.song-mobile-album,
+.song-artist-mobile {
   display: none;
 }
 
@@ -264,6 +257,14 @@ function handleRowDoubleClick() {
     margin-top: 0;
   }
 
+  .song-subtitle .song-artist-desktop {
+    display: none;
+  }
+
+  .song-subtitle .song-artist-mobile {
+    display: inline;
+  }
+
   .song-mobile-separator {
     display: inline;
     flex: 0 0 auto;
@@ -277,12 +278,6 @@ function handleRowDoubleClick() {
     min-width: 0;
     color: inherit;
     text-overflow: ellipsis;
-  }
-
-  .song-mobile-album:hover,
-  .song-mobile-album:focus-visible {
-    color: var(--brand);
-    outline: 0;
   }
 
   .song-row-meta {

@@ -99,7 +99,7 @@ describe("SongRow", () => {
     expect(wrapper.emitted("togglePlay")).toEqual([[song]]);
   });
 
-  it("keeps album information in the default mobile subtitle", () => {
+  it("renders mobile artist and album metadata as plain text", () => {
     const wrapper = mount(SongRow, {
       props: { song },
       global: {
@@ -111,6 +111,8 @@ describe("SongRow", () => {
     });
 
     expect(wrapper.get(".song-subtitle").text()).toContain("周杰伦");
+    expect(wrapper.get(".song-artist-mobile").element.tagName).toBe("SPAN");
+    expect(wrapper.get(".song-mobile-album").element.tagName).toBe("SPAN");
     expect(wrapper.get(".song-mobile-album").text()).toBe("十一月的萧邦");
   });
 });
