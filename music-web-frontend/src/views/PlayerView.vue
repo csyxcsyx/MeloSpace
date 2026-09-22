@@ -11,6 +11,30 @@
           <span>首页</span>
         </RouterLink>
       </div>
+      <div v-if="player.currentSong && mobileLayout" class="player-page-pager" role="tablist" aria-label="播放器页面">
+        <button
+          type="button"
+          role="tab"
+          aria-controls="player-cover-page"
+          :aria-selected="activePlayerPage === 0"
+          :tabindex="activePlayerPage === 0 ? 0 : -1"
+          aria-label="显示专辑封面页"
+          @click="showPlayerPage(0)"
+          @keydown.right.prevent="showPlayerPage(1)"
+          @keydown.end.prevent="showPlayerPage(1)"
+        />
+        <button
+          type="button"
+          role="tab"
+          aria-controls="player-lyrics-page"
+          :aria-selected="activePlayerPage === 1"
+          :tabindex="activePlayerPage === 1 ? 0 : -1"
+          aria-label="显示歌词页"
+          @click="showPlayerPage(1)"
+          @keydown.left.prevent="showPlayerPage(0)"
+          @keydown.home.prevent="showPlayerPage(0)"
+        />
+      </div>
       <SongActionsMenu v-if="player.currentSong" :song="player.currentSong" variant="player" />
     </header>
 
@@ -20,8 +44,14 @@
     </EmptyState>
 
     <template v-else>
-      <section class="player-stage">
-        <aside class="player-album-panel">
+      <section ref="stageRef" class="player-stage" @scroll.passive="onPlayerStageScroll">
+        <aside
+          id="player-cover-page"
+          class="player-album-panel player-page-slide"
+          role="tabpanel"
+          :aria-hidden="mobileLayout ? activePlayerPage !== 0 : undefined"
+          :inert="mobileLayout && activePlayerPage !== 0"
+        >
           <div class="turntable-card">
             <div class="record-disc" :class="{ 'record-disc-playing': player.isPlaying }">
               <div class="record-grooves" aria-hidden="true" />
@@ -40,7 +70,17 @@
           </div>
         </aside>
 
-        <section class="player-lyrics-panel">
+        <section
+          id="player-lyrics-page"
+          class="player-lyrics-panel player-page-slide"
+          role="tabpanel"
+          :aria-hidden="mobileLayout ? activePlayerPage !== 1 : undefined"
+          :inert="mobileLayout && activePlayerPage !== 1"
+        >
+          <header class="player-lyrics-mobile-head">
+            <h2>{{ player.currentSong.title }}</h2>
+            <p>{{ player.currentSong.artistName || "未知歌手" }}</p>
+          </header>
           <LyricPanel
             :song="player.currentSong"
             :current-time="player.currentTime"
@@ -176,7 +216,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { ArrowLeft, Home, ListMusic, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Trash2, Volume2, X } from "lucide-vue-next";
 import EmptyState from "@/components/EmptyState.vue";
@@ -189,6 +229,9 @@ import type { Song } from "@/api/types";
 const router = useRouter();
 const player = usePlayerStore();
 const queueOpen = ref(false);
+const stageRef = ref<HTMLElement | null>(null);
+const mobileLayout = ref(false);
+const activePlayerPage = ref<0 | 1>(0);
 const seekPreviewTime = ref<number | null>(null);
 const displayedSeekTime = computed(() => seekPreviewTime.value ?? player.currentTime);
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
@@ -218,6 +261,22 @@ const themeStyle = computed(() => ({
 let themeRequestId = 0;
 let rangeSeekActive = false;
 let resumeAfterRangeSeek = false;
+let mobileLayoutQuery: MediaQueryList | null = null;
+let stageScrollFrame: number | null = null;
+
+onMounted(() => {
+  mobileLayoutQuery = window.matchMedia("(max-width: 820px)");
+  mobileLayout.value = mobileLayoutQuery.matches;
+  mobileLayoutQuery.addEventListener("change", handleMobileLayoutChange);
+  if (mobileLayout.value) {
+    void nextTick(() => resetPlayerPage());
+  }
+});
+
+onBeforeUnmount(() => {
+  mobileLayoutQuery?.removeEventListener("change", handleMobileLayoutChange);
+  if (stageScrollFrame !== null) cancelAnimationFrame(stageScrollFrame);
+});
 
 watch(
   () => player.currentSong?.coverUrl,
@@ -233,6 +292,44 @@ watch(
   },
   { immediate: true }
 );
+
+watch(
+  () => player.currentSong?.id,
+  async () => {
+    activePlayerPage.value = 0;
+    await nextTick();
+    resetPlayerPage();
+  }
+);
+
+function showPlayerPage(page: 0 | 1) {
+  activePlayerPage.value = page;
+  if (!mobileLayout.value) return;
+  const stage = stageRef.value;
+  if (!stage) return;
+  stage.scrollTo({ left: stage.clientWidth * page, behavior: "smooth" });
+}
+
+function resetPlayerPage() {
+  activePlayerPage.value = 0;
+  if (!mobileLayout.value) return;
+  stageRef.value?.scrollTo({ left: 0, behavior: "auto" });
+}
+
+function onPlayerStageScroll() {
+  if (!mobileLayout.value || stageScrollFrame !== null) return;
+  stageScrollFrame = requestAnimationFrame(() => {
+    stageScrollFrame = null;
+    const stage = stageRef.value;
+    if (!stage?.clientWidth) return;
+    activePlayerPage.value = stage.scrollLeft >= stage.clientWidth / 2 ? 1 : 0;
+  });
+}
+
+function handleMobileLayoutChange(event: MediaQueryListEvent) {
+  mobileLayout.value = event.matches;
+  resetPlayerPage();
+}
 
 function goBack() {
   if (window.history.state?.back) {

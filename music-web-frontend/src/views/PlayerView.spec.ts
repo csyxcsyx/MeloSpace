@@ -1,0 +1,128 @@
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { createPinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Song } from "@/api/types";
+import { usePlayerStore } from "@/stores/player";
+import PlayerView from "@/views/PlayerView.vue";
+
+const song: Song = {
+  id: 101,
+  title: "晴天",
+  artistId: 1,
+  artistName: "周杰伦",
+  albumId: 11,
+  albumTitle: "叶惠美",
+  coverUrl: null,
+  audioUrl: "/media/sunny.mp3",
+  lyricUrl: "/media/sunny.lrc",
+  durationSeconds: 269,
+  language: "中文",
+  genre: "Pop",
+  mood: "怀旧",
+  playCount: 88,
+  status: 1,
+  createdAt: "2026-09-22T00:00:00",
+  updatedAt: "2026-09-22T00:00:00"
+};
+
+describe("PlayerView mobile pager", () => {
+  let wrapper: VueWrapper | null = null;
+  const scrollTo = vi.fn(function (this: HTMLElement, options: ScrollToOptions) {
+    this.scrollLeft = Number(options.left ?? 0);
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("melospace-player-song", JSON.stringify(song));
+    localStorage.setItem("melospace-player-queue", JSON.stringify([song]));
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    }));
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo
+    });
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = null;
+    localStorage.clear();
+    scrollTo.mockClear();
+    Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
+    vi.unstubAllGlobals();
+  });
+
+  it("starts on the cover page and exposes an accessible lyrics page control", async () => {
+    wrapper = await mountPlayer();
+    const tabs = wrapper.findAll('[role="tab"]');
+
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0].attributes("aria-selected")).toBe("true");
+    expect(wrapper.get("#player-cover-page").attributes("aria-hidden")).toBe("false");
+    expect(wrapper.get("#player-lyrics-page").attributes("aria-hidden")).toBe("true");
+  });
+
+  it("moves to lyrics from the page control and resets after a song change", async () => {
+    wrapper = await mountPlayer();
+    const stage = wrapper.get(".player-stage");
+    Object.defineProperty(stage.element, "clientWidth", { configurable: true, value: 360 });
+
+    await wrapper.findAll('[role="tab"]')[1].trigger("click");
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: 360, behavior: "smooth" });
+    expect(wrapper.findAll('[role="tab"]')[1].attributes("aria-selected")).toBe("true");
+
+    const player = usePlayerStore();
+    player.replaceCurrentSong({ ...song, id: 102, title: "夜曲" }, [{ ...song, id: 102, title: "夜曲" }]);
+    await flushPromises();
+
+    expect(wrapper.findAll('[role="tab"]')[0].attributes("aria-selected")).toBe("true");
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: "auto" });
+  });
+
+  it("updates the selected page after a native horizontal swipe settles", async () => {
+    wrapper = await mountPlayer();
+    const stage = wrapper.get(".player-stage");
+    Object.defineProperty(stage.element, "clientWidth", { configurable: true, value: 360 });
+    Object.defineProperty(stage.element, "scrollLeft", { configurable: true, writable: true, value: 360 });
+
+    await stage.trigger("scroll");
+    await waitForAnimationFrame();
+
+    expect(wrapper.findAll('[role="tab"]')[1].attributes("aria-selected")).toBe("true");
+    expect(wrapper.get("#player-cover-page").attributes("aria-hidden")).toBe("true");
+    expect(wrapper.get("#player-lyrics-page").attributes("aria-hidden")).toBe("false");
+  });
+});
+
+async function mountPlayer() {
+  const pinia = createPinia();
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/player", component: { template: "<div />" } },
+      { path: "/discover", component: { template: "<div />" } }
+    ]
+  });
+  await router.push("/player");
+  await router.isReady();
+
+  const mounted = mount(PlayerView, {
+    global: {
+      plugins: [pinia, router],
+      stubs: {
+        LyricPanel: { template: '<div class="lyric-panel-stub">歌词</div>' },
+        SongActionsMenu: { template: '<button class="song-actions-stub">更多</button>' }
+      }
+    }
+  });
+  await flushPromises();
+  return mounted;
+}
+
+function waitForAnimationFrame() {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, 24));
+}
