@@ -100,8 +100,24 @@
         <div class="now-meta">
           {{ player.errorMessage || player.currentSong?.artistName || "MeloSpace" }}
         </div>
-        <div class="mini-progress" aria-label="播放进度" role="slider" tabindex="0" @click="seek">
+        <div
+          class="mini-progress"
+          :class="{ 'mini-progress-decorated': progressDecoration }"
+          :style="progressDecorationStyle"
+          aria-label="播放进度"
+          role="slider"
+          tabindex="0"
+          @click="seek"
+        >
           <span :style="{ width: `${player.progressPercent}%` }" />
+          <img
+            v-if="progressDecoration"
+            class="mini-progress-decoration"
+            :src="progressDecoration.assetUrl"
+            :style="{ left: `${player.progressPercent}%` }"
+            alt=""
+            aria-hidden="true"
+          />
         </div>
       </div>
     </div>
@@ -158,6 +174,7 @@ import { useUiStore } from "@/stores/ui";
 import type { Song } from "@/api/types";
 import { PLAYER_PLAY_REQUEST_EVENT } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import { getPlayerProgressDecoration, getPlayerProgressDecorationStyle } from "@/utils/playerDecorations";
 import { resolvePlayerShortcut, type PlayerShortcutAction } from "@/utils/playerShortcuts";
 
 withDefaults(defineProps<{ hidden?: boolean }>(), {
@@ -171,6 +188,8 @@ const ui = useUiStore();
 const audioRef = ref<HTMLAudioElement | null>(null);
 const queueOpen = ref(false);
 const audioSrc = computed(() => resolveMediaUrl(player.currentSong?.audioUrl));
+const progressDecoration = computed(() => getPlayerProgressDecoration(player.currentSong));
+const progressDecorationStyle = computed(() => getPlayerProgressDecorationStyle(progressDecoration.value));
 let activePlayRequest: Promise<boolean> | null = null;
 let playRequestToken = 0;
 const PROGRESS_SYNC_INTERVAL_MS = 100;

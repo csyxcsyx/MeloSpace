@@ -131,6 +131,28 @@ describe("PlayerView mobile pager", () => {
     expect(wrapper.findAll('[role="tab"]')[1].attributes("aria-selected")).toBe("true");
     expect(scrollTo).not.toHaveBeenCalled();
   });
+
+  it("uses the bouquet progress thumb only for Handwritten Past", async () => {
+    wrapper = await mountPlayer();
+    const player = usePlayerStore();
+    const decoratedSong = {
+      ...song,
+      id: 230,
+      title: "手写的从前",
+      artistName: "周杰伦"
+    };
+
+    player.replaceCurrentSong(decoratedSong, [decoratedSong]);
+    await flushPromises();
+
+    const progress = wrapper.get('input[aria-label="播放进度"]');
+    expect(progress.classes()).toContain("player-dock-range-decorated");
+    expect(progress.attributes("style")).toContain("/decorations/handwritten-past-bouquet.png");
+
+    player.replaceCurrentSong(song, [song]);
+    await flushPromises();
+    expect(progress.classes()).not.toContain("player-dock-range-decorated");
+  });
 });
 
 async function mountPlayer() {

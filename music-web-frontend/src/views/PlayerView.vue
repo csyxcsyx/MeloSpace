@@ -162,13 +162,14 @@
           <span>{{ formatDuration(displayedSeekTime) }}</span>
           <input
             class="player-dock-range"
+            :class="{ 'player-dock-range-decorated': progressDecoration }"
             aria-label="播放进度"
             type="range"
             min="0"
             :max="rangeMax"
             step="0.1"
             :value="displayedSeekTime"
-            :style="progressRangeStyle"
+            :style="[progressRangeStyle, progressDecorationStyle]"
             @pointerdown="beginRangeSeek"
             @pointerup="commitRangeSeek"
             @pointercancel="commitRangeSeek"
@@ -239,6 +240,7 @@ import LyricPanel from "@/components/LyricPanel.vue";
 import SongActionsMenu from "@/components/SongActionsMenu.vue";
 import { usePlayerStore } from "@/stores/player";
 import { formatDuration, resolveMediaUrl } from "@/utils/format";
+import { getPlayerProgressDecoration, getPlayerProgressDecorationStyle } from "@/utils/playerDecorations";
 import type { Song } from "@/api/types";
 
 const router = useRouter();
@@ -250,6 +252,8 @@ const activePlayerPage = ref<0 | 1>(0);
 const seekPreviewTime = ref<number | null>(null);
 const displayedSeekTime = computed(() => seekPreviewTime.value ?? player.currentTime);
 const rangeMax = computed(() => Math.max(player.duration || player.currentSong?.durationSeconds || 1, 1));
+const progressDecoration = computed(() => getPlayerProgressDecoration(player.currentSong));
+const progressDecorationStyle = computed(() => getPlayerProgressDecorationStyle(progressDecoration.value));
 const progressRangeStyle = computed(() => ({
   "--player-range-progress": `${Math.min(100, Math.max(0, displayedSeekTime.value / rangeMax.value * 100))}%`
 }));
