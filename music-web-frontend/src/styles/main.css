@@ -1899,22 +1899,6 @@ button {
   text-align: center;
 }
 
-.lyric-follow-button {
-  position: sticky;
-  bottom: 18px;
-  display: block;
-  width: max-content;
-  min-height: 34px;
-  margin: 18px auto 0;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(29, 29, 31, 0.84);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 760;
-  box-shadow: var(--shadow);
-}
-
 .comment-form {
   display: grid;
   gap: 10px;

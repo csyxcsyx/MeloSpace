@@ -42,6 +42,7 @@ describe("LyricPanel performance behavior", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     cleanupWrapper?.();
     cleanupWrapper = null;
     scrollTo.mockClear();
@@ -127,6 +128,32 @@ describe("LyricPanel performance behavior", () => {
     await previewLines[1].trigger("click");
     expect(wrapper.emitted("activate")).toHaveLength(1);
     expect(wrapper.emitted("seek")).toBeUndefined();
+  });
+
+  it("手动浏览时不显示回正按钮，并在静止后自动回到当前歌词", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(LyricPanel, {
+      props: {
+        song: lyricSong,
+        currentTime: 6,
+        isCurrentSong: true,
+        fullscreen: true
+      }
+    });
+    cleanupWrapper = () => wrapper.unmount();
+    await flushPromises();
+    await vi.runOnlyPendingTimersAsync();
+    scrollTo.mockClear();
+
+    await wrapper.get(".lyric-scroll").trigger("touchmove");
+    expect(wrapper.find(".lyric-follow-button").exists()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(4199);
+    expect(scrollTo).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.runOnlyPendingTimersAsync();
+    expect(scrollTo).toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
 

@@ -64,14 +64,6 @@
           <template v-else>{{ line.text }}</template>
         </button>
       </template>
-      <button
-        v-if="showFollowButton"
-        class="lyric-follow-button"
-        type="button"
-        @click="resumeFollowing"
-      >
-        回到当前
-      </button>
     </div>
   </section>
 </template>
@@ -167,8 +159,6 @@ const previewLines = computed(() => {
     index: start + offset
   }));
 });
-const showFollowButton = computed(() => userBrowsing.value && props.isCurrentSong && activeIndex.value >= 0);
-
 watch(lyricUrl, loadLyrics, { immediate: true });
 
 watch(activeIndex, async (index) => {
@@ -369,18 +359,10 @@ function pauseFollowingForBrowsing() {
   if (browsingTimer) clearTimeout(browsingTimer);
   browsingTimer = setTimeout(() => {
     userBrowsing.value = false;
-    if (props.fullscreen && props.isCurrentSong && activeIndex.value >= 0) {
-      queueActiveLineCenter("auto");
-    }
+    if (!props.isCurrentSong || activeIndex.value < 0) return;
+    if (props.fullscreen) queueActiveLineCenter("auto");
+    else scrollToLine(activeIndex.value, "smooth");
   }, 4200);
-}
-
-async function resumeFollowing() {
-  userBrowsing.value = false;
-  await nextTick();
-  if (activeIndex.value >= 0) {
-    scrollToLine(activeIndex.value, "smooth");
-  }
 }
 
 function syncToActiveLine(behavior: ScrollBehavior) {
