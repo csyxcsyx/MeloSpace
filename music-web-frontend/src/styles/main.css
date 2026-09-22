@@ -1886,6 +1886,10 @@ button {
   color: transparent;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  transition: none;
+}
+
+.lyric-word-progressing {
   transition: --lyric-word-progress 110ms linear;
   will-change: --lyric-word-progress;
 }

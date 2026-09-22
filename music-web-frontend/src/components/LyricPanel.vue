@@ -56,6 +56,7 @@
               v-for="(word, wordIndex) in line.words"
               :key="`${word.time}-${wordIndex}-${word.text}`"
               class="lyric-word"
+              :class="{ 'lyric-word-progressing': isWordProgressing(word, line) }"
               :style="wordStyle(word, line)"
             >
               {{ word.text }}
@@ -322,10 +323,18 @@ function wordStyle(word: LyricWord, line: LyricLine) {
   };
 }
 
+function isWordProgressing(word: LyricWord, line: LyricLine) {
+  const progress = getWordProgress(word, line);
+  return progress > 0 && progress < 1;
+}
+
 function getWordProgress(word: LyricWord, line: LyricLine) {
   if (!props.isCurrentSong) return 0;
   const startTime = word.time;
-  const endTime = Math.max(word.endTime ?? line.endTime ?? startTime + MIN_WORD_DURATION_SECONDS, startTime + MIN_WORD_DURATION_SECONDS);
+  const timedEnd = word.endTime ?? line.endTime;
+  const endTime = timedEnd !== undefined && timedEnd > startTime
+    ? timedEnd
+    : startTime + MIN_WORD_DURATION_SECONDS;
   if (syncedTime.value <= startTime) return 0;
   if (syncedTime.value >= endTime) return 1;
   return (syncedTime.value - startTime) / (endTime - startTime);
