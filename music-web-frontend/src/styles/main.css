@@ -1051,7 +1051,7 @@ button {
   border-bottom: 1px solid var(--soft-line);
   grid-template-columns: max-content minmax(0, 1fr) 28px;
   gap: 12px;
-  border-radius: 10px;
+  border-radius: 0;
   padding: 8px 7px;
   background: transparent;
   cursor: default;
