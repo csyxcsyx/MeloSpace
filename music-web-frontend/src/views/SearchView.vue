@@ -43,7 +43,6 @@
           v-if="searchPanelOpen"
           id="search-assist-panel"
           class="search-assist-panel"
-          data-glass="regular"
           @mousedown.prevent
         >
           <template v-if="normalizedInput">
