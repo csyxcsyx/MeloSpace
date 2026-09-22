@@ -8,16 +8,16 @@
   >
     <template #title>
       <RouterLink class="search-song-copy search-song-title" :to="`/songs/${song.id}`">
-        <strong><SearchHighlightText :text="song.title" :keyword="keyword" /></strong>
+        <strong>{{ song.title }}</strong>
       </RouterLink>
     </template>
     <template #subtitle>
       <RouterLink class="search-song-copy search-song-subtitle search-song-subtitle-link" :to="song.artistId ? `/artists/${song.artistId}` : `/songs/${song.id}`">
-        <SearchHighlightText :text="song.artistName || '未知歌手'" :keyword="keyword" />
+        {{ song.artistName || "未知歌手" }}
         <template v-if="song.albumTitle"> · {{ song.albumTitle }}</template>
       </RouterLink>
       <span class="search-song-copy search-song-subtitle search-song-subtitle-mobile">
-        <SearchHighlightText :text="song.artistName || '未知歌手'" :keyword="keyword" />
+        {{ song.artistName || "未知歌手" }}
         <template v-if="song.albumTitle"> · {{ song.albumTitle }}</template>
       </span>
     </template>
@@ -31,7 +31,6 @@
 import type { Song } from "@/api/types";
 import SongRow from "@/components/SongRow.vue";
 import { formatCount } from "@/utils/format";
-import SearchHighlightText from "./SearchHighlightText.vue";
 
 withDefaults(defineProps<{
   song: Song;

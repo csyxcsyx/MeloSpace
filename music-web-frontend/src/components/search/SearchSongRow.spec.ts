@@ -24,6 +24,21 @@ const song: Song = {
 };
 
 describe("SearchSongRow", () => {
+  it("keeps song text in the standard row style without keyword marks", () => {
+    const wrapper = mount(SearchSongRow, {
+      props: { song, keyword: "夜曲" },
+      global: {
+        stubs: {
+          RouterLink: { template: "<a><slot /></a>" },
+          SongActionsMenu: { template: "<button>更多</button>" }
+        }
+      }
+    });
+
+    expect(wrapper.get(".search-song-title").text()).toBe("夜曲");
+    expect(wrapper.find(".search-highlight").exists()).toBe(false);
+  });
+
   it("provides plain mobile artist and album metadata", () => {
     const wrapper = mount(SearchSongRow, {
       props: { song, keyword: "夜曲" },
@@ -37,7 +52,7 @@ describe("SearchSongRow", () => {
 
     const mobileSubtitle = wrapper.get(".search-song-subtitle-mobile");
     expect(mobileSubtitle.element.tagName).toBe("SPAN");
-    expect(mobileSubtitle.text()).toBe("周杰伦 · 十一月的萧邦");
+    expect(mobileSubtitle.text().replace(/\s+/g, " ")).toBe("周杰伦 · 十一月的萧邦");
     expect(mobileSubtitle.attributes("href")).toBeUndefined();
   });
 });
