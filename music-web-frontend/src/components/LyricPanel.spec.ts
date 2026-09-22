@@ -97,6 +97,37 @@ describe("LyricPanel performance behavior", () => {
     expect(words[1].attributes("style")).toContain("50.00%");
     expect(words[2].attributes("style")).toContain("0.00%");
   });
+
+  it("在预览模式只显示当前附近三行并可请求打开完整歌词", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve([
+        "[00:00.00]第一句歌词",
+        "[00:05.00]第二句歌词",
+        "[00:10.00]第三句歌词",
+        "[00:15.00]第四句歌词"
+      ].join("\n"))
+    }));
+    const wrapper = mount(LyricPanel, {
+      props: {
+        song: { ...lyricSong, lyricUrl: "/media/test-preview.lrc" },
+        currentTime: 6,
+        isCurrentSong: true,
+        preview: true
+      }
+    });
+    cleanupWrapper = () => wrapper.unmount();
+    await flushPromises();
+
+    const previewLines = wrapper.findAll(".lyric-preview-line");
+    expect(previewLines).toHaveLength(3);
+    expect(previewLines[1].classes()).toContain("active");
+    expect(wrapper.find(".lyric-scroll").exists()).toBe(false);
+
+    await previewLines[1].trigger("click");
+    expect(wrapper.emitted("activate")).toHaveLength(1);
+    expect(wrapper.emitted("seek")).toBeUndefined();
+  });
 });
 
 function waitForAnimationFrame() {

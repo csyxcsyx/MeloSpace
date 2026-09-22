@@ -4102,7 +4102,7 @@ button {
     align-content: center;
     align-items: center;
     justify-items: center;
-    gap: clamp(14px, 3dvh, 24px);
+    gap: clamp(10px, 2dvh, 18px);
     grid-template-columns: 1fr;
   }
 
@@ -4140,12 +4140,87 @@ button {
     white-space: normal;
   }
 
+  .player-cover-lyrics {
+    display: block;
+    width: min(100%, 520px);
+    height: 92px;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .lyric-preview-lines,
+  .lyric-preview-list {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    align-content: center;
+    gap: 5px;
+  }
+
+  .lyric-preview-line {
+    overflow: hidden;
+    width: 100%;
+    border: 0;
+    padding: 1px 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.38);
+    font-family: var(--font-lyric);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 180ms ease, font-size 180ms ease, opacity 180ms ease, transform 180ms ease;
+  }
+
+  .lyric-preview-line.active {
+    color: var(--player-lyric-active);
+    font-size: 16px;
+    font-weight: 760;
+    text-shadow: 0 0 14px var(--player-lyric-shadow);
+  }
+
+  .lyric-preview-line:focus-visible {
+    border-radius: 8px;
+  }
+
+  .lyric-preview-state {
+    display: grid;
+    height: 100%;
+    margin: 0;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 13px;
+  }
+
+  .lyric-preview-enter-active,
+  .lyric-preview-leave-active {
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+
+  .lyric-preview-enter-from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  .lyric-preview-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
   .player-lyrics-panel {
     display: grid;
     min-height: 0;
     overflow: hidden;
     grid-template-rows: auto minmax(0, 1fr);
-    touch-action: pan-y;
+    touch-action: pan-x pan-y;
   }
 
   .player-lyrics-mobile-head {
@@ -4184,7 +4259,7 @@ button {
     max-height: none;
     padding: clamp(64px, 12dvh, 108px) 8px clamp(104px, 20dvh, 168px);
     overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    touch-action: pan-x pan-y;
   }
 
   .player-bottom-dock {
@@ -4398,6 +4473,18 @@ button {
 
   .turntable-card {
     width: min(64vw, 42dvh, 250px);
+  }
+
+  .player-cover-lyrics {
+    height: 72px;
+  }
+
+  .lyric-preview-line {
+    font-size: 12px;
+  }
+
+  .lyric-preview-line.active {
+    font-size: 14px;
   }
 
   .player-stage {

@@ -1,6 +1,10 @@
 <template>
-  <section class="lyric-panel" :class="{ 'lyric-panel-full': fullscreen }" aria-label="歌词">
-    <div v-if="!fullscreen" class="lyric-head">
+  <section
+    class="lyric-panel"
+    :class="{ 'lyric-panel-full': fullscreen, 'lyric-panel-preview': preview }"
+    :aria-label="preview ? '歌词预览，点击查看完整歌词' : '歌词'"
+  >
+    <div v-if="!fullscreen && !preview" class="lyric-head">
       <div>
         <p class="feature-label">歌词</p>
         <h2>{{ song?.title || "未选择歌曲" }}</h2>
@@ -8,7 +12,25 @@
       <span class="lyric-clock">{{ isCurrentSong ? formatDuration(currentTime) : "--:--" }}</span>
     </div>
 
+    <div v-if="preview" class="lyric-preview-lines">
+      <p v-if="loading" class="lyric-preview-state">正在加载歌词...</p>
+      <p v-else-if="errorMessage || !lines.length" class="lyric-preview-state">暂无歌词</p>
+      <TransitionGroup v-else name="lyric-preview" tag="div" class="lyric-preview-list">
+        <button
+          v-for="entry in previewLines"
+          :key="`${entry.line.time}-${entry.index}`"
+          type="button"
+          class="lyric-preview-line"
+          :class="{ active: entry.index === activeIndex }"
+          @click="emit('activate')"
+        >
+          {{ entry.line.text }}
+        </button>
+      </TransitionGroup>
+    </div>
+
     <div
+      v-else
       ref="scrollRef"
       class="lyric-scroll"
       @scroll="onScroll"
@@ -98,10 +120,12 @@ const props = defineProps<{
   currentTime: number;
   isCurrentSong: boolean;
   fullscreen?: boolean;
+  preview?: boolean;
 }>();
 
 const emit = defineEmits<{
   seek: [time: number];
+  activate: [];
 }>();
 
 const lyricLineCache = new Map<string, LyricLine[]>();
@@ -133,12 +157,23 @@ const activeIndex = computed(() => {
   }
   return Math.max(index, 0);
 });
+const previewLines = computed(() => {
+  if (!lines.value.length) return [];
+  const visibleCount = Math.min(3, lines.value.length);
+  const centeredStart = Math.max(activeIndex.value - 1, 0);
+  const start = Math.min(centeredStart, lines.value.length - visibleCount);
+  return lines.value.slice(start, start + visibleCount).map((line, offset) => ({
+    line,
+    index: start + offset
+  }));
+});
 const showFollowButton = computed(() => userBrowsing.value && props.isCurrentSong && activeIndex.value >= 0);
 
 watch(lyricUrl, loadLyrics, { immediate: true });
 
 watch(activeIndex, async (index) => {
   if (index < 0 || !props.isCurrentSong) return;
+  if (props.preview) return;
   if (userBrowsing.value) return;
   await nextTick();
   if (props.fullscreen) {
@@ -203,6 +238,7 @@ function rememberCacheEntry<T>(cache: Map<string, T>, key: string, value: T) {
 }
 
 function syncAfterLyricLoad() {
+  if (props.preview) return;
   if (!errorMessage.value && lines.value.length && props.isCurrentSong && activeIndex.value >= 0) {
     syncToActiveLine("auto");
   } else {

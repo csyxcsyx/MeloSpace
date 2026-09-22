@@ -41,6 +41,10 @@ describe("PlayerView mobile pager", () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("[00:00.00]第一句歌词\n[00:05.00]第二句歌词\n[00:10.00]第三句歌词")
+    }));
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
       value: scrollTo
@@ -96,6 +100,37 @@ describe("PlayerView mobile pager", () => {
     expect(wrapper.get("#player-cover-page").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get("#player-lyrics-page").attributes("aria-hidden")).toBe("false");
   });
+
+  it("opens lyrics from the cover preview and accepts a right swipe from inside lyrics", async () => {
+    wrapper = await mountPlayer();
+    const stage = wrapper.get(".player-stage");
+    Object.defineProperty(stage.element, "clientWidth", { configurable: true, value: 360 });
+
+    await flushPromises();
+    await wrapper.get(".player-cover-lyrics .lyric-preview-line").trigger("click");
+    expect(wrapper.findAll('[role="tab"]')[1].attributes("aria-selected")).toBe("true");
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: 360, behavior: "smooth" });
+
+    await stage.trigger("touchstart", { touches: [{ clientX: 72, clientY: 420 }] });
+    await stage.trigger("touchend", { changedTouches: [{ clientX: 286, clientY: 426 }] });
+
+    expect(wrapper.findAll('[role="tab"]')[0].attributes("aria-selected")).toBe("true");
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: "smooth" });
+  });
+
+  it("does not change pages for a vertical lyric scroll gesture", async () => {
+    wrapper = await mountPlayer();
+    const stage = wrapper.get(".player-stage");
+    Object.defineProperty(stage.element, "clientWidth", { configurable: true, value: 360 });
+    await wrapper.findAll('[role="tab"]')[1].trigger("click");
+    scrollTo.mockClear();
+
+    await stage.trigger("touchstart", { touches: [{ clientX: 190, clientY: 610 }] });
+    await stage.trigger("touchend", { changedTouches: [{ clientX: 202, clientY: 280 }] });
+
+    expect(wrapper.findAll('[role="tab"]')[1].attributes("aria-selected")).toBe("true");
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 });
 
 async function mountPlayer() {
@@ -114,7 +149,6 @@ async function mountPlayer() {
     global: {
       plugins: [pinia, router],
       stubs: {
-        LyricPanel: { template: '<div class="lyric-panel-stub">歌词</div>' },
         SongActionsMenu: { template: '<button class="song-actions-stub">更多</button>' }
       }
     }

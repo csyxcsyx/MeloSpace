@@ -44,7 +44,13 @@
     </EmptyState>
 
     <template v-else>
-      <section ref="stageRef" class="player-stage" @scroll.passive="onPlayerStageScroll">
+      <section
+        ref="stageRef"
+        class="player-stage"
+        @scroll.passive="onPlayerStageScroll"
+        @touchstart.capture.passive="onPlayerTouchStart"
+        @touchend.capture.passive="onPlayerTouchEnd"
+      >
         <aside
           id="player-cover-page"
           class="player-album-panel player-page-slide"
@@ -68,6 +74,15 @@
             <h2>{{ player.currentSong.title }}</h2>
             <p>{{ player.currentSong.artistName || "未知歌手" }} · {{ player.currentSong.albumTitle || "未知专辑" }}</p>
           </div>
+          <LyricPanel
+            v-if="mobileLayout"
+            class="player-cover-lyrics"
+            :song="player.currentSong"
+            :current-time="player.currentTime"
+            :is-current-song="true"
+            preview
+            @activate="showPlayerPage(1)"
+          />
         </aside>
 
         <section
@@ -263,6 +278,7 @@ let rangeSeekActive = false;
 let resumeAfterRangeSeek = false;
 let mobileLayoutQuery: MediaQueryList | null = null;
 let stageScrollFrame: number | null = null;
+let touchStart: { x: number; y: number; time: number } | null = null;
 
 onMounted(() => {
   mobileLayoutQuery = window.matchMedia("(max-width: 820px)");
@@ -324,6 +340,28 @@ function onPlayerStageScroll() {
     if (!stage?.clientWidth) return;
     activePlayerPage.value = stage.scrollLeft >= stage.clientWidth / 2 ? 1 : 0;
   });
+}
+
+function onPlayerTouchStart(event: TouchEvent) {
+  if (!mobileLayout.value || event.touches.length !== 1) return;
+  const touch = event.touches[0];
+  touchStart = { x: touch.clientX, y: touch.clientY, time: performance.now() };
+}
+
+function onPlayerTouchEnd(event: TouchEvent) {
+  if (!mobileLayout.value || !touchStart || event.changedTouches.length !== 1) {
+    touchStart = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - touchStart.x;
+  const deltaY = touch.clientY - touchStart.y;
+  const duration = performance.now() - touchStart.time;
+  touchStart = null;
+
+  if (duration > 900 || Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return;
+  if (deltaX > 0 && activePlayerPage.value === 1) showPlayerPage(0);
+  if (deltaX < 0 && activePlayerPage.value === 0) showPlayerPage(1);
 }
 
 function handleMobileLayoutChange(event: MediaQueryListEvent) {
