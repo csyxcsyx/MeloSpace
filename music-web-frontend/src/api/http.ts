@@ -10,10 +10,38 @@ export const http = axios.create({
 
 type RetryableConfig = NonNullable<AxiosError<ApiResponse<null>>["config"]> & {
   __retryCount?: number;
+  __retriedWithoutAuth?: boolean;
 };
+
+const PUBLIC_CONTENT_GET_PATHS = [
+  /^\/api\/songs(?:\/\d+)?$/,
+  /^\/api\/artists$/,
+  /^\/api\/albums$/,
+  /^\/api\/discover\/community$/,
+  /^\/api\/search(?:\/.*)?$/,
+  /^\/api\/playlists(?:\/\d+)?$/,
+  /^\/api\/comments(?:\/\d+\/replies)?$/,
+  /^\/api\/users\/\d+(?:\/playlists)?$/
+];
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isPublicContentGet(config: RetryableConfig | undefined) {
+  if (config?.method?.toUpperCase() !== "GET") return false;
+  const path = String(config.url || "").split("?", 1)[0];
+  return PUBLIC_CONTENT_GET_PATHS.some((pattern) => pattern.test(path));
+}
+
+function removeAuthorizationHeader(config: RetryableConfig) {
+  if (typeof config.headers?.delete === "function") {
+    config.headers.delete("Authorization");
+    return;
+  }
+  if (config.headers) {
+    delete config.headers.Authorization;
+  }
 }
 
 http.interceptors.request.use((config) => {
@@ -57,7 +85,12 @@ http.interceptors.response.use(
       ? "服务暂时不可用，请稍后重试"
       : error.response?.data?.message || error.message || "网络请求失败";
 
-    if (status === 401 && url.startsWith("/api/auth/")) {
+    if (status === 401 && config && isPublicContentGet(config) && !config.__retriedWithoutAuth) {
+      auth.clearSession();
+      config.__retriedWithoutAuth = true;
+      removeAuthorizationHeader(config);
+      return http.request(config);
+    } else if (status === 401 && url.startsWith("/api/auth/")) {
       ui.toast(message);
     } else if (status === 401) {
       auth.clearSession();

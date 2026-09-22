@@ -67,4 +67,37 @@ describe("http cancellation", () => {
     expect(adapter).toHaveBeenCalledTimes(1);
     expect(toast).not.toHaveBeenCalled();
   });
+
+  it("公开内容遇到过期会话时清理令牌并按匿名身份重试", async () => {
+    const auth = useAuthStore();
+    const ui = useUiStore();
+    auth.token = "expired-session";
+    auth.user = { id: 1, username: "listener", nickname: "Listener", avatarUrl: null, role: "USER" };
+
+    const adapter = vi.fn((config) => {
+      if (adapter.mock.calls.length === 1) {
+        expect(config.headers.get("Authorization")).toBe("Bearer expired-session");
+        return Promise.reject(new axios.AxiosError(
+          "Request failed with status code 401", "ERR_BAD_REQUEST", config, undefined,
+          { status: 401, statusText: "Unauthorized", headers: {}, config, data: { code: 401, message: "登录已失效", data: null } }
+        ));
+      }
+      expect(config.headers.get("Authorization")).toBeUndefined();
+      return Promise.resolve({
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+        data: { code: 0, message: "success", data: { items: [{ id: 1, title: "晴天" }], total: 1 } }
+      });
+    });
+
+    const response = await http.get("/api/songs", { adapter });
+
+    expect(response.data.data.items).toHaveLength(1);
+    expect(adapter).toHaveBeenCalledTimes(2);
+    expect(auth.isAuthenticated).toBe(false);
+    expect(auth.token).toBeNull();
+    expect(ui.toasts).toHaveLength(0);
+  });
 });

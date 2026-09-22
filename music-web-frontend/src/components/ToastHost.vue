@@ -1,9 +1,23 @@
 <template>
-  <div class="toast-host" aria-live="polite" aria-atomic="true">
-    <button v-for="item in ui.toasts" :key="item.id" class="toast" type="button" @click="ui.dismiss(item.id)">
+  <TransitionGroup
+    name="toast"
+    tag="div"
+    class="toast-host"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    <button
+      v-for="item in ui.toasts"
+      :key="item.id"
+      class="toast"
+      type="button"
+      aria-label="关闭提示"
+      @click="ui.dismiss(item.id)"
+    >
       {{ item.message }}
     </button>
-  </div>
+  </TransitionGroup>
 </template>
 
 <script setup lang="ts">
