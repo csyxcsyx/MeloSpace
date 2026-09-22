@@ -3950,7 +3950,9 @@ button {
   }
 
   .song-list {
-    --song-row-mobile-columns: minmax(0, 1fr) 44px;
+    --song-row-mobile-columns: minmax(0, 1fr) max-content;
+    border-top-color: rgba(30, 30, 34, 0.07);
+    border-bottom-color: rgba(30, 30, 34, 0.07);
   }
 
   .song-list-header {
@@ -3962,6 +3964,29 @@ button {
     opacity: 1;
     pointer-events: auto;
     transform: none;
+  }
+
+  .song-row {
+    min-height: 72px;
+    gap: 8px;
+    padding: 12px 6px;
+    border-radius: 0;
+    border-bottom-color: rgba(30, 30, 34, 0.07);
+    background: transparent;
+  }
+
+  .song-list > .song-row:nth-child(even) {
+    background: transparent;
+  }
+
+  .song-row:hover,
+  .song-row:focus-within {
+    background: rgba(232, 242, 238, 0.48);
+  }
+
+  .song-list > .song-row.song-row-active,
+  .song-row.song-row-active {
+    background: linear-gradient(90deg, rgba(var(--brand-rgb), 0.12), rgba(var(--brand-rgb), 0.025));
   }
 
   .song-actions-menu {

@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { defineComponent } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Song } from "@/api/types";
 import SongRow from "@/components/SongRow.vue";
 
@@ -51,6 +51,10 @@ function mountRow() {
 }
 
 describe("SongRow", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("keeps contextual actions before the three-dot menu and forwards all content slots", () => {
     const wrapper = mountRow();
     const classes = [...wrapper.element.children].map((element) => element.classList[0]);
@@ -83,5 +87,30 @@ describe("SongRow", () => {
 
     expect(wrapper.emitted("togglePlay")?.[0]).toEqual([song]);
     expect(wrapper.emitted("favoriteChange")?.[0]).toEqual([song, false]);
+  });
+
+  it("plays from the non-interactive row area on mobile without hijacking controls", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+    const wrapper = mountRow();
+
+    await wrapper.get(".song-row").trigger("click");
+    await wrapper.get('[data-part="actions"]').trigger("click");
+
+    expect(wrapper.emitted("togglePlay")).toEqual([[song]]);
+  });
+
+  it("keeps album information in the default mobile subtitle", () => {
+    const wrapper = mount(SongRow, {
+      props: { song },
+      global: {
+        stubs: {
+          RouterLink: { template: `<a><slot /></a>` },
+          SongActionsMenu: SongActionsMenuStub
+        }
+      }
+    });
+
+    expect(wrapper.get(".song-subtitle").text()).toContain("周杰伦");
+    expect(wrapper.get(".song-mobile-album").text()).toBe("十一月的萧邦");
   });
 });

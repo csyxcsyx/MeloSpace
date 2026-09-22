@@ -417,10 +417,25 @@ function downloadSong() {
 
 @media (max-width: 760px) {
   .song-actions-row {
-    min-width: 44px;
+    min-width: 116px;
+    gap: 0;
   }
 
   .song-actions-quick {
+    display: flex;
+    gap: 0;
+  }
+
+  .song-quick-action,
+  .song-actions-trigger-row {
+    width: 38px;
+    min-width: 38px;
+    height: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .song-quick-action[data-quick-action="download"] {
     display: none;
   }
 }
